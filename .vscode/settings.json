@@ -9,4 +9,6 @@
             }
         ]
     }
+    
+    ,"python.analysis.typeCheckingMode": "basic"
 }
