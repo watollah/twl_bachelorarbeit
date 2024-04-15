@@ -5,8 +5,8 @@ from typing import TypeVar
 from typing import final
 
 class Shape:
-    def __init__(self):
-        pass
+    def __init__(self, id: int):
+        self.id: int = id #id corresponding to the id of the shape on the canvas
 
     def is_at(self, x: int, y: int) -> bool:
         return False
@@ -15,7 +15,8 @@ class NodeShape(Shape):
 
     RADIUS: int = 5
 
-    def __init__(self, x: int, y: int):
+    def __init__(self, id: int, x: int, y: int):
+        super().__init__(id)
         self.x: int = x
         self.y: int = y
 
@@ -23,16 +24,39 @@ class NodeShape(Shape):
         return True if abs(self.x - x) <= self.RADIUS and abs(self.y - y) <= self.RADIUS else False
 
 class BeamShape(Shape):
-    def __init__(self, start_node: NodeShape, end_node: NodeShape):
+
+    WIDTH: int = 2
+
+    def __init__(self, id: int, start_node: NodeShape, end_node: NodeShape):
+        super().__init__(id)
         self.start_node: NodeShape = start_node
         self.end_node:NodeShape = end_node
 
+    def is_at(self, x: int, y: int) -> bool:
+        #Algorithmus für Abstand eines Punktes von einem Liniensegment
+        px = self.end_node.x-self.start_node.x
+        py = self.end_node.y-self.start_node.y
+
+        norm = px*px + py*py
+
+        u =  ((x - self.start_node.x) * px + (y - self.start_node.y) * py) / float(norm)
+        u = max(min(1, u), 0)
+
+        dx = x - (self.start_node.x + u * px)
+        dy = y - (self.start_node.y + u * py)
+
+        dist = (dx*dx + dy*dy)**.5
+
+        return dist < self.WIDTH/2
+
 class SupportShape(Shape):
-    def __init__(self, node: NodeShape):
+    def __init__(self, id, node: NodeShape):
+        super().__init__(id)
         self.node: NodeShape = node
 
 class ForceShape(Shape):
-    def __init__(self, node: NodeShape):
+    def __init__(self, id, node: NodeShape):
+        super().__init__(id)
         self.node: NodeShape = node
 
 class StaticalSystem:
@@ -42,13 +66,13 @@ class StaticalSystem:
         self.supports: list[SupportShape] = []
         self.forces: list[ForceShape] = []
 
-    def create_node(self, x: int, y: int) -> NodeShape:
-        node = NodeShape(x, y)
+    def create_node(self, id: int, x: int, y: int) -> NodeShape:
+        node = NodeShape(id, x, y)
         self.nodes.append(node)
         return node
 
-    def create_beam(self, start_node: NodeShape, end_node: NodeShape) -> BeamShape:
-        beam = BeamShape(start_node, end_node)
+    def create_beam(self, id: int, start_node: NodeShape, end_node: NodeShape) -> BeamShape:
+        beam = BeamShape(id, start_node, end_node)
         self.beams.append(beam)
         return beam
 
@@ -62,15 +86,15 @@ class Tool:
     @final
     def selected(self):
         """Perform tool change"""
-        self.editor.selected_tool.run_when_deselected()
-        self.run_when_selected()
+        self.editor.selected_tool.deactivate()
+        self.activate()
         self.editor.selected_tool = self
 
-    def run_when_selected(self):
+    def activate(self):
         """Code to be executed when the tool is selected"""
         print('now selected: ', self.name)
     
-    def run_when_deselected(self):
+    def deactivate(self):
         """Code to be executed when the tool is deselected"""
         print('now deselected: ', self.name)
 
@@ -82,6 +106,28 @@ class SelectTool(Tool):
     def __init__(self, editor):
         super().__init__(editor, 'Select', 0, '\u2d3d')
 
+    def activate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.canvas.tag_bind(node.id, "<Button-1>", self.select_node)
+
+        for beam in self.editor.statical_system.beams:
+            self.editor.canvas.tag_bind(beam.id, "<Button-1>", self.select_beam)
+
+    def deactivate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.canvas.tag_unbind(node.id, "<Button-1>")
+
+        for beam in self.editor.statical_system.beams:
+            self.editor.canvas.tag_bind(beam.id, "<Button-1>")
+
+    def select_node(self, event):
+        node = self.editor.find_shape_at(event.x, event.y, self.editor.statical_system.nodes)
+        print('not found' if node == None else node.id)
+
+    def select_beam(self, event):
+        beam = self.editor.find_shape_at(event.x, event.y, self.editor.statical_system.beams)
+        print('not found' if beam == None else beam.id)
+    
 class BeamTool(Tool):
     def __init__(self, editor):
         super().__init__(editor, 'Beam', 1, '\ua5ec')
@@ -134,13 +180,7 @@ class DiagramEditor:
         """Code to be executed when the tool is changed"""
     
     def update(self):
-        """Clear canvas and redraw all of the shapes"""
-        self.canvas.delete("all")
-        for beam in self.statical_system.beams:
-            self.canvas.create_line(beam.start_node.x, beam.start_node.y, beam.end_node.x, beam.end_node.y)
-        
-        for node in self.statical_system.nodes:
-            self.canvas.create_oval(node.x - 5, node.y - 5, node.x + 5, node.y + 5, fill="black", tags="node")
+        """Outdated"""
 
     def on_click(self, event):
         """Handle mouse clicks on the canvas"""
@@ -148,13 +188,13 @@ class DiagramEditor:
             self.selected_tool.action(event)
 
     def create_node(self, x: int, y: int) -> NodeShape:
-        node = self.statical_system.create_node(x, y)
-        self.update()
+        node_shape_id = self.canvas.create_oval(x - NodeShape.RADIUS, y - NodeShape.RADIUS, x + NodeShape.RADIUS, y + NodeShape.RADIUS, fill='black', tags='node')
+        node = self.statical_system.create_node(node_shape_id, x, y)
         return node
 
     def create_beam(self, start_node: NodeShape, end_node: NodeShape) -> BeamShape:
-        beam = self.statical_system.create_beam(start_node, end_node)
-        self.update()
+        beam_shape_id = self.canvas.create_line(start_node.x, start_node.y, end_node.x, end_node.y, tags='beam')
+        beam = self.statical_system.create_beam(beam_shape_id, start_node, end_node) 
         return beam
     
     S = TypeVar('S', bound=Shape)
