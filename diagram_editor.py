@@ -13,7 +13,8 @@ class Shape:
 
 class NodeShape(Shape):
 
-    RADIUS: int = 5
+    RADIUS: int = 6
+    BORDER: int = 2
 
     def __init__(self, id: int, x: int, y: int):
         super().__init__(id)
@@ -25,7 +26,7 @@ class NodeShape(Shape):
 
 class BeamShape(Shape):
 
-    WIDTH: int = 2
+    WIDTH: int = 4
 
     def __init__(self, id: int, start_node: NodeShape, end_node: NodeShape):
         super().__init__(id)
@@ -118,7 +119,7 @@ class SelectTool(Tool):
             self.editor.canvas.tag_unbind(node.id, "<Button-1>")
 
         for beam in self.editor.statical_system.beams:
-            self.editor.canvas.tag_bind(beam.id, "<Button-1>")
+            self.editor.canvas.tag_unbind(beam.id, "<Button-1>")
 
     def select_node(self, event):
         node = self.editor.find_shape_at(event.x, event.y, self.editor.statical_system.nodes)
@@ -188,13 +189,15 @@ class DiagramEditor:
             self.selected_tool.action(event)
 
     def create_node(self, x: int, y: int) -> NodeShape:
-        node_shape_id = self.canvas.create_oval(x - NodeShape.RADIUS, y - NodeShape.RADIUS, x + NodeShape.RADIUS, y + NodeShape.RADIUS, fill='black', tags='node')
+        node_shape_id = self.canvas.create_oval(x - NodeShape.RADIUS, y - NodeShape.RADIUS, x + NodeShape.RADIUS, y + NodeShape.RADIUS, fill='white', width = NodeShape.BORDER, tags='node')
         node = self.statical_system.create_node(node_shape_id, x, y)
+        self.canvas.tag_lower('beam', 'node')
         return node
 
     def create_beam(self, start_node: NodeShape, end_node: NodeShape) -> BeamShape:
-        beam_shape_id = self.canvas.create_line(start_node.x, start_node.y, end_node.x, end_node.y, tags='beam')
-        beam = self.statical_system.create_beam(beam_shape_id, start_node, end_node) 
+        beam_shape_id = self.canvas.create_line(start_node.x, start_node.y, end_node.x, end_node.y, width=BeamShape.WIDTH, tags='beam')
+        beam = self.statical_system.create_beam(beam_shape_id, start_node, end_node)
+        self.canvas.tag_lower('beam', 'node')
         return beam
     
     S = TypeVar('S', bound=Shape)
