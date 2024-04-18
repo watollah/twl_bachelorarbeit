@@ -4,6 +4,8 @@ from typing import final
 import number_entry
 from statical_system import *
 
+
+
 class Tool:
     def __init__(self, editor: 'DiagramEditor', name: str, id: int, symbol: str):
         self.editor: 'DiagramEditor' = editor
@@ -41,12 +43,18 @@ class SelectTool(Tool):
         for beam in self.editor.statical_system.beams:
             self.editor.canvas.tag_bind(beam.id, "<Button-1>", self.select_beam)
 
+        for support in self.editor.statical_system.supports:
+            self.editor.canvas.tag_bind(support.id, "<Button-1>", self.select_support)
+
     def deactivate(self):
         for node in self.editor.statical_system.nodes:
             self.editor.canvas.tag_unbind(node.id, "<Button-1>")
 
         for beam in self.editor.statical_system.beams:
             self.editor.canvas.tag_unbind(beam.id, "<Button-1>")
+            
+        for support in self.editor.statical_system.supports:
+            self.editor.canvas.tag_unbind(support.id, "<Button-1>")
 
     def deselect_all(self):
         for shape in self.editor.selection:
@@ -65,11 +73,21 @@ class SelectTool(Tool):
     def select_beam(self, event):
         beam = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.beams)
         print('not found' if beam == None else beam.id)
+
+    def select_support(self, event):
+        support = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.supports)
+        print('not found' if support == None else support.id)
     
 class BeamTool(Tool):
     def __init__(self, editor):
         super().__init__(editor, 'Beam', 1, '\ua5ec')
         self.start_node: Node | None = None
+
+    def activate(self):
+        self.editor.canvas.bind("<Button-1>", self.action)
+
+    def deactivate(self):
+        self.editor.canvas.unbind("<Button-1>")
 
     def action(self, event):
         clicked_node: Node | None = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.nodes)
@@ -92,6 +110,22 @@ class SupportTool(Tool):
     def __init__(self, editor):
         super().__init__(editor, 'Support', 2, '\u29cb')
 
+    def activate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.canvas.tag_bind(node.id, "<Button-1>", self.action)
+    
+    def deactivate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.canvas.tag_unbind(node.id, "<Button-1>")
+
+    def action(self, event):
+        clicked_node: Node | None = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.nodes)
+        if clicked_node:
+            has_support = any(s.node == clicked_node for s in self.editor.statical_system.supports)
+            if not has_support:
+                self.editor.create_support(clicked_node)
+                print(f"Created support on Node {clicked_node.id}")
+
 class ForceTool(Tool):
     def __init__(self, editor):
         super().__init__(editor, 'Force', 3, '\u2b07')
@@ -99,7 +133,6 @@ class ForceTool(Tool):
 class DiagramEditor:
     def __init__(self, master, statical_system):
         self.canvas: tk.Canvas = tk.Canvas(master)
-        self.canvas.bind("<Button-1>", self.on_click)
         self.statical_system: StaticalSystem = statical_system
         self.selection: list[Component] = []
         
@@ -118,14 +151,6 @@ class DiagramEditor:
     def change_tool(self):
         """Code to be executed when the tool is changed"""
     
-    def update(self):
-        """Outdated"""
-
-    def on_click(self, event):
-        """Handle mouse clicks on the canvas"""
-        if isinstance(self.selected_tool, BeamTool):
-            self.selected_tool.action(event)
-
     def create_node(self, x: int, y: int) -> Node:
         node_shape_id = self.canvas.create_oval(x - Node.RADIUS, y - Node.RADIUS, x + Node.RADIUS, y + Node.RADIUS, fill='white', width = Node.BORDER, tags='node')
         node = self.statical_system.create_node(node_shape_id, x, y)
@@ -138,6 +163,11 @@ class DiagramEditor:
         self.canvas.tag_lower('beam', 'node')
         return beam
     
+    def create_support(self, node: Node):
+        support_shape_id = self.canvas.create_polygon(node.x, node.y, node.x - Support.WIDTH / 2, node.y + Support.HEIGHT, node.x + Support.WIDTH / 2, node.y + Support.HEIGHT, outline='black', fill='white', width=Support.BORDER, tags='support')
+        support = self.statical_system.create_support(support_shape_id, node)
+        self.canvas.tag_lower('support', 'node')
+        return support
 
 def main():
     root = tk.Tk()
