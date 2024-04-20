@@ -13,7 +13,7 @@ class ToggledFrame(tk.Frame):
         tk.Frame.__init__(self, parent, *args, **options)
         
         self.title: str = title
-        self.is_expanded: tk.BooleanVar = tk.BooleanVar()
+        self.is_expanded: tk.BooleanVar = tk.BooleanVar(value=True)
 
         self.title_frame: ttk.Frame = ttk.Frame(self)
         self.title_frame.pack(fill="x", expand=True)
