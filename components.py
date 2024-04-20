@@ -1,4 +1,3 @@
-from typing import Callable
 from abc import ABC, abstractmethod
 from twl_math import Point
 
@@ -12,10 +11,14 @@ class Component(ABC):
     def deselect(self):
         pass
 
+    @classmethod
+    @abstractmethod
+    def get_table_columns(cls) -> tuple:
+        pass #returns the table columns for the component type
 
     @abstractmethod
     def get_table_entry(self) -> tuple:
-        pass #return a function that takes a component and returns a table-entry for it, to be implemented by subclasses
+        pass #return a table entry for the component instance
 
     def is_at(self, x: int, y: int) -> bool:
         return False
@@ -33,9 +36,13 @@ class Node(Component):
 
     def is_at(self, x: int, y: int) -> bool:
         return True if abs(self.x - x) <= self.RADIUS and abs(self.y - y) <= self.RADIUS else False
-    
+
+    @classmethod
+    def get_table_columns(cls) -> tuple:
+        return ()
+
     def get_table_entry(self) -> tuple:
-        return (self.x, self.y)
+        return ()
     
 
 class Beam(Component):
@@ -64,6 +71,10 @@ class Beam(Component):
 
         return dist < self.WIDTH/2
 
+    @classmethod
+    def get_table_columns(cls) -> tuple:
+        return ("Start Node", "End Node")
+
     def get_table_entry(self) -> tuple:
         return (self.start_node.id, self.end_node.id)
 
@@ -74,10 +85,10 @@ class Support(Component):
     WIDTH: int = 28
     BORDER: int = 2
 
-    def __init__(self, id, node: Node, angle: int = 0):
+    def __init__(self, id, node: Node, angle: float=0):
         super().__init__(id)
         self.node: Node = node
-        self.angle: int = angle
+        self.angle: float = angle
 
     def is_at(self, x: int, y: int) -> bool:
         s_point = Point(x, y)
@@ -106,11 +117,23 @@ class Support(Component):
         #Check if the point is inside the triangle
         return u >= 0 and v >= 0 and w >= 0 and u + v + w <= 1
     
+    @classmethod
+    def get_table_columns(cls) -> tuple:
+        return ("Angle", "Node")
+
     def get_table_entry(self) -> tuple:
         return (self.angle, self.node.id)
 
 
 class Force(Component):
-    def __init__(self, id, node: Node):
+    def __init__(self, id, node: Node, angle: float=0):
         super().__init__(id)
         self.node: Node = node
+        self.angle: float = angle
+
+    @classmethod
+    def get_table_columns(cls) -> tuple:
+        return ("Angle", "Node")
+
+    def get_table_entry(self) -> tuple:
+        return (self.angle, self.node.id)

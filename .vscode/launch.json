@@ -5,7 +5,7 @@
             "name": "Launch",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/diagram_editor.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal"
         }
     ]

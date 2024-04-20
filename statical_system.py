@@ -1,4 +1,4 @@
-from typing import TypeVar, List
+from typing import TypeVar, List, Type
 from twl_widget import TwlWidget
 from components import *
 
@@ -6,8 +6,9 @@ C = TypeVar('C', bound=Component)
 
 class ComponentList(List[C]):
 
-    def __init__(self, widgets: list[TwlWidget]=[], *args, **kwargs):
+    def __init__(self, component_class: Type[C], widgets: list[TwlWidget]=[], *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.component_class: Type[C] = component_class #Class of the entries in this list, to make it accessible even when the list is empty
         self.widgets: list[TwlWidget] = widgets #Ui elements that should be updated when there is a change to this list
 
     def append(self, object: C) -> None:
@@ -15,9 +16,9 @@ class ComponentList(List[C]):
         super().append(object)
         self.update_widgets()
 
-    def remove(self, value: C) -> None:
+    def remove(self, object: C) -> None:
         """Remove item from the list and notify connected widgets to update"""
-        super().remove(value)
+        super().remove(object)
         self.update_widgets()
 
     def update_widgets(self):
@@ -27,10 +28,10 @@ class ComponentList(List[C]):
 
 class StaticalSystem:
     def __init__(self):
-        self.nodes: ComponentList[Node] = ComponentList()
-        self.beams: ComponentList[Beam] = ComponentList()
-        self.supports: ComponentList[Support] = ComponentList()
-        self.forces: ComponentList[Force] = ComponentList()
+        self.nodes: ComponentList[Node] = ComponentList(Node)
+        self.beams: ComponentList[Beam] = ComponentList(Beam)
+        self.supports: ComponentList[Support] = ComponentList(Support)
+        self.forces: ComponentList[Force] = ComponentList(Force)
 
     def create_node(self, id: int, x: int, y: int) -> Node:
         node = Node(id, x, y)
