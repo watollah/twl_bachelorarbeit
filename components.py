@@ -73,7 +73,7 @@ class Beam(Component):
         return ("Length", "Angle")
 
     def get_table_entry(self) -> tuple:
-        return (self.length(), self.angle())
+        return (round(self.length(), 2), round(self.angle(), 2))
 
 
 class Support(Component):
@@ -119,7 +119,7 @@ class Support(Component):
         return ("Angle", "Node")
 
     def get_table_entry(self) -> tuple:
-        return (self.angle, self.node.id)
+        return (round(self.angle, 2), self.node.id)
 
 
 class Force(Component):
@@ -150,4 +150,4 @@ class Force(Component):
         return ("Angle", "Node")
 
     def get_table_entry(self) -> tuple:
-        return (self.angle, self.node.id)
+        return (round(self.angle, 2), self.node.id)
