@@ -129,7 +129,7 @@ class Force(Component):
     DISTANCE_FROM_NODE = 10
     ARROW_SHAPE = (15,14,10)
 
-    def __init__(self, id, node: Node, angle: float=0):
+    def __init__(self, id, node: Node, angle: float=180):
         super().__init__(id)
         self.node: Node = node
         self.angle: float = angle
