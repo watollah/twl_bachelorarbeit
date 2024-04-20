@@ -57,13 +57,23 @@ class Beam(Component):
     def is_at(self, x: int, y: int) -> bool:
         beam = Line(Point(self.start_node.x, self.start_node.y), Point(self.end_node.x, self.end_node.y))
         return Point(x, y).distance(beam) < self.WIDTH/2
+    
+    def length(self) -> float:
+        p1 = Point(self.start_node.x, self.start_node.y)
+        p2 = Point(self.end_node.x, self.end_node.y)
+        return Line(p1, p2).length()
+
+    def angle(self) -> float:
+        p1 = Point(self.start_node.x, self.start_node.y)
+        p2 = Point(self.end_node.x, self.end_node.y)
+        return Line(p1, p2).angle()
 
     @classmethod
     def get_table_columns(cls) -> tuple:
-        return ("Start Node", "End Node")
+        return ("Length", "Angle")
 
     def get_table_entry(self) -> tuple:
-        return (self.start_node.id, self.end_node.id)
+        return (self.length(), self.angle())
 
 
 class Support(Component):

@@ -6,6 +6,8 @@ class Point:
         self.y: int = y
 
     def rotate(self, center_of_rotation: 'Point', angle: float):
+        angle = math.radians(angle)
+
         #Translate the point to be rotated so that the center of rotation becomes the origin
         translated_x = self.x - center_of_rotation.x
         translated_y = self.y - center_of_rotation.y
@@ -46,7 +48,13 @@ class Line:
         p = self.end.subtract(self.start)
         distance_squared = p.x**2 + p.y**2
         return math.sqrt(distance_squared)
-    
+
+    def angle(self) -> float:
+        d = self.end.subtract(self.start)
+        angle_degrees = 90 - math.degrees(math.atan2(-d.y, d.x))
+        angle_degrees %= 360
+        return angle_degrees
+
     def distance(self, point: Point) -> float:
         return point.distance(self)
 
