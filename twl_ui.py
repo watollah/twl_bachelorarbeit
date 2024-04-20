@@ -5,11 +5,14 @@ from components import *
 from statical_system import *
 
 class Tool:
-    def __init__(self, editor: 'TwlDiagram', name: str, id: int, symbol: str):
+
+    ID: int = -1
+    NAME: str = "X"
+    SYMBOL: str = "X"
+
+    def __init__(self, editor: 'TwlDiagram'):
         self.editor: 'TwlDiagram' = editor
-        self.name: str = name
-        self.id: int = id
-        self.symbol: str = symbol
+        self.name = "TEST"
    
     @final
     def selected(self):
@@ -20,19 +23,21 @@ class Tool:
 
     def activate(self):
         """Code to be executed when the tool is selected"""
-        print('now selected: ', self.name)
+        print('now selected: ', self.ID)
     
     def deactivate(self):
         """Code to be executed when the tool is deselected"""
-        print('now deselected: ', self.name)
+        print('now deselected: ', self.NAME)
 
     def action(self, event):
         """Code to be executed when the user clicks on the canvas while the tool is active"""
         pass
 
 class SelectTool(Tool):
-    def __init__(self, editor):
-        super().__init__(editor, 'Select', 0, '\u2d3d')
+
+    ID: int = 0
+    NAME: str = 'Select'
+    SYMBOL: str = '\u2d3d'
 
     def activate(self):
         for node in self.editor.statical_system.nodes:
@@ -44,6 +49,9 @@ class SelectTool(Tool):
         for support in self.editor.statical_system.supports:
             self.editor.tag_bind(support.id, "<Button-1>", self.select_support)
 
+        for force in self.editor.statical_system.forces:
+            self.editor.tag_bind(force.id, "<Button-1>", self.select_force)
+
     def deactivate(self):
         for node in self.editor.statical_system.nodes:
             self.editor.tag_unbind(node.id, "<Button-1>")
@@ -53,6 +61,9 @@ class SelectTool(Tool):
             
         for support in self.editor.statical_system.supports:
             self.editor.tag_unbind(support.id, "<Button-1>")
+
+        for force in self.editor.statical_system.forces:
+            self.editor.tag_unbind(force.id, "<Button-1>")
 
     def deselect_all(self):
         for shape in self.editor.selection:
@@ -75,10 +86,19 @@ class SelectTool(Tool):
     def select_support(self, event):
         support = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.supports)
         print('not found' if support == None else support.id)
+
+    def select_force(self, event):
+        force = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.forces)
+        print('not found' if force == None else force.id)
     
 class BeamTool(Tool):
+
+    ID: int = 1
+    NAME: str = 'Beam'
+    SYMBOL: str = '\ua5ec'
+
     def __init__(self, editor):
-        super().__init__(editor, 'Beam', 1, '\ua5ec')
+        super().__init__(editor)
         self.start_node: Node | None = None
 
     def activate(self):
@@ -105,8 +125,10 @@ class BeamTool(Tool):
                 self.start_node = None
 
 class SupportTool(Tool):
-    def __init__(self, editor):
-        super().__init__(editor, 'Support', 2, '\u29cb')
+
+    ID: int = 2
+    NAME: str = 'Support'
+    SYMBOL: str = '\u29cb'
 
     def activate(self):
         for node in self.editor.statical_system.nodes:
@@ -125,8 +147,26 @@ class SupportTool(Tool):
                 print(f"Created support on Node {clicked_node.id}")
 
 class ForceTool(Tool):
-    def __init__(self, editor):
-        super().__init__(editor, 'Force', 3, '\u2b07')
+
+    ID: int = 3
+    NAME: str = 'Force'
+    SYMBOL: str = '\u2b07'
+
+    def activate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.tag_bind(node.id, "<Button-1>", self.action)
+    
+    def deactivate(self):
+        for node in self.editor.statical_system.nodes:
+            self.editor.tag_unbind(node.id, "<Button-1>")
+
+    def action(self, event):
+        clicked_node: Node | None = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.nodes)
+        if clicked_node:
+            has_force = any(f.node == clicked_node for f in self.editor.statical_system.forces)
+            if not has_force:
+                self.editor.create_force(clicked_node)
+                print(f"Created force on Node {clicked_node.id}")
 
 
 C = TypeVar('C', bound=Component)
@@ -156,8 +196,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         toolbar = tk.Frame(self)
         toolbar.place(relx=0, rely=0, anchor=tk.NW)
         for tool in self.tools:
-            rb = ttk.Radiobutton(toolbar, text=tool.symbol, variable=self.selected_tool, value=tool, command=tool.selected, style='Toolbutton')
-            rb.grid(row=0, column=tool.id)
+            rb = ttk.Radiobutton(toolbar, text=tool.SYMBOL, variable=self.selected_tool, value=tool, command=tool.selected, style='Toolbutton')
+            rb.grid(row=0, column=tool.ID)
         ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10), width = 2) #todo: improve sizing with grid
 
     def change_tool(self):
@@ -183,3 +223,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         support = self.statical_system.create_support(support_shape_id, node)
         self.tag_lower('support', 'node')
         return support
+    
+    def create_force(self, node: Node):
+        arrow: Line = Force("", node).arrow() #create temporary object to get the position of the arrow
+        force_shape_id = self.create_line(arrow.start.x, arrow.start.y, arrow.end.x, arrow.end.y, width=Force.WIDTH, arrow=tk.FIRST, arrowshape=Force.ARROW_SHAPE, tags='force')
+        force = self.statical_system.create_force(force_shape_id, node)
+        self.tag_lower('force', 'node')
+        return force

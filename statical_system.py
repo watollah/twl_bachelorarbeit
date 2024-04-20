@@ -48,6 +48,11 @@ class StaticalSystem:
         self.supports.append(support)
         return support
     
+    def create_force(self, id: int, node: Node) -> Force:
+        force = Force(id, node)
+        self.forces.append(force)
+        return force
+    
     C = TypeVar('C', bound=Component)
     @staticmethod
     def find_component_at(x: int, y: int, components: list[C]) -> C | None:

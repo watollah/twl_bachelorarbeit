@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from twl_math import Point
+from twl_math import Point, Line
 
 class Component(ABC):
     def __init__(self, id: int):
@@ -55,21 +55,8 @@ class Beam(Component):
         self.end_node:Node = end_node
 
     def is_at(self, x: int, y: int) -> bool:
-        #Algorithm to calculate distance from point to line segment
-        px = self.end_node.x-self.start_node.x
-        py = self.end_node.y-self.start_node.y
-
-        norm = px*px + py*py
-
-        u =  ((x - self.start_node.x) * px + (y - self.start_node.y) * py) / float(norm)
-        u = max(min(1, u), 0)
-
-        dx = x - (self.start_node.x + u * px)
-        dy = y - (self.start_node.y + u * py)
-
-        dist = (dx*dx + dy*dy)**.5
-
-        return dist < self.WIDTH/2
+        beam = Line(Point(self.start_node.x, self.start_node.y), Point(self.end_node.x, self.end_node.y))
+        return Point(x, y).distance(beam) < self.WIDTH/2
 
     @classmethod
     def get_table_columns(cls) -> tuple:
@@ -126,10 +113,27 @@ class Support(Component):
 
 
 class Force(Component):
+
+    LENGTH = 40
+    WIDTH = 6
+    DISTANCE_FROM_NODE = 10
+    ARROW_SHAPE = (15,14,10)
+
     def __init__(self, id, node: Node, angle: float=0):
         super().__init__(id)
         self.node: Node = node
         self.angle: float = angle
+
+    def is_at(self, x: int, y: int) -> bool:
+        return Point(x, y).distance(self.arrow()) < self.WIDTH/2
+
+    def arrow(self) -> Line:
+        n = Point(self.node.x, self.node.y)
+        a1 = Point(n.x, n.y + Force.DISTANCE_FROM_NODE)
+        a2 = Point(a1.x, a1.y + Force.LENGTH)
+        a1.rotate(n, self.angle)
+        a2.rotate(n, self.angle)
+        return Line(a1, a2)
 
     @classmethod
     def get_table_columns(cls) -> tuple:

@@ -24,6 +24,32 @@ class Point:
     def dot_product(self, other) -> float:
         return self.x * other.x + self.y * other.y
 
+    def distance(self, line: 'Line') -> float:
+        p = line.end.subtract(line.start)
+        norm = p.dot_product(p)
+
+        u =  ((self.x - line.start.x) * p.x + (self.y - line.start.y) * p.y) / norm
+        u = max(min(1, u), 0)
+
+        dx = self.x - (line.start.x + u * p.x)
+        dy = self.y - (line.start.y + u * p.y)
+
+        return (dx*dx + dy*dy)**.5
+
+
+class Line:
+    def __init__(self, start: Point, end: Point) -> None:
+        self.start: Point = start
+        self.end: Point = end
+
+    def length(self) -> float:
+        p = self.end.subtract(self.start)
+        distance_squared = p.x**2 + p.y**2
+        return math.sqrt(distance_squared)
+    
+    def distance(self, point: Point) -> float:
+        return point.distance(self)
+
 
 class Polygon:
     def __init__(self, *points: Point) -> None:

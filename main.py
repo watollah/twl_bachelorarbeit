@@ -30,6 +30,10 @@ def main():
     supports_entry.pack(fill="x")
     add_table(supports_entry.content, statical_system.supports)
 
+    forces_entry = ToggledFrame(menu_frame, "Forces")
+    forces_entry.pack(fill="x")
+    add_table(forces_entry.content, statical_system.forces)
+
     paned_window.pack(fill=tk.BOTH, expand=True)
     root.mainloop()
 
