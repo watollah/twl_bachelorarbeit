@@ -40,57 +40,51 @@ class SelectTool(Tool):
     SYMBOL: str = '\u2d3d'
 
     def activate(self):
-        for node in self.editor.statical_system.nodes:
-            self.editor.tag_bind(node.id, "<Button-1>", self.select_node)
-
-        for beam in self.editor.statical_system.beams:
-            self.editor.tag_bind(beam.id, "<Button-1>", self.select_beam)
-
-        for support in self.editor.statical_system.supports:
-            self.editor.tag_bind(support.id, "<Button-1>", self.select_support)
-
-        for force in self.editor.statical_system.forces:
-            self.editor.tag_bind(force.id, "<Button-1>", self.select_force)
+        self.editor.bind("<Button-1>", self.handle_selection)
+        self.editor.bind("<Shift-Button-1>", self.handle_shift_selection)
 
     def deactivate(self):
-        for node in self.editor.statical_system.nodes:
-            self.editor.tag_unbind(node.id, "<Button-1>")
+        self.editor.unbind("<Button-1>")
+        self.editor.unbind("<Shift-Button-1>")
 
-        for beam in self.editor.statical_system.beams:
-            self.editor.tag_unbind(beam.id, "<Button-1>")
-            
-        for support in self.editor.statical_system.supports:
-            self.editor.tag_unbind(support.id, "<Button-1>")
+    def selectable_components(self) -> list[Component]:
+        return list(chain(self.editor.statical_system.beams, self.editor.statical_system.supports, self.editor.statical_system.forces))
 
-        for force in self.editor.statical_system.forces:
-            self.editor.tag_unbind(force.id, "<Button-1>")
+    def select(self, component):
+        self.editor.itemconfig(component.id, component.selected_style())
+        self.editor.selection.append(component)
+        print(f"selected: {component.id}")
 
-    def deselect_all(self):
-        for shape in self.editor.selection:
-            shape.deselect()
-            self.editor.selection.remove(shape)
+    def deselect(self, component):
+        self.editor.itemconfig(component.id, component.default_style())
+        self.editor.selection.remove(component)
+        print(f"deselected: {component.id}")
 
-    def select_node(self, event):
-        node = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.nodes)
-        if node != None:
-            self.deselect_all()
-            self.editor.selection.append(node)
-            node.select()
+    def clear_selection(self):
+        for component in list(self.editor.selection):
+            self.deselect(component)
 
-        print('not found' if node == None else node.id)
+    def handle_selection(self, event):
+        self.clear_selection()
+        component = StaticalSystem.find_component_at(event.x, event.y, self.selectable_components())
+        if component == None:
+            print("not found")
+            return
+        elif component == self.editor:
+            pass
+        self.select(component)
 
-    def select_beam(self, event):
-        beam = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.beams)
-        print('not found' if beam == None else beam.id)
+    def handle_shift_selection(self, event):
+        component = StaticalSystem.find_component_at(event.x, event.y, self.selectable_components())
+        if component == None:
+            print("not found")
+            return
+        elif component in self.editor.selection:
+            self.deselect(component)
+            return
+        self.select(component)
 
-    def select_support(self, event):
-        support = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.supports)
-        print('not found' if support == None else support.id)
 
-    def select_force(self, event):
-        force = StaticalSystem.find_component_at(event.x, event.y, self.editor.statical_system.forces)
-        print('not found' if force == None else force.id)
-    
 class BeamTool(Tool):
 
     ID: int = 1
@@ -207,26 +201,30 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         pass
 
     def create_node(self, x: int, y: int) -> Node:
-        node_shape_id = self.create_oval(x - Node.RADIUS, y - Node.RADIUS, x + Node.RADIUS, y + Node.RADIUS, fill='white', width = Node.BORDER, tags='node')
-        node = self.statical_system.create_node(node_shape_id, x, y)
+        node_shape_id = self.create_oval(x - Node.RADIUS, y - Node.RADIUS, x + Node.RADIUS, y + Node.RADIUS, fill=Node.FILL_COLOR, outline=Node.BORDER_COLOR, width = Node.BORDER, tags='node')
+        node = Node(node_shape_id, x, y)
+        self.statical_system.nodes.append(node)
         self.tag_lower('beam', 'node')
         return node
 
     def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        beam_shape_id = self.create_line(start_node.x, start_node.y, end_node.x, end_node.y, width=Beam.WIDTH, tags='beam')
-        beam = self.statical_system.create_beam(beam_shape_id, start_node, end_node)
+        beam_shape_id = self.create_line(start_node.x, start_node.y, end_node.x, end_node.y, fill=Beam.FILL_COLOR, width=Beam.WIDTH, tags='beam')
+        beam = Beam(beam_shape_id, start_node, end_node)
+        self.statical_system.beams.append(beam)
         self.tag_lower('beam', 'node')
         return beam
     
     def create_support(self, node: Node):
-        support_shape_id = self.create_polygon(node.x, node.y, node.x - Support.WIDTH / 2, node.y + Support.HEIGHT, node.x + Support.WIDTH / 2, node.y + Support.HEIGHT, outline='black', fill='white', width=Support.BORDER, tags='support')
-        support = self.statical_system.create_support(support_shape_id, node)
+        support_shape_id = self.create_polygon(node.x, node.y, node.x - Support.WIDTH / 2, node.y + Support.HEIGHT, node.x + Support.WIDTH / 2, node.y + Support.HEIGHT, fill=Support.FILL_COLOR, outline=Support.BORDER_COLOR, width=Support.BORDER, tags='support')
+        support = Support(support_shape_id, node)
+        self.statical_system.supports.append(support)
         self.tag_lower('support', 'node')
         return support
     
     def create_force(self, node: Node):
         arrow: Line = Force("", node).arrow() #create temporary object to get the position of the arrow
-        force_shape_id = self.create_line(arrow.start.x, arrow.start.y, arrow.end.x, arrow.end.y, width=Force.WIDTH, arrow=tk.FIRST, arrowshape=Force.ARROW_SHAPE, tags='force')
-        force = self.statical_system.create_force(force_shape_id, node)
+        force_shape_id = self.create_line(arrow.start.x, arrow.start.y, arrow.end.x, arrow.end.y, width=Force.WIDTH, arrow=tk.FIRST, arrowshape=Force.ARROW_SHAPE, fill=Force.BORDER_COLOR, tags='force')
+        force = Force(force_shape_id, node)
+        self.statical_system.forces.append(force)
         self.tag_lower('force', 'node')
         return force

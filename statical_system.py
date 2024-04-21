@@ -1,4 +1,5 @@
 from typing import TypeVar, List, Type
+from itertools import chain
 from twl_widget import TwlWidget
 from components import *
 
@@ -33,28 +34,13 @@ class StaticalSystem:
         self.supports: ComponentList[Support] = ComponentList(Support)
         self.forces: ComponentList[Force] = ComponentList(Force)
 
-    def create_node(self, id: int, x: int, y: int) -> Node:
-        node = Node(id, x, y)
-        self.nodes.append(node)
-        return node
+    def all_components(self) -> list[Component]:
+        return list(chain(self.nodes, self.beams, self.supports, self.forces))
 
-    def create_beam(self, id: int, start_node: Node, end_node: Node) -> Beam:
-        beam = Beam(id, start_node, end_node)
-        self.beams.append(beam)
-        return beam
-    
-    def create_support(self, id: int, node: Node) -> Support:
-        support = Support(id, node)
-        self.supports.append(support)
-        return support
-    
-    def create_force(self, id: int, node: Node) -> Force:
-        force = Force(id, node)
-        self.forces.append(force)
-        return force
-    
     C = TypeVar('C', bound=Component)
     @staticmethod
     def find_component_at(x: int, y: int, components: list[C]) -> C | None:
         """Checks if one of the components in the list is at the specified Coordinate"""
         return next(filter(lambda c: c.is_at(x, y), components), None)
+    
+

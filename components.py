@@ -2,13 +2,21 @@ from abc import ABC, abstractmethod
 from twl_math import Point, Line
 
 class Component(ABC):
+
+    FILL_COLOR: str = "pink"
+    SELECTED_FILL_COLOR: str = "pink"
+    BORDER_COLOR: str = "pink"
+    SELECTED_BORDER_COLOR: str = "pink"
+
     def __init__(self, id: int):
         self.id: int = id #id corresponding to the id of the Shape in the diagram
 
-    def select(self):
+    @abstractmethod
+    def default_style(self) -> dict[str, str]:
         pass
 
-    def deselect(self):
+    @abstractmethod
+    def selected_style(self) -> dict[str, str]:
         pass
 
     @classmethod
@@ -26,6 +34,11 @@ class Component(ABC):
 
 class Node(Component):
 
+    FILL_COLOR: str = "white"
+    SELECTED_FILL_COLOR: str = "white"
+    BORDER_COLOR: str = "black"
+    SELECTED_BORDER_COLOR: str = "red"
+
     RADIUS: int = 6
     BORDER: int = 2
 
@@ -37,6 +50,12 @@ class Node(Component):
     def is_at(self, x: int, y: int) -> bool:
         return True if abs(self.x - x) <= self.RADIUS and abs(self.y - y) <= self.RADIUS else False
 
+    def default_style(self) -> dict[str, str]:
+        return {"fill": self.FILL_COLOR, "outline": self.BORDER_COLOR}
+
+    def selected_style(self) -> dict[str, str]:
+        return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
+
     @classmethod
     def get_table_columns(cls) -> tuple:
         return ()
@@ -46,6 +65,11 @@ class Node(Component):
     
 
 class Beam(Component):
+
+    FILL_COLOR: str = "black"
+    SELECTED_FILL_COLOR: str = "red"
+    BORDER_COLOR: str = "black"
+    SELECTED_BORDER_COLOR: str = "red"
 
     WIDTH: int = 4
 
@@ -68,6 +92,12 @@ class Beam(Component):
         p2 = Point(self.end_node.x, self.end_node.y)
         return Line(p1, p2).angle()
 
+    def default_style(self) -> dict[str, str]:
+        return {"fill": self.FILL_COLOR}
+
+    def selected_style(self) -> dict[str, str]:
+        return {"fill": self.SELECTED_FILL_COLOR}
+
     @classmethod
     def get_table_columns(cls) -> tuple:
         return ("Length", "Angle")
@@ -77,6 +107,11 @@ class Beam(Component):
 
 
 class Support(Component):
+
+    FILL_COLOR: str = "white"
+    SELECTED_FILL_COLOR: str = "white"
+    BORDER_COLOR: str = "black"
+    SELECTED_BORDER_COLOR: str = "red"
 
     HEIGHT: int = 24
     WIDTH: int = 28
@@ -113,7 +148,13 @@ class Support(Component):
 
         #Check if the point is inside the triangle
         return u >= 0 and v >= 0 and w >= 0 and u + v + w <= 1
-    
+
+    def default_style(self) -> dict[str, str]:
+        return {"fill": self.FILL_COLOR, "outline": self.BORDER_COLOR}
+
+    def selected_style(self) -> dict[str, str]:
+        return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
+
     @classmethod
     def get_table_columns(cls) -> tuple:
         return ("Angle", "Node")
@@ -123,6 +164,11 @@ class Support(Component):
 
 
 class Force(Component):
+
+    FILL_COLOR: str = "black"
+    SELECTED_FILL_COLOR: str = "red"
+    BORDER_COLOR: str = "black"
+    SELECTED_BORDER_COLOR: str = "red"
 
     LENGTH = 40
     WIDTH = 6
@@ -144,6 +190,12 @@ class Force(Component):
         a1.rotate(n, self.angle)
         a2.rotate(n, self.angle)
         return Line(a1, a2)
+
+    def default_style(self) -> dict[str, str]:
+        return {"fill": self.FILL_COLOR}
+
+    def selected_style(self) -> dict[str, str]:
+        return {"fill": self.SELECTED_FILL_COLOR}
 
     @classmethod
     def get_table_columns(cls) -> tuple:
