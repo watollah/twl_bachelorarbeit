@@ -42,10 +42,12 @@ class SelectTool(Tool):
     def activate(self):
         self.editor.bind("<Button-1>", self.handle_selection)
         self.editor.bind("<Shift-Button-1>", self.handle_shift_selection)
+        self.editor.bind("<Delete>", self.delete_selected_shapes)
 
     def deactivate(self):
         self.editor.unbind("<Button-1>")
         self.editor.unbind("<Shift-Button-1>")
+        self.editor.unbind("<Delete>")
 
     def selectable_components(self) -> list[Component]:
         return list(chain(self.editor.statical_system.beams, self.editor.statical_system.supports, self.editor.statical_system.forces))
@@ -65,13 +67,12 @@ class SelectTool(Tool):
             self.deselect(component)
 
     def handle_selection(self, event):
+        self.editor.focus_set()
         self.clear_selection()
         component = StaticalSystem.find_component_at(event.x, event.y, self.selectable_components())
         if component == None:
             print("not found")
             return
-        elif component == self.editor:
-            pass
         self.select(component)
 
     def handle_shift_selection(self, event):
@@ -83,6 +84,34 @@ class SelectTool(Tool):
             self.deselect(component)
             return
         self.select(component)
+
+    def delete_selected_shapes(self, event): #todo: improve this awful code
+        self.editor.delete(*[component.id for component in self.editor.selection])
+        component_lists: list[ComponentList] = [self.editor.statical_system.nodes, self.editor.statical_system.beams, self.editor.statical_system.supports, self.editor.statical_system.forces]
+        for component in self.editor.selection:
+            for component_list in component_lists:
+                if component in component_list:
+                    component_list.remove(component)
+                    if type(component) == Beam:
+                        if(len(self.editor.beams_for_node(component.start_node)) == 0):
+                            self.editor.delete(component.start_node.id)
+                            self.editor.statical_system.nodes.remove(component.start_node)
+                            for support in self.editor.support_for_node(component.start_node):
+                                self.editor.delete(support.id)
+                                self.editor.statical_system.supports.remove(support)
+                            for force in self.editor.force_for_node(component.start_node):
+                                self.editor.delete(force.id)
+                                self.editor.statical_system.forces.remove(force)                            
+                        if(len(self.editor.beams_for_node(component.end_node)) == 0):
+                            self.editor.delete(component.end_node.id)
+                            self.editor.statical_system.nodes.remove(component.end_node)
+                            for support in self.editor.support_for_node(component.end_node):
+                                self.editor.delete(support.id)
+                                self.editor.statical_system.supports.remove(support)
+                            for force in self.editor.force_for_node(component.end_node):
+                                self.editor.delete(force.id)
+                                self.editor.statical_system.forces.remove(force)     
+        self.clear_selection()
 
 
 class BeamTool(Tool):
@@ -228,3 +257,12 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.statical_system.forces.append(force)
         self.tag_lower('force', 'node')
         return force
+    
+    def beams_for_node(self, node: Node) -> list[Beam]:
+        return [beam for beam in self.statical_system.beams if beam.start_node == node or beam.end_node == node]
+    
+    def support_for_node(self, node: Node) -> list[Support]:
+        return [support for support in self.statical_system.supports if support.node == node]
+    
+    def force_for_node(self, node: Node):
+        return [force for force in self.statical_system.forces if force.node == node]
