@@ -1,7 +1,8 @@
 import tkinter as tk
-from twl_ui import *
-from toggled_frame import ToggledFrame
-from twl_ui import ComponentList
+
+from twl_toggled_frame import *
+from twl_diagram import *
+from twl_table import *
 
 def main():
     root = tk.Tk()
@@ -16,9 +17,11 @@ def main():
     paned_window.add(editor_frame, minsize=300)
     paned_window.paneconfigure(editor_frame, minsize=300)
 
-    editor = TwlDiagram(editor_frame, statical_system)
-    editor.pack(fill="both", expand=True)
-    
+    diagram = TwlDiagram(editor_frame, statical_system)
+    diagram.pack(fill="both", expand=True)
+
+    statical_system.widgets.append(diagram)
+
     menu_frame = ttk.Frame(root, relief="groove", borderwidth=1)
     paned_window.add(menu_frame, minsize=300, width=300)
 
@@ -39,8 +42,8 @@ def main():
 
 def add_table(menu_frame: ttk.Frame, component_list: ComponentList) -> TwlTable:
     table = TwlTable(menu_frame, component_list)
-    component_list.widgets.append(table)
-    columns: tuple = component_list.component_class.get_table_columns()
+    component_list.statical_system.widgets.append(table)
+    columns: tuple = component_list.component_class.attribute_names
     column_indices: tuple = tuple(f"#{i}" for i in range(1, len(columns) + 1))
     table.configure(columns=column_indices)
     table.heading("#0", text="Id")

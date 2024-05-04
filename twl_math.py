@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 
 class Point:
     def __init__(self, x: int, y: int):
@@ -57,6 +58,39 @@ class Line:
 
     def distance(self, point: Point) -> float:
         return point.distance(self)
+
+
+class Triangle:
+    def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
+        self.p1: Point = p1
+        self.p2: Point = p2
+        self.p3: Point = p3
+
+    def rotate(self, center_of_rotation: Point, angle: float):
+        [p.rotate(center_of_rotation, angle) for p in [self.p1, self.p2, self.p3]]
+
+    def barycentric_coordinates(self, point: Point) -> Tuple[float, float, float]:
+        v0 = self.p2.subtract(self.p1)
+        v1 = self.p3.subtract(self.p1)
+        v2 = point.subtract(self.p1)
+
+        dot00 = v0.dot_product(v0)
+        dot01 = v0.dot_product(v1)
+        dot02 = v0.dot_product(v2)
+        dot11 = v1.dot_product(v1)
+        dot12 = v1.dot_product(v2)
+
+        # Compute barycentric coordinates
+        inv_denom = 1 / (dot00 * dot11 - dot01 * dot01)
+        u = (dot11 * dot02 - dot01 * dot12) * inv_denom
+        v = (dot00 * dot12 - dot01 * dot02) * inv_denom
+        w = 1 - u - v
+
+        return (u, v, w)
+
+    def inside_triangle(self, point: Point) -> bool:
+        bc = self.barycentric_coordinates(point)
+        return bc[0] >= 0 and bc[1] >= 0 and bc[2] >= 0 and bc[0] + bc[1] + bc[2] <= 1
 
 
 class Polygon:
