@@ -1,14 +1,54 @@
 import tkinter as tk
+import webbrowser
 
 from twl_toggled_frame import *
 from twl_diagram import *
 from twl_table import *
 
+def tab_changed(event):
+    print("Tab changed!")
+
 def main():
     root = tk.Tk()
     root.title("TWL Tool")
 
-    paned_window = tk.PanedWindow(root, orient=tk.HORIZONTAL, sashwidth=3, sashrelief=tk.RAISED)
+    create_menu_bar(root)
+
+    # Customize tab style
+    style = ttk.Style()
+    style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))  # Increase horizontal padding to 20 and vertical padding to 10
+
+    # Create a Tab Control
+    notebook = ttk.Notebook(root)
+
+    # Create tabs
+    definition_tab = ttk.Frame(notebook)
+    cremona_tab = ttk.Frame(notebook)
+    result_tab = ttk.Frame(notebook)
+    profiles_tab = ttk.Frame(notebook)
+
+    notebook.add(definition_tab, text="Definition")
+    notebook.add(cremona_tab, text="Cremona")
+    notebook.add(result_tab, text="Result")
+    notebook.add(profiles_tab, text="(Profiles)")
+
+    # Add content to the tabs
+    label2 = tk.Label(cremona_tab, text="Cremona Plan")
+    label2.pack(padx=10, pady=10)
+
+    label3 = tk.Label(result_tab, text="Results")
+    label3.pack(padx=10, pady=10)
+
+    label4 = tk.Label(profiles_tab, text="Profiles (maybe added later)")
+    label4.pack(padx=10, pady=10)
+
+    # Bind tab selection event
+    notebook.bind("<<NotebookTabChanged>>", tab_changed)
+
+    # Pack the Tab Control
+    notebook.pack(expand=1, fill='both')
+
+    paned_window = tk.PanedWindow(definition_tab, orient=tk.HORIZONTAL, sashwidth=3, sashrelief=tk.RAISED)
     paned_window.pack(fill=tk.BOTH, expand=True)
 
     statical_system = StaticalSystem()
@@ -39,6 +79,37 @@ def main():
 
     paned_window.pack(fill=tk.BOTH, expand=True)
     root.mainloop()
+
+def create_menu_bar(root: tk.Tk):
+    # Create a menu bar
+    menubar = tk.Menu(root)
+
+    # Create File menu
+    file_menu = tk.Menu(menubar, tearoff=0)
+    file_menu.add_command(label="Open", command=lambda: print("Not implemented yet."))
+    file_menu.add_separator()
+    file_menu.add_command(label="Save", command=lambda: print("Not implemented yet."))
+    file_menu.add_command(label="Save As...", command=lambda: print("Not implemented yet."))
+    menubar.add_cascade(label="File", menu=file_menu)
+
+    # Create Settings menu
+    settings_menu = tk.Menu(menubar, tearoff=0)
+    show_node_labels = tk.BooleanVar()
+    settings_menu.add_checkbutton(label="Show Node Labels", variable=show_node_labels, command=lambda: print("Not implemented yet."))
+    show_beam_labels = tk.BooleanVar()
+    settings_menu.add_checkbutton(label="Show Beam Labels", variable=show_beam_labels, command=lambda: print("Not implemented yet."))
+    show_force_labels = tk.BooleanVar()
+    settings_menu.add_checkbutton(label="Show Force Labels", variable=show_force_labels, command=lambda: print("Not implemented yet."))
+    show_support_labels = tk.BooleanVar()
+    settings_menu.add_checkbutton(label="Show Support Labels", variable=show_support_labels, command=lambda: print("Not implemented yet."))
+    menubar.add_cascade(label="Settings", menu=settings_menu)
+
+    # Create Help menu and link to 
+    help_menu = tk.Menu(menubar, tearoff=0)
+    menubar.add_command(label="Help", command=lambda: webbrowser.open("https://example.com"))
+
+    # Configure the root window to use the menu bar
+    root.config(menu=menubar)
 
 def add_table(menu_frame: ttk.Frame, component_list: ComponentList) -> TwlTable:
     table = TwlTable(menu_frame, component_list)

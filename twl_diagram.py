@@ -359,6 +359,8 @@ class ForceTool(Tool):
 
 class TwlDiagram(tk.Canvas, TwlWidget):
 
+    TOOL_BUTTON_SIZE: int = 50
+
     def __init__(self, master, statical_system):
         tk.Canvas.__init__(self, master)
         self.statical_system: StaticalSystem = statical_system
@@ -369,12 +371,21 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.tools = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
         self.selected_tool: Tool = self.tools[0]
 
-        toolbar = tk.Frame(self)
-        toolbar.place(relx=0, rely=0, anchor=tk.NW)
         for tool in self.tools:
-            rb = ttk.Radiobutton(toolbar, text=tool.SYMBOL, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style='Toolbutton')
-            rb.grid(row=0, column=tool.ID)
-        ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10), width = 2) #todo: improve sizing with grid
+            self.add_button(tool)
+
+    def add_button(self, tool: Tool) -> ttk.Radiobutton:
+        frame = tk.Frame(self, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
+        frame.grid_propagate(False) #disables resizing of frame
+        frame.columnconfigure(0, weight=1) #enables button to fill frame
+        frame.rowconfigure(0, weight=1) #any positive number would do the trick
+        frame.grid(row=tool.ID, column=0) #put frame where the button should be
+
+        button = ttk.Radiobutton(frame, text=tool.SYMBOL, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style='Toolbutton')
+        button.grid(sticky="nsew") #makes the button expand
+        ttk.Style().configure('Toolbutton', font=('Helvetica', 14))
+    
+        return button
 
     def change_tool(self):
         """Code to be executed when the tool is changed"""
