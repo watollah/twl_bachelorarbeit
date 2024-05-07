@@ -19,7 +19,7 @@ class ToggledFrame(tk.Frame):
         self.title_frame.pack(fill="x", expand=True)
 
         self.toggle_button = ttk.Checkbutton(self.title_frame, command=self.toggle, variable=self.is_expanded, style='Toolbutton', width=ToggledFrame.TABLE_WIDTH)
-        ttk.Style().configure('Toolbutton', font=('Helvetica', 14))
+        ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10))
         self.toggle_button.pack(fill=tk.BOTH, expand=True)
 
         self.content: ttk.Frame = ttk.Frame(self, relief="groove", borderwidth=1)
