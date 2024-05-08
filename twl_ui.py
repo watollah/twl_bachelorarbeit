@@ -51,9 +51,10 @@ class CremonaTab(ttk.Frame):
 
         return cremona_diagram
     
+    CONTROL_PANEL_PADDING: int = 5
+
     def create_control_panel(self, master: tk.PanedWindow):
         frame = ttk.Frame(master)
-        frame.pack_configure()
         master.add(frame, weight=1)
 
         inner_frame = ttk.Frame(frame)
@@ -61,13 +62,28 @@ class CremonaTab(ttk.Frame):
 
         control_panel = ttk.Frame(inner_frame)
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+    
+        label_frame = ttk.Frame(control_panel, width=400, height=30, style="3.TFrame")
+        ttk.Style().configure("3.TFrame", background="yellow")
+        label_frame.grid_propagate(False)
+        label_frame.grid(row=0, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
+        label: ttk.Label = ttk.Label(label_frame, text="Test", style="3.TLabel")
+        label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
-        colors = ["red", "green", "blue"]
-        for i, color in enumerate(colors):
-            pane = ttk.Frame(control_panel, width=100, height=100, style=f"{i}.TFrame")
-            ttk.Style().configure(f"{i}.TFrame", background=colors[i])
-            pane.grid(row=0, column=i, padx=10, pady=10)
-            control_panel.columnconfigure(i, weight=1)
+        play_button_frame = ttk.Frame(control_panel, width=70, height=30, style="0.TFrame")
+        ttk.Style().configure("0.TFrame", background="red")
+        play_button_frame.grid_propagate(False)
+        play_button_frame.grid(row=1, column=0, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
+
+        slider_frame = ttk.Frame(control_panel, width=400, height=30, style="1.TFrame")
+        ttk.Style().configure("1.TFrame", background="green")
+        slider_frame.grid_propagate(False)
+        slider_frame.grid(row=1, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
+
+        speed_selection_frame = ttk.Frame(control_panel, width=70, height=30, style="2.TFrame")
+        ttk.Style().configure("2.TFrame", background="blue")
+        speed_selection_frame.grid_propagate(False)
+        speed_selection_frame.grid(row=1, column=2, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
 
 
         
