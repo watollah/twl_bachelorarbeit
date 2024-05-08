@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk 
+import ttkbootstrap as ttk
 
 
 class ToggledFrame(tk.Frame):
@@ -16,19 +16,19 @@ class ToggledFrame(tk.Frame):
         self.is_expanded: tk.BooleanVar = tk.BooleanVar(value=True)
 
         self.title_frame: ttk.Frame = ttk.Frame(self)
-        self.title_frame.pack(fill="x", expand=True)
+        self.title_frame.pack(fill="x")
 
-        self.toggle_button = ttk.Checkbutton(self.title_frame, command=self.toggle, variable=self.is_expanded, style='Toolbutton', width=ToggledFrame.TABLE_WIDTH)
-        ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10))
-        self.toggle_button.pack(fill=tk.BOTH, expand=True)
+        self.toggle_button = ttk.Checkbutton(self.title_frame, command=self.toggle, variable=self.is_expanded, style='Toolbutton')
+        ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10), relief="solid", borderwidth=2)
+        self.toggle_button.pack(fill=tk.BOTH)
 
-        self.content: ttk.Frame = ttk.Frame(self, relief="groove", borderwidth=1)
+        self.content: ttk.Frame = ttk.Frame(self)
 
         self.toggle()
 
     def toggle(self):
         if self.is_expanded.get():
-            self.content.pack(fill="x", expand=1)
+            self.content.pack(fill="x")
             self.toggle_button.configure(text=f"{ToggledFrame.OPEN_SYMBOL} {self.title}")
         else:
             self.content.forget()

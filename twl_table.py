@@ -1,6 +1,7 @@
 import tkinter as tk
-from tkinter import ttk
+import ttkbootstrap as ttk
 from typing import final, TypeVar
+
 from twl_components import *
 
 C = TypeVar('C', bound=Component)

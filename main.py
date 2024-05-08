@@ -1,40 +1,37 @@
 import tkinter as tk
+import ttkbootstrap as ttk
 import webbrowser
 
 from twl_toggled_frame import *
 from twl_diagram import *
 from twl_table import *
+from twl_ui import *
 
 def tab_changed(event):
     print("Tab changed!")
 
 def main():
-    root = tk.Tk()
+    root = ttk.Window()
+    root.geometry("1200x800")
     root.title("TWL Tool")
+
+    statical_system = StaticalSystem()
 
     create_menu_bar(root)
 
-    # Customize tab style
     style = ttk.Style()
-    style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))  # Increase horizontal padding to 20 and vertical padding to 10
+    style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))
 
-    # Create a Tab Control
     notebook = ttk.Notebook(root)
 
-    # Create tabs
     definition_tab = ttk.Frame(notebook)
-    cremona_tab = ttk.Frame(notebook)
     result_tab = ttk.Frame(notebook)
     profiles_tab = ttk.Frame(notebook)
 
     notebook.add(definition_tab, text="Definition")
-    notebook.add(cremona_tab, text="Cremona")
+    notebook.add(CremonaTab(notebook, statical_system), text="Cremona")
     notebook.add(result_tab, text="Result")
     notebook.add(profiles_tab, text="(Profiles)")
-
-    # Add content to the tabs
-    label2 = tk.Label(cremona_tab, text="Cremona Plan")
-    label2.pack(padx=10, pady=10)
 
     label3 = tk.Label(result_tab, text="Results")
     label3.pack(padx=10, pady=10)
@@ -42,28 +39,26 @@ def main():
     label4 = tk.Label(profiles_tab, text="Profiles (maybe added later)")
     label4.pack(padx=10, pady=10)
 
-    # Bind tab selection event
     notebook.bind("<<NotebookTabChanged>>", tab_changed)
+    notebook.pack(fill=tk.BOTH, expand=True)
 
-    # Pack the Tab Control
-    notebook.pack(expand=1, fill='both')
-
-    paned_window = tk.PanedWindow(definition_tab, orient=tk.HORIZONTAL, sashwidth=3, sashrelief=tk.RAISED)
+    paned_window = ttk.PanedWindow(definition_tab, orient=ttk.HORIZONTAL)
     paned_window.pack(fill=tk.BOTH, expand=True)
 
-    statical_system = StaticalSystem()
-
-    editor_frame = tk.Frame(root)
-    paned_window.add(editor_frame, minsize=300)
-    paned_window.paneconfigure(editor_frame, minsize=300)
+    #Diagram Editor
+    editor_frame = ttk.Frame(paned_window)
+    editor_frame.pack_propagate(False)
+    paned_window.add(editor_frame, weight=3)
 
     diagram = TwlDiagram(editor_frame, statical_system)
     diagram.pack(fill="both", expand=True)
 
     statical_system.widgets.append(diagram)
-
-    menu_frame = ttk.Frame(root, relief="groove", borderwidth=1)
-    paned_window.add(menu_frame, minsize=300, width=300)
+    
+    #Tables
+    menu_frame = ttk.Frame(paned_window)
+    menu_frame.pack_propagate(False)
+    paned_window.add(menu_frame, weight=1)
 
     beams_entry = ToggledFrame(menu_frame, "Beams")
     beams_entry.pack(fill="x")
@@ -76,8 +71,7 @@ def main():
     forces_entry = ToggledFrame(menu_frame, "Forces")
     forces_entry.pack(fill="x")
     add_table(forces_entry.content, statical_system.forces)
-
-    paned_window.pack(fill=tk.BOTH, expand=True)
+    
     root.mainloop()
 
 def create_menu_bar(root: tk.Tk):
@@ -119,7 +113,7 @@ def add_table(menu_frame: ttk.Frame, component_list: ComponentList) -> TwlTable:
     table.configure(columns=column_indices)
     table.heading("#0", text="Id")
     for i in range(0, len(columns)): table.heading(column_indices[i], text=columns[i])
-    table.pack(fill="both", expand=True)
+    table.pack(fill="both")
     return table
 
 if __name__ == "__main__":
