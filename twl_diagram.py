@@ -1,8 +1,7 @@
 import tkinter as tk
-import ttkbootstrap as ttk
 from typing import final, TypeVar, Generic
+from tkinter import ttk
 
-from twl_components import Node
 from twl_widget import *
 from twl_components import *
 
@@ -359,6 +358,7 @@ class ForceTool(Tool):
 
 class TwlDiagram(tk.Canvas, TwlWidget):
 
+    STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
     def __init__(self, master, statical_system):
@@ -370,20 +370,27 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         #create toolbar
         self.tools = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
         self.selected_tool: Tool = self.tools[0]
+        toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
+        toolbar.pack(fill="y", side= "left")
+        ttk.Style().configure("Diagram.TFrame", background="lightgrey")
 
         for tool in self.tools:
-            self.add_button(tool)
+            self.add_button(tool, toolbar)
+        
+        stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text="f = 0, the system ist statically determined.\n20 equations (2 * 10 nodes)\n20 unknowns (3 for supports, 17 for beams)")
+        stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
+        ttk.Style().configure("Diagram.TLabel", foreground="grey")
 
-    def add_button(self, tool: Tool) -> ttk.Radiobutton:
-        frame = tk.Frame(self, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
+    def add_button(self, tool: Tool, master: ttk.Frame) -> ttk.Radiobutton:
+        frame = tk.Frame(master, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
         frame.grid_propagate(False) #disables resizing of frame
         frame.columnconfigure(0, weight=1) #enables button to fill frame
         frame.rowconfigure(0, weight=1) #any positive number would do the trick
         frame.grid(row=tool.ID, column=0) #put frame where the button should be
 
-        button = ttk.Radiobutton(frame, text=tool.SYMBOL, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style='Toolbutton')
+        button = ttk.Radiobutton(frame, text=tool.SYMBOL, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Diagram.Toolbutton")
         button.grid(sticky="nsew") #makes the button expand
-        ttk.Style().configure('Toolbutton', font=('Helvetica', 14))
+        ttk.Style().configure('Diagram.Toolbutton', font=('Helvetica', 14))
     
         return button
 

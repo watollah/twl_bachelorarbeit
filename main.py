@@ -1,5 +1,5 @@
 import tkinter as tk
-import ttkbootstrap as ttk
+from tkinter import ttk
 import webbrowser
 
 from twl_toggled_frame import *
@@ -11,16 +11,15 @@ def tab_changed(event):
     print("Tab changed!")
 
 def main():
-    root = ttk.Window()
+    root = tk.Tk()
     root.geometry("1200x800")
     root.title("TWL Tool")
+
+    configure_styles()
 
     statical_system = StaticalSystem()
 
     create_menu_bar(root)
-
-    style = ttk.Style()
-    style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))
 
     notebook = ttk.Notebook(root)
 
@@ -42,7 +41,7 @@ def main():
     notebook.bind("<<NotebookTabChanged>>", tab_changed)
     notebook.pack(fill=tk.BOTH, expand=True)
 
-    paned_window = ttk.PanedWindow(definition_tab, orient=ttk.HORIZONTAL)
+    paned_window = ttk.PanedWindow(definition_tab, orient=tk.HORIZONTAL)
     paned_window.pack(fill=tk.BOTH, expand=True)
 
     #Diagram Editor
@@ -73,6 +72,11 @@ def main():
     add_table(forces_entry.content, statical_system.forces)
     
     root.mainloop()
+
+def configure_styles():
+    style = ttk.Style()
+    style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))
+    
 
 def create_menu_bar(root: tk.Tk):
     # Create a menu bar

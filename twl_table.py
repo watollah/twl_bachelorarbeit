@@ -1,5 +1,5 @@
 import tkinter as tk
-import ttkbootstrap as ttk
+from tkinter import ttk
 from typing import final, TypeVar
 
 from twl_components import *

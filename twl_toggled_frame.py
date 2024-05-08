@@ -1,6 +1,5 @@
 import tkinter as tk
-import ttkbootstrap as ttk
-
+from tkinter import ttk
 
 class ToggledFrame(tk.Frame):
 
@@ -18,8 +17,8 @@ class ToggledFrame(tk.Frame):
         self.title_frame: ttk.Frame = ttk.Frame(self)
         self.title_frame.pack(fill="x")
 
-        self.toggle_button = ttk.Checkbutton(self.title_frame, command=self.toggle, variable=self.is_expanded, style='Toolbutton')
-        ttk.Style().configure('Toolbutton', font=('Helvetica', 14), padding = (10, 10), relief="solid", borderwidth=2)
+        self.toggle_button = ttk.Checkbutton(self.title_frame, command=self.toggle, variable=self.is_expanded, style="Toolbutton")
+        ttk.Style().configure("Toolbutton", font=('Helvetica', 14), padding = (10, 10), relief="solid", borderwidth=2)
         self.toggle_button.pack(fill=tk.BOTH)
 
         self.content: ttk.Frame = ttk.Frame(self)

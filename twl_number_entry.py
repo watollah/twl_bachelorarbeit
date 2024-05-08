@@ -1,5 +1,5 @@
 import tkinter as tk
-import ttkbootstrap as ttk
+from tkinter import ttk
 
 class NumberEntry(tk.Entry):
 
