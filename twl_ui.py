@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from twl_components import *
+from twl_buttons import *
 
 class CremonaTab(ttk.Frame):
 
@@ -65,25 +66,39 @@ class CremonaTab(ttk.Frame):
     
         label_frame = ttk.Frame(control_panel, width=400, height=30, style="3.TFrame")
         ttk.Style().configure("3.TFrame", background="yellow")
-        label_frame.grid_propagate(False)
+        label_frame.pack_propagate(False)
         label_frame.grid(row=0, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
-        label: ttk.Label = ttk.Label(label_frame, text="Test", style="3.TLabel")
-        label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        label: ttk.Label = ttk.Label(label_frame, text="Test", style="3.TLabel", anchor=tk.CENTER)
+        label.pack(fill=tk.BOTH, expand=True)
 
-        play_button_frame = ttk.Frame(control_panel, width=70, height=30, style="0.TFrame")
+        def run_animation():
+            if play_button.state:
+                scale_value.set((scale_value.get() + 1) % 101)
+                speed = speed_options.get(selected_speed.get())
+                assert(speed)
+                self.after(speed, run_animation)
+
+        play_button_frame = ttk.Frame(control_panel, width=60, height=30, style="0.TFrame")
         ttk.Style().configure("0.TFrame", background="red")
-        play_button_frame.grid_propagate(False)
+        play_button_frame.pack_propagate(False)
         play_button_frame.grid(row=1, column=0, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
+        play_button = CustomToggleButton(play_button_frame, text_on="\u23F8", text_off="\u23F5", command=run_animation)
+        play_button.pack(fill=tk.BOTH, expand=True)
 
         slider_frame = ttk.Frame(control_panel, width=400, height=30, style="1.TFrame")
         ttk.Style().configure("1.TFrame", background="green")
-        slider_frame.grid_propagate(False)
+        slider_frame.pack_propagate(False)
         slider_frame.grid(row=1, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
+        scale_value: tk.IntVar = tk.IntVar()
+        scale_value.trace_add("write", lambda var, index, mode: label.config(text=f"Value: {scale_value.get()}"))
+        scale = ttk.Scale(slider_frame, from_=1, to=100, variable=scale_value, orient="horizontal", takefocus=False)
+        scale.pack(fill=tk.BOTH, expand=True)
 
-        speed_selection_frame = ttk.Frame(control_panel, width=70, height=30, style="2.TFrame")
+        speed_selection_frame = ttk.Frame(control_panel, width=60, height=30, style="2.TFrame")
         ttk.Style().configure("2.TFrame", background="blue")
-        speed_selection_frame.grid_propagate(False)
+        speed_selection_frame.pack_propagate(False)
         speed_selection_frame.grid(row=1, column=2, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
-
-
-        
+        speed_options = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
+        selected_speed = tk.StringVar(self)
+        speed_menu = ttk.OptionMenu(speed_selection_frame, selected_speed, list(speed_options.keys())[1], *speed_options.keys())
+        speed_menu.pack(fill=tk.BOTH, expand=True)
