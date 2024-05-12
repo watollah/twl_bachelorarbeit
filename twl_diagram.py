@@ -126,12 +126,13 @@ class SupportShape(Shape[Support]):
 
     def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
         super().__init__(support, diagram)
-        self.tk_id = diagram.create_polygon(support.node.x, 
-                               support.node.y, 
-                               support.node.x - SupportShape.WIDTH / 2, 
-                               support.node.y + SupportShape.HEIGHT, 
-                               support.node.x + SupportShape.WIDTH / 2, 
-                               support.node.y + SupportShape.HEIGHT, 
+        triangle = self.triangle_coordinates
+        self.tk_id = diagram.create_polygon(triangle.p1.x, 
+                               triangle.p1.y, 
+                               triangle.p2.x, 
+                               triangle.p2.y, 
+                               triangle.p3.x, 
+                               triangle.p3.y, 
                                fill=SupportShape.FILL_COLOR, 
                                outline=SupportShape.BORDER_COLOR, 
                                width=SupportShape.BORDER, 
@@ -139,8 +140,9 @@ class SupportShape(Shape[Support]):
         diagram.tag_lower(Support.TAG, Node.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
-        return self.triangle_coordinates().inside_triangle(Point(x, y))
+        return self.triangle_coordinates.inside_triangle(Point(x, y))
 
+    @property
     def triangle_coordinates(self) -> Triangle:
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)

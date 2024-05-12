@@ -31,7 +31,7 @@ class Component(ABC):
     @classproperty
     @abstractmethod
     def attribute_names(cls) -> tuple:
-        """Returns the names of attributes to display for the component type."""
+        """Returns the names of attributes to display for the component type and get and set the attribute when editing in twl tables."""
         pass
 
     @property
@@ -42,10 +42,10 @@ class Component(ABC):
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Automatically update the connected widgets whenever one of the components attributes is changed."""
+        super().__setattr__(name, value)
         if not name == "statical_system":
             self.statical_system.update_widgets()
             print(f"detected change in {self}, changed attribute: {name}")
-        return super().__setattr__(name, value)
 
 
 class Node(Component):
@@ -111,7 +111,7 @@ class Beam(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("Length", "Angle")
+        return ("length", "angle")
 
     @property
     def attribute_values(self) -> tuple:
@@ -132,7 +132,7 @@ class Support(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("Angle", "Node")
+        return ("angle", "node")
 
     @property
     def attribute_values(self) -> tuple:
@@ -153,7 +153,7 @@ class Force(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("Angle", "Node")
+        return ("angle", "node")
 
     @property
     def attribute_values(self) -> tuple:
@@ -208,3 +208,6 @@ class ComponentList(List[C]):
                 super().remove(component)
                 change = True
         if change: self.statical_system.update_widgets()
+
+    def get_component(self, id: int) -> C | None:
+        return next((component for component in self if component.id == id), None)

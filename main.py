@@ -61,15 +61,18 @@ def main():
 
     beams_entry = ToggledFrame(menu_frame, "Beams")
     beams_entry.pack(fill="x")
-    add_table(beams_entry.content, statical_system.beams)
+    beams_table = TwlTable(beams_entry.content, statical_system.beams)
+    beams_table.pack(fill="both")
     
     supports_entry = ToggledFrame(menu_frame, "Supports")
     supports_entry.pack(fill="x")
-    add_table(supports_entry.content, statical_system.supports)
+    supports_table = TwlTable(supports_entry.content, statical_system.supports)
+    supports_table.pack(fill="both")
 
     forces_entry = ToggledFrame(menu_frame, "Forces")
     forces_entry.pack(fill="x")
-    add_table(forces_entry.content, statical_system.forces)
+    forces_table = TwlTable(forces_entry.content, statical_system.forces)
+    forces_table.pack(fill="both")
     
     root.mainloop()
 
@@ -108,17 +111,6 @@ def create_menu_bar(root: tk.Tk):
 
     # Configure the root window to use the menu bar
     root.config(menu=menubar)
-
-def add_table(menu_frame: ttk.Frame, component_list: ComponentList) -> TwlTable:
-    table = TwlTable(menu_frame, component_list)
-    component_list.statical_system.widgets.append(table)
-    columns: tuple = component_list.component_class.attribute_names
-    column_indices: tuple = tuple(f"#{i}" for i in range(1, len(columns) + 1))
-    table.configure(columns=column_indices)
-    table.heading("#0", text="Id")
-    for i in range(0, len(columns)): table.heading(column_indices[i], text=columns[i])
-    table.pack(fill="both")
-    return table
 
 if __name__ == "__main__":
     main()
