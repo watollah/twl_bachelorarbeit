@@ -122,42 +122,44 @@ class Support(Component):
 
     TAG: str = "support"
 
-    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=0):
+    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=0, constraints: int=2):
         super().__init__(statical_system)
         self.node: Node = node
         self.angle: float = angle
+        self.constraints: int = constraints
 
     def delete(self):
         self.statical_system.supports.remove(self)
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("angle", "node")
+        return ("angle", "constraints")
 
     @property
     def attribute_values(self) -> tuple:
-        return (round(self.angle, 2), self.node.id)
+        return (round(self.angle, 2), self.constraints)
 
 
 class Force(Component):
 
     TAG: str = "force"
 
-    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180):
+    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180, strength: float=1):
         super().__init__(statical_system)
         self.node: Node = node
         self.angle: float = angle
+        self.strength: float = strength
 
     def delete(self):
         self.statical_system.forces.remove(self)
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("angle", "node")
+        return ("angle", "strength")
 
     @property
     def attribute_values(self) -> tuple:
-        return (round(self.angle, 2), self.node.id)
+        return (round(self.angle, 2), round(self.strength, 2))
 
 
 class StaticalSystem:
