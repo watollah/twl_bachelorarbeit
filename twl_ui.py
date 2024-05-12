@@ -16,7 +16,7 @@ class CremonaTab(ttk.Frame):
         horizontal_panes = ttk.Panedwindow(vertical_panes, orient=tk.HORIZONTAL)
         self.create_statical_system_diagram(horizontal_panes)
         self.create_cremona_diagram(horizontal_panes)
-        vertical_panes.add(horizontal_panes, weight=4)
+        vertical_panes.add(horizontal_panes, weight=8)
 
         self.create_control_panel(vertical_panes)
 
@@ -69,7 +69,7 @@ class CremonaTab(ttk.Frame):
         label_frame = ttk.Frame(control_panel, width=400, height=30, style="ControlPanel.TFrame")
         label_frame.pack_propagate(False)
         label_frame.grid(row=0, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
-        label: ttk.Label = ttk.Label(label_frame, text="Test", anchor=tk.CENTER, style="ControlPanel.TLabel")
+        label: ttk.Label = ttk.Label(label_frame, anchor=tk.CENTER, style="ControlPanel.TLabel")
         label.pack(fill=tk.BOTH, expand=True)
 
         def run_animation():
@@ -93,6 +93,7 @@ class CremonaTab(ttk.Frame):
         scale_value.trace_add("write", lambda var, index, mode: label.config(text=f"Step {scale_value.get()}: Node X, Beam X"))
         scale = ttk.Scale(slider_frame, from_=1, to=100, variable=scale_value, orient="horizontal", takefocus=False, style="TScale")
         scale.pack(fill=tk.BOTH, expand=True)
+        scale_value.set(1)
 
         speed_selection_frame = ttk.Frame(control_panel, width=60, height=30)
         speed_selection_frame.pack_propagate(False)
