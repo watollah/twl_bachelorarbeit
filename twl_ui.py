@@ -30,7 +30,6 @@ class CremonaTab(ttk.Frame):
         master.add(frame, weight = 1)
             
         statical_system_diagram = tk.Canvas(frame)
-        statical_system_diagram.configure(bg= "blue")
         statical_system_diagram.pack(fill=tk.BOTH, expand=True)
     
         title_label = ttk.Label(frame, text="Statical System", font=("Helvetica", 12))
@@ -44,7 +43,6 @@ class CremonaTab(ttk.Frame):
         master.add(frame, weight = 1)
     
         cremona_diagram = tk.Canvas(frame)
-        cremona_diagram.configure(bg= "red")
         cremona_diagram.pack(fill=tk.BOTH, expand=True)
     
         title_label = ttk.Label(frame, text="Cremona Plan", font=("Helvetica", 12))
@@ -55,47 +53,48 @@ class CremonaTab(ttk.Frame):
     CONTROL_PANEL_PADDING: int = 5
 
     def create_control_panel(self, master: tk.PanedWindow):
-        frame = ttk.Frame(master)
+        ttk.Style().configure("ControlPanel.TFrame", background="white")
+        ttk.Style().configure("ControlPanel.TLabel", background="white")
+        ttk.Style().configure("TScale", background="white")
+    
+        frame = ttk.Frame(master, style="ControlPanel.TFrame")
         master.add(frame, weight=1)
 
-        inner_frame = ttk.Frame(frame)
+        inner_frame = ttk.Frame(frame, style="ControlPanel.TFrame")
         inner_frame.pack(fill=tk.BOTH, expand=True)
 
-        control_panel = ttk.Frame(inner_frame)
+        control_panel = ttk.Frame(inner_frame, style="ControlPanel.TFrame")
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
     
-        label_frame = ttk.Frame(control_panel, width=400, height=30, style="3.TFrame")
-        ttk.Style().configure("3.TFrame", background="yellow")
+        label_frame = ttk.Frame(control_panel, width=400, height=30, style="ControlPanel.TFrame")
         label_frame.pack_propagate(False)
         label_frame.grid(row=0, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
-        label: ttk.Label = ttk.Label(label_frame, text="Test", style="3.TLabel", anchor=tk.CENTER)
+        label: ttk.Label = ttk.Label(label_frame, text="Test", anchor=tk.CENTER, style="ControlPanel.TLabel")
         label.pack(fill=tk.BOTH, expand=True)
 
         def run_animation():
-            if play_button.state:
-                scale_value.set((scale_value.get() + 1) % 101)
-                speed = speed_options.get(selected_speed.get())
-                assert(speed)
-                self.after(speed, run_animation)
+            if not play_button.state:
+                return
+            scale_value.set((scale_value.get() + 1) % 101)
+            speed = speed_options.get(selected_speed.get())
+            assert(speed)
+            self.after(speed, run_animation)
 
-        play_button_frame = ttk.Frame(control_panel, width=60, height=30, style="0.TFrame")
-        ttk.Style().configure("0.TFrame", background="red")
+        play_button_frame = ttk.Frame(control_panel, width=60, height=30)
         play_button_frame.pack_propagate(False)
         play_button_frame.grid(row=1, column=0, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
         play_button = CustomToggleButton(play_button_frame, text_on="\u23F8", text_off="\u23F5", command=run_animation)
         play_button.pack(fill=tk.BOTH, expand=True)
 
-        slider_frame = ttk.Frame(control_panel, width=400, height=30, style="1.TFrame")
-        ttk.Style().configure("1.TFrame", background="green")
+        slider_frame = ttk.Frame(control_panel, width=400, height=30, style="ControlPanel.TFrame")
         slider_frame.pack_propagate(False)
         slider_frame.grid(row=1, column=1, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
         scale_value: tk.IntVar = tk.IntVar()
-        scale_value.trace_add("write", lambda var, index, mode: label.config(text=f"Value: {scale_value.get()}"))
-        scale = ttk.Scale(slider_frame, from_=1, to=100, variable=scale_value, orient="horizontal", takefocus=False)
+        scale_value.trace_add("write", lambda var, index, mode: label.config(text=f"Step {scale_value.get()}: Node X, Beam X"))
+        scale = ttk.Scale(slider_frame, from_=1, to=100, variable=scale_value, orient="horizontal", takefocus=False, style="TScale")
         scale.pack(fill=tk.BOTH, expand=True)
 
-        speed_selection_frame = ttk.Frame(control_panel, width=60, height=30, style="2.TFrame")
-        ttk.Style().configure("2.TFrame", background="blue")
+        speed_selection_frame = ttk.Frame(control_panel, width=60, height=30)
         speed_selection_frame.pack_propagate(False)
         speed_selection_frame.grid(row=1, column=2, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
         speed_options = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
