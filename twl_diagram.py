@@ -123,6 +123,7 @@ class SupportShape(Shape[Support]):
     HEIGHT: int = 24
     WIDTH: int = 28
     BORDER: int = 2
+    LINE_SPACING: int = 5
 
     def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
         super().__init__(support, diagram)
@@ -137,6 +138,15 @@ class SupportShape(Shape[Support]):
                                outline=SupportShape.BORDER_COLOR, 
                                width=SupportShape.BORDER, 
                                tags=(Support.TAG, str(support.id)))
+        if support.constraints == 1:
+            line = self.line_coordinates
+            diagram.create_line(line.start.x, 
+                                line.start.y, 
+                                line.end.x, 
+                                line.end.y, 
+                                fill=SupportShape.BORDER_COLOR, 
+                                width=SupportShape.BORDER, 
+                                tags=(Support.TAG, str(support.id)))
         diagram.tag_lower(Support.TAG, Node.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
@@ -150,6 +160,15 @@ class SupportShape(Shape[Support]):
         triangle = Triangle(n_point, l_point, r_point)
         triangle.rotate(n_point, self.component.angle)
         return triangle
+
+    @property
+    def line_coordinates(self) -> Line:
+        n_point = Point(self.component.node.x, self.component.node.y)
+        l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
+        r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
+        line = Line(l_point, r_point)
+        line.rotate(n_point, self.component.angle)
+        return line
 
     @property
     def default_style(self) -> dict[str, str]:
