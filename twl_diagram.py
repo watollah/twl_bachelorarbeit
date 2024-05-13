@@ -12,6 +12,8 @@ C = TypeVar('C', bound=Component)
 class Shape(Generic[C]):
     """Represents the shape of a component in the TwlDiagram."""
 
+    SELECTION_COLOR = "#0078D7"
+
     FILL_COLOR: str = "pink"
     SELECTED_FILL_COLOR: str = "pink"
     BORDER_COLOR: str = "pink"
@@ -54,7 +56,7 @@ class NodeShape(Shape[Node]):
     FILL_COLOR: str = "white"
     SELECTED_FILL_COLOR: str = "white"
     BORDER_COLOR: str = "black"
-    SELECTED_BORDER_COLOR: str = "red"
+    SELECTED_BORDER_COLOR: str = Shape.SELECTION_COLOR
 
     RADIUS: int = 6
     BORDER: int = 2
@@ -85,7 +87,7 @@ class NodeShape(Shape[Node]):
 class BeamShape(Shape[Beam]):
 
     FILL_COLOR: str = "black"
-    SELECTED_FILL_COLOR: str = "red"
+    SELECTED_FILL_COLOR: str = Shape.SELECTION_COLOR
 
     WIDTH: int = 4
 
@@ -118,7 +120,7 @@ class SupportShape(Shape[Support]):
     FILL_COLOR: str = "white"
     SELECTED_FILL_COLOR: str = "white"
     BORDER_COLOR: str = "black"
-    SELECTED_BORDER_COLOR: str = "red"
+    SELECTED_BORDER_COLOR: str = Shape.SELECTION_COLOR
 
     HEIGHT: int = 24
     WIDTH: int = 28
@@ -182,7 +184,7 @@ class SupportShape(Shape[Support]):
 class ForceShape(Shape[Force]):
 
     FILL_COLOR: str = "black"
-    SELECTED_FILL_COLOR: str = "red"
+    SELECTED_FILL_COLOR: str = Shape.SELECTION_COLOR
 
     LENGTH = 40
     WIDTH = 6
