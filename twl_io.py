@@ -10,12 +10,12 @@ def save_project(statical_system: StaticalSystem) -> bool:
         return True
     return False
 
-def open_project(statical_system: StaticalSystem):
-    response = messagebox.askyesnocancel("Warning", "Opening a new project will discard current changes. Do you want to save first?")
-    if response:  # If user chooses to save
-        save_project(statical_system)
-    elif response is False:  # If user chooses to discard
-        filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
-        if filename:
-            #loaded_diagram = load_diagram_from_file(filename)
-            print("Diagram loaded from", filename)
+def open_project(statical_system: StaticalSystem, is_saved: bool):
+    if not is_saved:
+        ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
+        if not ok:
+            return
+    filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+    if filename:
+        #loaded_diagram = load_diagram_from_file(filename)
+        print("Diagram loaded from", filename)

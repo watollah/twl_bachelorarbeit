@@ -82,7 +82,7 @@ class TwlTool(tk.Tk, TwlWidget):
         forces_table.pack(fill="both")
 
         self.bind("<Control-s>", lambda *ignore: self.is_saved.set(save_project(self.statical_system)))
-        self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system))
+        self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system, self.is_saved.get()))
 
     def update(self):
         if self.statical_system.is_empty():
@@ -103,7 +103,7 @@ class TwlTool(tk.Tk, TwlWidget):
 
         # Create File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.statical_system), accelerator="Ctrl+O")
+        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.statical_system, self.is_saved.get()), accelerator="Ctrl+O")
         file_menu.add_separator()
         file_menu.add_command(label="Save", command=lambda *ignore: self.is_saved.set(save_project(self.statical_system)), accelerator="Ctrl+S")
         file_menu.add_command(label="Save As...", command=lambda *ignore: save_project(self.statical_system))
