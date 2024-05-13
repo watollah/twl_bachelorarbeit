@@ -172,7 +172,7 @@ class SupportShape(Shape[Support]):
     BORDER: int = 2
     LINE_SPACING: int = 5
 
-    LABEL_OFFSET = 15
+    LABEL_OFFSET = 20
 
     def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
         super().__init__(support, diagram)
