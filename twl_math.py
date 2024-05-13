@@ -59,6 +59,9 @@ class Line:
     def distance(self, point: Point) -> float:
         return point.distance(self)
 
+    def rotate(self, center_of_rotation: Point, angle: float):
+        [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]
+
 
 class Triangle:
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
