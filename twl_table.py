@@ -45,6 +45,10 @@ class TwlTable(ttk.Treeview, TwlWidget):
         self.heading("#0", text="Id")
         for i in range(0, len(columns)): self.heading(columns[i], text=columns[i].capitalize())
 
+        #force columns to resize to boundaries of parent
+        self.column("#0", width=0)
+        for column in columns: self.column(column, width=0)
+
         self.bind('<Double-1>', self.direct_edit_cell)
 
     def update(self) -> None:
