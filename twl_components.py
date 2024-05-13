@@ -171,6 +171,11 @@ class StaticalSystem:
 
         self.widgets: list[TwlWidget] = []
 
+    def clear(self):
+        if not self.is_empty():
+            [component_list.clear() for component_list in self.component_lists]
+            self.update_widgets()
+
     def is_empty(self) -> bool:
         return all(not component_list for component_list in self.component_lists)
 
