@@ -397,10 +397,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         for tool in self.tools:
             self.add_button(tool, toolbar)
-        
-        stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text="f = 0, the system ist statically determined.\n20 equations (2 * 10 nodes)\n20 unknowns (3 for supports, 17 for beams)")
-        stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
-        ttk.Style().configure("Diagram.TLabel", foreground="grey")
+
+        self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
+        self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
+        ttk.Style().configure("Diagram.TLabel", foreground="green")
 
     def add_button(self, tool: Tool, master: ttk.Frame) -> ttk.Radiobutton:
         frame = tk.Frame(master, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
@@ -428,7 +428,21 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         for support in self.statical_system.supports: self.shapes.append(SupportShape(support, self))
         for force in self.statical_system.forces: self.shapes.append(ForceShape(force, self))
 
+        self.stat_determ_label.configure(text=self.stat_determ_text)
+        color = "green" if self.stat_determ_text[:5] == "f = 0" else "red"
+        ttk.Style().configure("Diagram.TLabel", foreground=color)
+
         self.selected_tool.activate()
+
+    @property
+    def stat_determ_text(self) -> str:
+        nodes = len(self.statical_system.nodes)
+        equations = 2 * nodes
+        constraints = sum(support.constraints for support in self.statical_system.supports)
+        beams = len(self.statical_system.beams)
+        unknowns = constraints + beams
+        f = equations - unknowns
+        return f"f = {f}, the system ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def create_node(self, x: int, y: int) -> Node:
         node = Node(self.statical_system, x, y)
