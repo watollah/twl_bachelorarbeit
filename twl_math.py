@@ -62,6 +62,11 @@ class Line:
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]
 
+    def midpoint(self) -> Point:
+        mid_x = (self.start.x + self.end.x) // 2
+        mid_y = (self.start.y + self.end.y) // 2
+        return Point(mid_x, mid_y)
+
 
 class Triangle:
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:

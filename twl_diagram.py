@@ -4,6 +4,7 @@ from tkinter import ttk
 
 from twl_widget import *
 from twl_components import *
+from twl_help import *
 
 
 C = TypeVar('C', bound=Component)
@@ -18,6 +19,11 @@ class Shape(Generic[C]):
     SELECTED_FILL_COLOR: str = "pink"
     BORDER_COLOR: str = "pink"
     SELECTED_BORDER_COLOR: str = "pink"
+
+    LABEL_TAG = "label"
+    LABEL_BG_TAG = "label_background"
+    LABEL_PREFIX = ""
+    LABEL_SIZE = 12
 
     def __init__(self, component: C, diagram: 'TwlDiagram') -> None:
         self.component: C = component
@@ -50,6 +56,30 @@ class Shape(Generic[C]):
         """Style attributes when the shape is selected."""
         pass
 
+    @property
+    @abstractmethod
+    def label_position(self) -> Point:
+        pass
+
+    @property
+    def label_text(self) -> str:
+        return f"{self.LABEL_PREFIX}{self.component.id}"
+
+    def draw_label(self):
+        id = self.diagram.create_text(self.label_position.x, 
+                                 self.label_position.y, 
+                                 text=self.label_text, 
+                                 anchor=tk.CENTER, 
+                                 tags=self.LABEL_TAG,
+                                 font=('Helvetica', self.LABEL_SIZE))
+        bounds = self.diagram.bbox(id)
+        self.diagram.create_rectangle(bounds[0], bounds[1], 
+                                 bounds[2], bounds[3],
+                                 width=0,
+                                 fill=self.diagram["background"], 
+                                 tags=self.LABEL_BG_TAG)
+        self.diagram.tag_lower(self.LABEL_BG_TAG, self.LABEL_TAG)
+
 
 class NodeShape(Shape[Node]):
 
@@ -60,6 +90,8 @@ class NodeShape(Shape[Node]):
 
     RADIUS: int = 6
     BORDER: int = 2
+
+    LABEL_OFFSET = 15
 
     def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
         super().__init__(node, diagram)
@@ -83,6 +115,13 @@ class NodeShape(Shape[Node]):
     def selected_style(self) -> dict[str, str]:
         return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
 
+    @property
+    def label_position(self) -> Point:
+        return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
+
+    @property
+    def label_text(self) -> str:
+        return f"{self.LABEL_PREFIX}{int_to_roman(self.component.id)}"
 
 class BeamShape(Shape[Beam]):
 
@@ -114,6 +153,12 @@ class BeamShape(Shape[Beam]):
     def selected_style(self) -> dict[str, str]:
         return {"fill": self.SELECTED_FILL_COLOR}
 
+    @property
+    def label_position(self) -> Point:
+        p1 = Point(self.component.start_node.x, self.component.start_node.y)
+        p2 = Point(self.component.end_node.x, self.component.end_node.y)
+        return Line(p1, p2).midpoint()
+
 
 class SupportShape(Shape[Support]):
 
@@ -126,6 +171,8 @@ class SupportShape(Shape[Support]):
     WIDTH: int = 28
     BORDER: int = 2
     LINE_SPACING: int = 5
+
+    LABEL_OFFSET = 15
 
     def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
         super().__init__(support, diagram)
@@ -180,6 +227,17 @@ class SupportShape(Shape[Support]):
     def selected_style(self) -> dict[str, str]:
         return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
 
+    @property
+    def label_position(self) -> Point:
+        n_point = Point(self.component.node.x, self.component.node.y)
+        point = Point(self.component.node.x, self.component.node.y + self.HEIGHT + self.LABEL_OFFSET)
+        point.rotate(n_point, self.component.angle)
+        return point
+
+    @property
+    def label_text(self) -> str:
+        return int_to_letter(self.component.id)
+
 
 class ForceShape(Shape[Force]):
 
@@ -188,8 +246,11 @@ class ForceShape(Shape[Force]):
 
     LENGTH = 40
     WIDTH = 6
-    DISTANCE_FROM_NODE = 10
+    DISTANCE_FROM_NODE = 15
     ARROW_SHAPE = (15,14,10)
+
+    LABEL_OFFSET = 20
+    LABEL_PREFIX = "F"
 
     def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
         super().__init__(force, diagram)
@@ -224,6 +285,13 @@ class ForceShape(Shape[Force]):
     @property
     def selected_style(self) -> dict[str, str]:
         return {"fill": self.SELECTED_FILL_COLOR}
+
+    @property
+    def label_position(self) -> Point:
+        n_point = Point(self.component.node.x, self.component.node.y)
+        point = Point(n_point.x - self.LABEL_OFFSET, n_point.y + self.DISTANCE_FROM_NODE + ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
+        point.rotate(n_point, self.component.angle)
+        return point
 
 
 class Tool:
@@ -397,8 +465,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         toolbar.pack(fill="y", side= "left")
         ttk.Style().configure("Diagram.TFrame", background="lightgrey")
 
-        for tool in self.tools:
-            self.add_button(tool, toolbar)
+        for tool in self.tools: self.add_button(tool, toolbar)
 
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
@@ -429,6 +496,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         for beam in self.statical_system.beams: self.shapes.append(BeamShape(beam, self))
         for support in self.statical_system.supports: self.shapes.append(SupportShape(support, self))
         for force in self.statical_system.forces: self.shapes.append(ForceShape(force, self))
+
+        for shape in self.shapes: shape.draw_label()
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = "green" if self.stat_determ_text[:5] == "f = 0" else "red"
