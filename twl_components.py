@@ -171,6 +171,9 @@ class StaticalSystem:
 
         self.widgets: list[TwlWidget] = []
 
+    def is_empty(self) -> bool:
+        return all(not component_list for component_list in self.component_lists)
+
     @property
     def component_lists(self):
         return (self.nodes, self.beams, self.supports, self.forces)
