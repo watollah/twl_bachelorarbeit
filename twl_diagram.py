@@ -5,6 +5,7 @@ from tkinter import ttk
 from twl_widget import *
 from twl_components import *
 from twl_help import *
+from twl_settings import *
 
 
 C = TypeVar('C', bound=Component)
@@ -108,6 +109,8 @@ class NodeShape(Shape[Node]):
                             outline=self.COLOR, 
                             width = self.BORDER, 
                             tags=[*self.TAGS, str(node.id)])
+        if (not self.TAG == Shape.TEMP) and diagram.settings.show_node_labels.get(): 
+            self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
         return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
@@ -151,6 +154,8 @@ class BeamShape(Shape[Beam]):
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
+        if (not self.TAG == Shape.TEMP) and diagram.settings.show_beam_labels.get(): 
+            self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
         beam = Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
@@ -210,6 +215,8 @@ class SupportShape(Shape[Support]):
                                 width=self.BORDER, 
                                 tags=[*self.TAGS, str(support.id)])
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
+        if diagram.settings.show_support_labels.get(): 
+            self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
         return self.triangle_coordinates.inside_triangle(Point(x, y))
@@ -277,6 +284,8 @@ class ForceShape(Shape[Force]):
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
         diagram.tag_lower(ForceShape.TAG, NodeShape.TAG)
+        if diagram.settings.show_force_labels.get(): 
+            self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance(self.arrow_coordinates) < self.WIDTH/2
@@ -493,9 +502,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
-    def __init__(self, master, statical_system):
+    def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
         tk.Canvas.__init__(self, master)
         self.statical_system: StaticalSystem = statical_system
+        self.settings: Settings = settings
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
         
@@ -537,8 +547,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         for beam in self.statical_system.beams: self.shapes.append(BeamShape(beam, self))
         for support in self.statical_system.supports: self.shapes.append(SupportShape(support, self))
         for force in self.statical_system.forces: self.shapes.append(ForceShape(force, self))
-
-        for shape in self.shapes: shape.draw_label()
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = "green" if self.stat_determ_text[:5] == "f = 0" else "red"

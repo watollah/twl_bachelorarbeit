@@ -61,7 +61,7 @@ class TwlTool(tk.Tk, TwlWidget):
         editor_frame.pack_propagate(False)
         paned_window.add(editor_frame, weight=3)
 
-        diagram = TwlDiagram(editor_frame, self.statical_system)
+        diagram = TwlDiagram(editor_frame, self.statical_system, self.settings)
         diagram.pack(fill="both", expand=True)
 
         self.update_manager.widgets.append(diagram)
@@ -124,14 +124,10 @@ class TwlTool(tk.Tk, TwlWidget):
 
         # Create Settings menu
         settings_menu = tk.Menu(menubar, tearoff=0)
-        show_node_labels = tk.BooleanVar()
-        settings_menu.add_checkbutton(label="Show Node Labels", variable=show_node_labels, command=lambda: print("Not implemented yet."))
-        show_beam_labels = tk.BooleanVar()
-        settings_menu.add_checkbutton(label="Show Beam Labels", variable=show_beam_labels, command=lambda: print("Not implemented yet."))
-        show_force_labels = tk.BooleanVar()
-        settings_menu.add_checkbutton(label="Show Force Labels", variable=show_force_labels, command=lambda: print("Not implemented yet."))
-        show_support_labels = tk.BooleanVar()
-        settings_menu.add_checkbutton(label="Show Support Labels", variable=show_support_labels, command=lambda: print("Not implemented yet."))
+        settings_menu.add_checkbutton(label="Show Node Labels", variable=self.settings.show_node_labels)
+        settings_menu.add_checkbutton(label="Show Beam Labels", variable=self.settings.show_beam_labels)
+        settings_menu.add_checkbutton(label="Show Force Labels", variable=self.settings.show_force_labels)
+        settings_menu.add_checkbutton(label="Show Support Labels", variable=self.settings.show_support_labels)
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
         # Create Help menu and link to 
