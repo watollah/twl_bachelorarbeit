@@ -13,17 +13,24 @@ C = TypeVar('C', bound=Component)
 class Shape(Generic[C]):
     """Represents the shape of a component in the TwlDiagram."""
 
-    SELECTION_COLOR = "#0078D7"
+    TAGS: List[str] = []
+    TAG = "shape"
+    TEMP = "temp"
 
-    FILL_COLOR: str = "pink"
-    SELECTED_FILL_COLOR: str = "pink"
-    BORDER_COLOR: str = "pink"
-    SELECTED_BORDER_COLOR: str = "pink"
+    COLOR = "black"
+    TEMP_COLOR = "lightgrey"
+    BG_COLOR = "white"
+    SELECTED_COLOR = "#0078D7"
 
     LABEL_TAG = "label"
     LABEL_BG_TAG = "label_background"
     LABEL_PREFIX = ""
     LABEL_SIZE = 12
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        cls.TAGS = cls.TAGS.copy()
+        cls.TAGS.append(cls.TAG)
 
     def __init__(self, component: C, diagram: 'TwlDiagram') -> None:
         self.component: C = component
@@ -83,10 +90,7 @@ class Shape(Generic[C]):
 
 class NodeShape(Shape[Node]):
 
-    FILL_COLOR: str = "white"
-    SELECTED_FILL_COLOR: str = "white"
-    BORDER_COLOR: str = "black"
-    SELECTED_BORDER_COLOR: str = Shape.SELECTION_COLOR
+    TAG: str = "node"
 
     RADIUS: int = 6
     BORDER: int = 2
@@ -95,25 +99,25 @@ class NodeShape(Shape[Node]):
 
     def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
         super().__init__(node, diagram)
-        self.tk_id = diagram.create_oval(node.x - NodeShape.RADIUS, 
-                            node.y - NodeShape.RADIUS, 
-                            node.x + NodeShape.RADIUS, 
-                            node.y + NodeShape.RADIUS, 
-                            fill=NodeShape.FILL_COLOR, 
-                            outline=NodeShape.BORDER_COLOR, 
-                            width = NodeShape.BORDER, 
-                            tags=(Node.TAG, str(node.id)))
+        self.tk_id = diagram.create_oval(node.x - self.RADIUS, 
+                            node.y - self.RADIUS, 
+                            node.x + self.RADIUS, 
+                            node.y + self.RADIUS, 
+                            fill=self.BG_COLOR, 
+                            outline=self.COLOR, 
+                            width = self.BORDER, 
+                            tags=[*self.TAGS, str(node.id)])
 
     def is_at(self, x: int, y: int) -> bool:
         return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
 
     @property
     def default_style(self) -> dict[str, str]:
-        return {"fill": self.FILL_COLOR, "outline": self.BORDER_COLOR}
+        return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
+        return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -123,11 +127,15 @@ class NodeShape(Shape[Node]):
     def label_text(self) -> str:
         return f"{self.LABEL_PREFIX}{int_to_roman(self.component.id)}"
 
+class TempNodeShape(NodeShape):
+
+    TAG: str = Shape.TEMP
+    COLOR: str = Shape.TEMP_COLOR
+
+
 class BeamShape(Shape[Beam]):
 
-    FILL_COLOR: str = "black"
-    SELECTED_FILL_COLOR: str = Shape.SELECTION_COLOR
-
+    TAG: str = "beam"
     WIDTH: int = 4
 
     def __init__(self, beam: Beam, diagram: 'TwlDiagram') -> None:
@@ -136,10 +144,10 @@ class BeamShape(Shape[Beam]):
                             beam.start_node.y,
                             beam.end_node.x,
                             beam.end_node.y,
-                            fill=BeamShape.FILL_COLOR,
-                            width=BeamShape.WIDTH,
-                            tags=(Beam.TAG, str(beam.id)))
-        diagram.tag_lower(Beam.TAG, Node.TAG)
+                            fill=self.COLOR,
+                            width=self.WIDTH,
+                            tags=[*self.TAGS, str(beam.id)])
+        diagram.tag_lower(self.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         beam = Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
@@ -147,11 +155,11 @@ class BeamShape(Shape[Beam]):
 
     @property
     def default_style(self) -> dict[str, str]:
-        return {"fill": self.FILL_COLOR}
+        return {"fill": self.COLOR}
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.SELECTED_FILL_COLOR}
+        return {"fill": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -159,13 +167,15 @@ class BeamShape(Shape[Beam]):
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         return Line(p1, p2).midpoint()
 
+class TempBeamShape(BeamShape):
+
+    TAG: str = Shape.TEMP
+    COLOR: str = Shape.TEMP_COLOR
+
 
 class SupportShape(Shape[Support]):
 
-    FILL_COLOR: str = "white"
-    SELECTED_FILL_COLOR: str = "white"
-    BORDER_COLOR: str = "black"
-    SELECTED_BORDER_COLOR: str = Shape.SELECTION_COLOR
+    TAG: str = "support"
 
     HEIGHT: int = 24
     WIDTH: int = 28
@@ -183,20 +193,20 @@ class SupportShape(Shape[Support]):
                                triangle.p2.y, 
                                triangle.p3.x, 
                                triangle.p3.y, 
-                               fill=SupportShape.FILL_COLOR, 
-                               outline=SupportShape.BORDER_COLOR, 
-                               width=SupportShape.BORDER, 
-                               tags=(Support.TAG, str(support.id)))
+                               fill=self.BG_COLOR, 
+                               outline=self.COLOR, 
+                               width=self.BORDER, 
+                               tags=[*self.TAGS, str(support.id)])
         if support.constraints == 1:
             line = self.line_coordinates
             diagram.create_line(line.start.x, 
                                 line.start.y, 
                                 line.end.x, 
                                 line.end.y, 
-                                fill=SupportShape.BORDER_COLOR, 
-                                width=SupportShape.BORDER, 
-                                tags=(Support.TAG, str(support.id)))
-        diagram.tag_lower(Support.TAG, Node.TAG)
+                                fill=self.COLOR, 
+                                width=self.BORDER, 
+                                tags=[*self.TAGS, str(support.id)])
+        diagram.tag_lower(self.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         return self.triangle_coordinates.inside_triangle(Point(x, y))
@@ -221,11 +231,11 @@ class SupportShape(Shape[Support]):
 
     @property
     def default_style(self) -> dict[str, str]:
-        return {"fill": self.FILL_COLOR, "outline": self.BORDER_COLOR}
+        return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.SELECTED_FILL_COLOR, "outline": self.SELECTED_BORDER_COLOR}
+        return {"fill": self.BG_COLOR, "outline": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -241,8 +251,7 @@ class SupportShape(Shape[Support]):
 
 class ForceShape(Shape[Force]):
 
-    FILL_COLOR: str = "black"
-    SELECTED_FILL_COLOR: str = Shape.SELECTION_COLOR
+    TAG: str = "force"
 
     LENGTH = 40
     WIDTH = 6
@@ -259,12 +268,12 @@ class ForceShape(Shape[Force]):
                             arrow.start.y, 
                             arrow.end.x, 
                             arrow.end.y, 
-                            width=ForceShape.WIDTH, 
+                            width=self.WIDTH, 
                             arrow=tk.FIRST, 
-                            arrowshape=ForceShape.ARROW_SHAPE, 
-                            fill=ForceShape.FILL_COLOR, 
-                            tags=(Force.TAG, str(force.id)))
-        diagram.tag_lower(Force.TAG, Node.TAG)
+                            arrowshape=self.ARROW_SHAPE, 
+                            fill=self.BG_COLOR, 
+                            tags=[*self.TAGS, str(force.id)])
+        diagram.tag_lower(self.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance(self.arrow_coordinates) < self.WIDTH/2
@@ -280,11 +289,11 @@ class ForceShape(Shape[Force]):
 
     @property
     def default_style(self) -> dict[str, str]:
-        return {"fill": self.FILL_COLOR}
+        return {"fill": self.BG_COLOR}
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.SELECTED_FILL_COLOR}
+        return {"fill": self.COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -383,26 +392,64 @@ class BeamTool(Tool):
 
     def activate(self):
         self.diagram.bind("<Button-1>", self.action)
+        self.diagram.bind("<Escape>", lambda *ignore: self.reset())
 
     def deactivate(self):
         self.diagram.unbind("<Button-1>")
+        self.diagram.unbind("<Escape>")
+        self.reset()
+
+    def reset(self):
+        self.stop_live_edit()
+        self.start_node = None
 
     def action(self, event):
-        clicked_node_shape: Shape[Node] | None = self.diagram.find_shape_of_type_at(Node, event.x, event.y)
+        self.diagram.focus_set()
+        clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
 
-        if clicked_node_shape:
+        if clicked_node:
             if self.start_node is None:
-                self.start_node = clicked_node_shape.component
+                self.start_node = clicked_node
+                self.start_live_edit()
             else:
-                self.diagram.create_beam(self.start_node, clicked_node_shape.component)
+                self.diagram.create_beam(self.start_node, clicked_node)
                 self.start_node = None
+                self.stop_live_edit()
         else:
             if self.start_node is None:
-                self.start_node = self.diagram.create_node(event.x, event.y)
+                self.start_node = Node(StaticalSystem(), event.x, event.y)
+                TempNodeShape(self.start_node, self.diagram)
+                self.start_live_edit()
             else:
+                if not self.start_node in self.diagram.statical_system.nodes:
+                    self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
                 end_node = self.diagram.create_node(event.x, event.y)
                 self.diagram.create_beam(self.start_node, end_node)
                 self.start_node = None
+                self.stop_live_edit()
+
+    def start_live_edit(self):
+        self.diagram.bind("<Motion>", self.show_temp_beam)
+        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag("temp"))
+
+    def stop_live_edit(self):
+        self.diagram.unbind("<Motion>")
+        self.diagram.unbind("<Leave>")
+        self.diagram.delete_with_tag("temp")
+
+    def show_temp_beam(self, event):
+        assert(self.start_node)
+        self.diagram.delete_with_tag("temp")
+        if not self.start_node in self.diagram.statical_system.nodes:
+            TempNodeShape(self.start_node, self.diagram)
+        temp_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+        if not temp_node:
+            temp_node = Node(StaticalSystem(), event.x, event.y)
+            TempNodeShape(temp_node, self.diagram)
+        temp_beam = Beam(StaticalSystem(), self.start_node, temp_node)
+        TempBeamShape(temp_beam, self.diagram)
+        self.diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
+        self.diagram.focus_set()
 
 
 class SupportTool(Tool):
@@ -546,5 +593,19 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         """Check if there is a shape in the diagram at the specified coordinate."""
         return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.shapes), None)
 
+    def find_component_of_type_at(self, component_type: Type[C], x: int, y: int) -> C | None:
+        shape = self.find_shape_of_type_at(component_type, x, y)
+        return shape.component if shape else None
+
     def shape_for(self, component: C) -> Shape[C]:
         return next(filter(lambda shape: shape.component == component, self.shapes))
+
+    def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
+        return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))
+
+    def tag_lower(self, lower: str | int, upper: str | int | None = None) -> None:
+        if self.find_withtag(lower) and (not upper or self.find_withtag(upper)):
+            super().tag_lower(lower, upper)
+
+    def delete_with_tag(self, tag: str):
+        [self.delete(shape) for shape in self.find_withtag("temp")]
