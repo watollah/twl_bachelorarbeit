@@ -148,7 +148,9 @@ class BeamShape(Shape[Beam]):
                             fill=self.COLOR,
                             width=self.WIDTH,
                             tags=[*self.TAGS, str(beam.id)])
-        diagram.tag_lower(self.TAG, NodeShape.TAG)
+        diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
+        diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
+        diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         beam = Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
@@ -207,7 +209,7 @@ class SupportShape(Shape[Support]):
                                 fill=self.COLOR, 
                                 width=self.BORDER, 
                                 tags=[*self.TAGS, str(support.id)])
-        diagram.tag_lower(self.TAG, NodeShape.TAG)
+        diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         return self.triangle_coordinates.inside_triangle(Point(x, y))
@@ -274,7 +276,7 @@ class ForceShape(Shape[Force]):
                             arrowshape=self.ARROW_SHAPE, 
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
-        diagram.tag_lower(self.TAG, NodeShape.TAG)
+        diagram.tag_lower(ForceShape.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance(self.arrow_coordinates) < self.WIDTH/2
@@ -441,7 +443,6 @@ class BeamTool(Tool):
             TempNodeShape(temp_node, self.diagram)
         temp_beam = Beam(StaticalSystem(TwlUpdateManager()), self.start_node, temp_node)
         TempBeamShape(temp_beam, self.diagram)
-        self.diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         self.diagram.focus_set()
 
 
