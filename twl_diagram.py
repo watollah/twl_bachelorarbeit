@@ -21,6 +21,7 @@ class Shape(Generic[C]):
     TEMP_COLOR = "lightgrey"
     BG_COLOR = "white"
     SELECTED_COLOR = "#0078D7"
+    SELECTED_BG_COLOR = "#cce8ff"
 
     LABEL_TAG = "label"
     LABEL_BG_TAG = "label_background"
@@ -235,7 +236,7 @@ class SupportShape(Shape[Support]):
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.BG_COLOR, "outline": self.SELECTED_COLOR}
+        return {"fill": self.SELECTED_BG_COLOR, "outline": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -271,7 +272,7 @@ class ForceShape(Shape[Force]):
                             width=self.WIDTH, 
                             arrow=tk.FIRST, 
                             arrowshape=self.ARROW_SHAPE, 
-                            fill=self.BG_COLOR, 
+                            fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
         diagram.tag_lower(self.TAG, NodeShape.TAG)
 
@@ -289,11 +290,11 @@ class ForceShape(Shape[Force]):
 
     @property
     def default_style(self) -> dict[str, str]:
-        return {"fill": self.BG_COLOR}
+        return {"fill": self.COLOR}
 
     @property
     def selected_style(self) -> dict[str, str]:
-        return {"fill": self.COLOR}
+        return {"fill": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
