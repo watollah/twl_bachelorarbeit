@@ -394,7 +394,7 @@ class BeamTool(Tool):
     def activate(self):
         self.diagram.bind("<Button-1>", self.action)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
-        self.diagram.bind("<Motion>", self.live_edit)
+        self.diagram.bind("<Motion>", self.preview)
         self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(Shape.TEMP))
 
     def deactivate(self):
@@ -415,7 +415,7 @@ class BeamTool(Tool):
         if not self.start_node in self.diagram.statical_system.nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
         self.diagram.create_beam(self.start_node, end_node)
-        self.start_node = None
+        self.start_node = end_node
 
     def create_temp_node(self, x, y) -> Node:
         temp_node = Node(StaticalSystem(TwlUpdateManager()), x, y)
@@ -426,7 +426,7 @@ class BeamTool(Tool):
         self.start_node = None
         self.diagram.delete_with_tag(Shape.TEMP)
 
-    def live_edit(self, event):
+    def preview(self, event):
         self.diagram.delete_with_tag(Shape.TEMP)
         temp_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if not self.start_node:
