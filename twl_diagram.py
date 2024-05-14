@@ -355,7 +355,7 @@ class SelectTool(Tool):
         return list(filter(lambda s: isinstance(s.component, (Beam, Support, Force)), self.diagram.shapes))
 
     def clear_selection(self):
-        [shape.deselect() for shape in self.diagram.selection]
+        [shape.deselect() for shape in self.diagram.selection.copy()]
 
     def handle_selection(self, event):
         self.diagram.focus_set()
