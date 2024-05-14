@@ -408,25 +408,19 @@ class BeamTool(Tool):
     def action(self, event):
         self.diagram.focus_set()
         clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+        if self.start_node is None:
+            self.start_node = clicked_node if clicked_node else self.create_temp_node(event.x, event.y)
+            return
+        end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
+        if not self.start_node in self.diagram.statical_system.nodes:
+            self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
+        self.diagram.create_beam(self.start_node, end_node)
+        self.start_node = None
 
-        if clicked_node:
-            if self.start_node is None:
-                self.start_node = clicked_node
-            else:
-                if not self.start_node in self.diagram.statical_system.nodes:
-                    self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
-                self.diagram.create_beam(self.start_node, clicked_node)
-                self.start_node = None
-        else:
-            if self.start_node is None:
-                self.start_node = Node(StaticalSystem(TwlUpdateManager()), event.x, event.y)
-                TempNodeShape(self.start_node, self.diagram)
-            else:
-                if not self.start_node in self.diagram.statical_system.nodes:
-                    self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
-                end_node = self.diagram.create_node(event.x, event.y)
-                self.diagram.create_beam(self.start_node, end_node)
-                self.start_node = None
+    def create_temp_node(self, x, y) -> Node:
+        temp_node = Node(StaticalSystem(TwlUpdateManager()), x, y)
+        TempNodeShape(temp_node, self.diagram)
+        return temp_node
 
     def reset(self):
         self.start_node = None
