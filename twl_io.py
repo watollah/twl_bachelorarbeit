@@ -1,37 +1,57 @@
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, BooleanVar
 import json
+import os
 
 from twl_components import *
 
-def clear_project(statical_system: StaticalSystem, is_saved: bool):
-    if not statical_system.is_empty() and not is_saved:
+FILENAME: str | None = None
+
+def get_project_name() -> str | None:
+    return os.path.splitext(os.path.basename(FILENAME))[0] if FILENAME else None
+
+def clear_project(statical_system: StaticalSystem, is_saved: BooleanVar):
+    global FILENAME
+    if not statical_system.is_empty() and not is_saved.get():
         ok = messagebox.askokcancel("Warning", "Creating a new project will discard current changes.", default="cancel")
         if not ok:
             return
     statical_system.clear()
+    FILENAME = None
     print("Project cleared")
+    is_saved.set(True)
 
-def save_project(statical_system: StaticalSystem) -> bool:
-    filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
-    if filename:
-        with open(filename, "w") as file:
+def save_project(statical_system: StaticalSystem, is_saved: BooleanVar):
+    global FILENAME
+    if FILENAME:
+        with open(FILENAME, "w") as file:
             serialized_project = serialize_project(statical_system)
             json.dump(serialized_project, file)
-            print("Project saved to", filename)
-        return True
-    return False
+            print("Project saved to", FILENAME)
+        is_saved.set(True)
+        return
+    save_project_as(statical_system, is_saved)
 
-def open_project(statical_system: StaticalSystem, is_saved: bool):
-    if not is_saved:
+def save_project_as(statical_system: StaticalSystem, is_saved: BooleanVar):
+    global FILENAME
+    new_filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+    if new_filename:
+        FILENAME = new_filename
+        save_project(statical_system, is_saved)
+
+def open_project(statical_system: StaticalSystem, is_saved: BooleanVar):
+    global FILENAME
+    if not is_saved.get():
         ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
         if not ok:
             return
-    filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
-    if filename:
-        with open(filename, "r") as file:
+    new_filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
+    if new_filename:
+        FILENAME = new_filename
+        with open(FILENAME, "r") as file:
             serialized_project = json.load(file)
             deserialize_project(serialized_project, statical_system)
-        print("Project loaded from", filename)
+        print("Project loaded from", FILENAME)
+        is_saved.set(True)
 
 def serialize_project(statical_system: StaticalSystem):
     serialized_project = {

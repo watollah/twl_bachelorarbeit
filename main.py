@@ -17,7 +17,7 @@ class TwlTool(tk.Tk, TwlWidget):
         super().__init__()
 
         self.is_saved: tk.BooleanVar = tk.BooleanVar()
-        self.is_saved.trace_add("write", lambda *ignore: self.title(f"{"" if self.is_saved.get() else "*"}{self.TITLE}"))
+        self.is_saved.trace_add("write", lambda *ignore: self.update_window_title())
         self.is_saved.set(True)
 
         self.geometry("1200x800")
@@ -86,8 +86,14 @@ class TwlTool(tk.Tk, TwlWidget):
         forces_table = TwlTable(forces_entry.content, self.statical_system.forces)
         forces_table.pack(fill="both")
 
-        self.bind("<Control-s>", lambda *ignore: self.is_saved.set(save_project(self.statical_system)))
-        self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system, self.is_saved.get()))
+        self.bind("<Control-n>", lambda *ignore: clear_project(self.statical_system, self.is_saved))
+        self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system, self.is_saved))
+        self.bind("<Control-s>", lambda *ignore: save_project(self.statical_system, self.is_saved))
+        self.bind("<Control-S>", lambda *ignore: save_project_as(self.statical_system, self.is_saved))
+
+    def update_window_title(self):
+        project_name = get_project_name()
+        self.title(f"{"" if self.is_saved.get() else "*"}{self.TITLE}{" - " + project_name if project_name else ""}")
 
     def update(self):
         if self.statical_system.is_empty():
@@ -108,12 +114,12 @@ class TwlTool(tk.Tk, TwlWidget):
 
         # Create File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.statical_system, self.is_saved.get()))
+        file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.statical_system, self.is_saved), accelerator="Ctrl+N")
         file_menu.add_separator()
-        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.statical_system, self.is_saved.get()), accelerator="Ctrl+O")
+        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.statical_system, self.is_saved), accelerator="Ctrl+O")
         file_menu.add_separator()
-        file_menu.add_command(label="Save", command=lambda *ignore: self.is_saved.set(save_project(self.statical_system)), accelerator="Ctrl+S")
-        file_menu.add_command(label="Save As...", command=lambda *ignore: save_project(self.statical_system))
+        file_menu.add_command(label="Save", command=lambda *ignore: save_project(self.statical_system, self.is_saved), accelerator="Ctrl+S")
+        file_menu.add_command(label="Save As...", command=lambda *ignore: save_project_as(self.statical_system, self.is_saved), accelerator="Ctrl+Shift+S")
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Create Settings menu
