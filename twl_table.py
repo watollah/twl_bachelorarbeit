@@ -38,7 +38,7 @@ class TwlTable(ttk.Treeview, TwlWidget):
         ttk.Treeview.__init__(self, master)
 
         self.component_list: ComponentList[C] = component_list
-        component_list.statical_system.widgets.append(self)
+        component_list.update_manager.widgets.append(self)
 
         columns: tuple = component_list.component_class.attribute_names
         self.configure(columns=columns)

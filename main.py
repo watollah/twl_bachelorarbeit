@@ -7,6 +7,7 @@ from twl_diagram import *
 from twl_table import *
 from twl_ui import *
 from twl_io import *
+from twl_settings import *
 
 class TwlTool(tk.Tk, TwlWidget):
 
@@ -23,9 +24,13 @@ class TwlTool(tk.Tk, TwlWidget):
 
         self.configure_styles()
 
-        self.statical_system = StaticalSystem()
-        self.statical_system.widgets.append(self)
-
+        self.update_manager = TwlUpdateManager()
+        self.settings = Settings(self.update_manager)
+    
+        self.statical_system = StaticalSystem(self.update_manager)
+        self.update_manager.widgets.append(self)
+    
+    
         self.create_menu_bar()
 
         notebook = ttk.Notebook(self)
@@ -59,7 +64,7 @@ class TwlTool(tk.Tk, TwlWidget):
         diagram = TwlDiagram(editor_frame, self.statical_system)
         diagram.pack(fill="both", expand=True)
 
-        self.statical_system.widgets.append(diagram)
+        self.update_manager.widgets.append(diagram)
         
         #Tables
         menu_frame = ttk.Frame(paned_window)

@@ -44,7 +44,7 @@ class Component(ABC):
         """Automatically update the connected widgets whenever one of the components attributes is changed."""
         super().__setattr__(name, value)
         if not name == "statical_system":
-            self.statical_system.update_widgets()
+            self.statical_system.update_manager.update()
             print(f"detected change in {self}, changed attribute: {name}")
 
 
@@ -163,18 +163,18 @@ class Force(Component):
 
 
 class StaticalSystem:
-    def __init__(self):
-        self.nodes: ComponentList[Node] = ComponentList(Node, self)
-        self.beams: ComponentList[Beam] = ComponentList(Beam, self)
-        self.supports: ComponentList[Support] = ComponentList(Support, self)
-        self.forces: ComponentList[Force] = ComponentList(Force, self)
+    def __init__(self, update_manager: TwlUpdateManager):
+        self.nodes: ComponentList[Node] = ComponentList(Node, update_manager)
+        self.beams: ComponentList[Beam] = ComponentList(Beam, update_manager)
+        self.supports: ComponentList[Support] = ComponentList(Support, update_manager)
+        self.forces: ComponentList[Force] = ComponentList(Force, update_manager)
 
-        self.widgets: list[TwlWidget] = []
+        self.update_manager: TwlUpdateManager = update_manager
 
     def clear(self):
         if not self.is_empty():
             [component_list.clear() for component_list in self.component_lists]
-            self.update_widgets()
+            self.update_manager.update()
 
     def is_empty(self) -> bool:
         return all(not component_list for component_list in self.component_lists)
@@ -193,22 +193,19 @@ class StaticalSystem:
     def statically_determined(self) -> bool: #todo: implement once different types of supports have been implemented
         """Check if the system is statically determined and thus ready for analysis."""
         return False
-    
-    def update_widgets(self, *args):
-        """Update all ui widgets connected to this statical system."""
-        for widget in self.widgets: widget.update()
+
 
 class ComponentList(List[C]):
 
-    def __init__(self, component_class: Type[C], statical_system: StaticalSystem, *args, **kwargs):
+    def __init__(self, component_class: Type[C], update_manager: TwlUpdateManager, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.component_class: Type[C] = component_class #Class of the entries in this list, to make it accessible even when the list is empty
-        self.statical_system: StaticalSystem = statical_system
+        self.update_manager: TwlUpdateManager = update_manager
 
     def append(self, *components: C) -> None:
         """Add item to the list and notify connected widgets to update."""
         for component in components: super().append(component)
-        self.statical_system.update_widgets()
+        self.update_manager.update()
 
     def remove(self, *components: C) -> None:
         """Remove item(s) from the list and notify connected widgets to update."""
@@ -217,7 +214,7 @@ class ComponentList(List[C]):
             if component in self:
                 super().remove(component)
                 change = True
-        if change: self.statical_system.update_widgets()
+        if change: self.update_manager.update()
 
     def get_component(self, id: int) -> C | None:
         return next((component for component in self if component.id == id), None)
