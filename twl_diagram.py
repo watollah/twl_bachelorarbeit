@@ -556,23 +556,31 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return f"f = {f}, the system ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def create_node(self, x: int, y: int) -> Node:
+        self.statical_system.update_manager.pause()
         node = Node(self.statical_system, x, y)
         self.statical_system.nodes.append(node)
+        self.statical_system.update_manager.resume()
         return node
 
     def create_beam(self, start_node: Node, end_node: Node) -> Beam:
+        self.statical_system.update_manager.pause()
         beam = Beam(self.statical_system, start_node, end_node)
         self.statical_system.beams.append(beam)
+        self.statical_system.update_manager.resume()
         return beam
 
     def create_support(self, node: Node):
+        self.statical_system.update_manager.pause()
         support = Support(self.statical_system, node)
         self.statical_system.supports.append(support)
+        self.statical_system.update_manager.resume()
         return support
 
     def create_force(self, node: Node):
+        self.statical_system.update_manager.pause()
         force = Force(self.statical_system, node)
         self.statical_system.forces.append(force)
+        self.statical_system.update_manager.resume()
         return force
 
     def find_shape_at(self, x: int, y: int) -> Shape | None:
