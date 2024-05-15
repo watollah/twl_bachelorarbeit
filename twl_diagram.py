@@ -439,7 +439,8 @@ class SelectTool(Tool):
         self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=Shape.SELECTED_COLOR, width=2)
 
     def continue_rect_selection(self, event):
-        assert(self.selection_rect)
+        if not self.selection_rect:
+            return
         start_x, start_y, _, _ = self.diagram.coords(self.selection_rect)
         self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
 
@@ -455,7 +456,9 @@ class SelectTool(Tool):
             self.reset()
 
     def delete_selected(self, event):
-        [shape.component.delete() for shape in self.diagram.selection]  
+        self.diagram.statical_system.update_manager.pause()
+        [shape.component.delete() for shape in self.diagram.selection]
+        self.diagram.statical_system.update_manager.resume()
         self.reset()
 
 
