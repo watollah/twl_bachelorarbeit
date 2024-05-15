@@ -49,7 +49,9 @@ def open_project(statical_system: StaticalSystem, is_saved: BooleanVar):
         FILENAME = new_filename
         with open(FILENAME, "r") as file:
             serialized_project = json.load(file)
+            statical_system.update_manager.pause()
             deserialize_project(serialized_project, statical_system)
+            statical_system.update_manager.resume()
         print("Project loaded from", FILENAME)
         is_saved.set(True)
 
