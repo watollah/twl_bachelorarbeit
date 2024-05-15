@@ -2,6 +2,7 @@ import tkinter as tk
 from typing import final, TypeVar, Generic
 from tkinter import ttk
 
+from twl_components import Polygon
 from twl_widget import *
 from twl_components import *
 from twl_help import *
@@ -89,6 +90,11 @@ class Shape(Generic[C]):
                                  tags=self.LABEL_BG_TAG)
         self.diagram.tag_lower(self.LABEL_BG_TAG, self.LABEL_TAG)
 
+    @property
+    @abstractmethod
+    def bounds(self) -> Polygon:
+        pass
+
 
 class NodeShape(Shape[Node]):
 
@@ -130,6 +136,10 @@ class NodeShape(Shape[Node]):
     @property
     def label_text(self) -> str:
         return f"{self.LABEL_PREFIX}{int_to_roman(self.component.id)}"
+
+    @property
+    def bounds(self) -> Polygon:
+        return Polygon(Point(self.component.x, self.component.y))
 
 class TempNodeShape(NodeShape):
 
@@ -174,6 +184,11 @@ class BeamShape(Shape[Beam]):
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         return Line(p1, p2).midpoint()
+
+    @property
+    def bounds(self) -> Polygon:
+        return Polygon(Point(self.component.start_node.x, self.component.start_node.y),
+                       Point(self.component.end_node.x, self.component.end_node.y))
 
 class TempBeamShape(BeamShape):
 
@@ -258,6 +273,11 @@ class SupportShape(Shape[Support]):
     def label_text(self) -> str:
         return int_to_letter(self.component.id)
 
+    @property
+    def bounds(self) -> Polygon:
+        triangle = self.triangle_coordinates
+        return Polygon(triangle.p1, triangle.p2, triangle.p3)
+
 class TempSupportShape(SupportShape):
 
     TAG: str = Shape.TEMP
@@ -318,6 +338,11 @@ class ForceShape(Shape[Force]):
         point = Point(n_point.x - self.LABEL_OFFSET, n_point.y + self.DISTANCE_FROM_NODE + ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
         point.rotate(n_point, self.component.angle)
         return point
+
+    @property
+    def bounds(self) -> Polygon:
+        arrow = self.arrow_coordinates
+        return Polygon(arrow.start, arrow.end)
 
 class TempForceShape(ForceShape):
 
@@ -421,19 +446,10 @@ class SelectTool(Tool):
     def action(self, event):
         self.diagram.focus_set()
         shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
-        if self.holding_shift_key(event):
-            if shape == None:
-                self.start_rect_selection(event)
-            elif shape in self.diagram.selection:
-                shape.deselect()
-            else:
-                shape.select()
+        if shape == None:
+            self.start_rect_selection(event)
         else:
-            self.reset()
-            if shape == None:
-                self.start_rect_selection(event)
-            else:
-                shape.select()
+            self.process_selection(event, shape)
 
     def start_rect_selection(self, event):
         self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=Shape.SELECTED_COLOR, width=2)
@@ -445,15 +461,30 @@ class SelectTool(Tool):
         self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
 
     def end_rect_selection(self, event):
+        selected: List[Shape] = []
         if not self.selection_rect:
             return
-        x1, y1, x2, y2 = self.diagram.coords(self.selection_rect)
+        x1, y1, x2, y2 = map(int, self.diagram.coords(self.selection_rect))
         print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
+        p1 = Point(x1, y1)
+        p2 = Point(x2, y2)
+        selection = [shape for shape in self.selectable_shapes if all(point.in_bounds(p1, p2) for point in shape.bounds.points)]
+        self.process_selection(event, *selection)
+
+    def process_selection(self, event, *selection: Shape):
         if self.holding_shift_key(event):
-            self.diagram.delete(self.selection_rect)
-            self.selection_rect = None
+            for shape in selection:
+                if shape in self.diagram.selection:
+                    shape.deselect()
+                else:
+                    shape.select()
+            if self.selection_rect:
+                self.diagram.delete(self.selection_rect)
+                self.selection_rect = None
         else:
             self.reset()
+            for shape in selection:
+                shape.select()
 
     def delete_selected(self, event):
         self.diagram.statical_system.update_manager.pause()

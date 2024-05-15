@@ -42,6 +42,14 @@ class Point:
 
         return (dx*dx + dy*dy)**.5
 
+    def in_bounds(self, point_1: 'Point', point_2: 'Point'):
+        min_x = min(point_1.x, point_2.x)
+        max_x = max(point_1.x, point_2.x)
+        min_y = min(point_1.y, point_2.y)
+        max_y = max(point_1.y, point_2.y)
+
+        return min_x <= self.x <= max_x and min_y <= self.y <= max_y
+
 
 class Line:
     def __init__(self, start: Point, end: Point) -> None:
