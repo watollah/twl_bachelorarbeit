@@ -333,7 +333,6 @@ class Tool:
 
     def __init__(self, diagram: 'TwlDiagram'):
         self.diagram: 'TwlDiagram' = diagram
-        self.name = "TEST"
 
     @final
     def selected(self):
@@ -390,16 +389,29 @@ class SelectTool(Tool):
     NAME: str = 'Select'
     SYMBOL: str = '\u2d3d'
 
+    def __init__(self, diagram: 'TwlDiagram'):
+        super().__init__(diagram)
+        self.selection_rect: int | None = None
+
     def activate(self):
-        super().activate()
+        self.diagram.bind("<Button-1>", self.action)
+        self.diagram.bind("<B1-Motion>", self.continue_rect_selection)
+        self.diagram.bind("<ButtonRelease-1>", self.end_rect_selection)
+        self.diagram.bind("<Escape>", lambda *ignore: self.reset())
         self.diagram.bind("<Delete>", self.delete_selected)
 
     def deactivate(self):
-        super().deactivate()
+        self.diagram.unbind("<Button-1>")
+        self.diagram.unbind("<B1-Motion>")
+        self.diagram.unbind("<ButtonRelease-1>")
+        self.diagram.unbind("<Escape>")
         self.diagram.unbind("<Delete>")
 
     def reset(self):
         super().reset()
+        if self.selection_rect:
+            self.diagram.delete(self.selection_rect)
+            self.selection_rect = None
         [shape.deselect() for shape in self.diagram.selection.copy()]
 
     @property
@@ -411,7 +423,7 @@ class SelectTool(Tool):
         shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
         if self.holding_shift_key(event):
             if shape == None:
-                print("not found")
+                self.start_rect_selection(event)
             elif shape in self.diagram.selection:
                 shape.deselect()
             else:
@@ -419,9 +431,28 @@ class SelectTool(Tool):
         else:
             self.reset()
             if shape == None:
-                print("not found")
+                self.start_rect_selection(event)
             else:
                 shape.select()
+
+    def start_rect_selection(self, event):
+        self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=Shape.SELECTED_COLOR, width=2)
+
+    def continue_rect_selection(self, event):
+        assert(self.selection_rect)
+        start_x, start_y, _, _ = self.diagram.coords(self.selection_rect)
+        self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
+
+    def end_rect_selection(self, event):
+        if not self.selection_rect:
+            return
+        x1, y1, x2, y2 = self.diagram.coords(self.selection_rect)
+        print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
+        if self.holding_shift_key(event):
+            self.diagram.delete(self.selection_rect)
+            self.selection_rect = None
+        else:
+            self.reset()
 
     def delete_selected(self, event):
         [shape.component.delete() for shape in self.diagram.selection]  
