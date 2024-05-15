@@ -81,6 +81,13 @@ class Line:
         mid_y = (self.start.y + self.end.y) // 2
         return Point(mid_x, mid_y)
 
+    def extend(self, amount):
+        length = self.length()
+        dx = (self.end.x - self.start.x) / length
+        dy = (self.end.y - self.start.y) / length
+        self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
+        self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
+
 
 class Triangle:
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
