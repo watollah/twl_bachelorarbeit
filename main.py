@@ -124,6 +124,8 @@ class TwlTool(tk.Tk, TwlWidget):
 
         # Create Settings menu
         settings_menu = tk.Menu(menubar, tearoff=0)
+        settings_menu.add_checkbutton(label="Show Angle Guide", variable=self.settings.show_angle_guide)
+        settings_menu.add_separator()
         settings_menu.add_checkbutton(label="Show Node Labels", variable=self.settings.show_node_labels)
         settings_menu.add_checkbutton(label="Show Beam Labels", variable=self.settings.show_beam_labels)
         settings_menu.add_checkbutton(label="Show Force Labels", variable=self.settings.show_force_labels)

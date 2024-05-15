@@ -76,19 +76,12 @@ class Shape(Generic[C]):
         return f"{self.LABEL_PREFIX}{self.component.id}"
 
     def draw_label(self):
-        id = self.diagram.create_text(self.label_position.x, 
+        self.diagram.create_text_with_bg(self.label_position.x, 
                                  self.label_position.y, 
                                  text=self.label_text, 
-                                 anchor=tk.CENTER, 
                                  tags=self.LABEL_TAG,
+                                 bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
-        bounds = self.diagram.bbox(id)
-        self.diagram.create_rectangle(bounds[0], bounds[1], 
-                                 bounds[2], bounds[3],
-                                 width=0,
-                                 fill=self.diagram["background"], 
-                                 tags=self.LABEL_BG_TAG)
-        self.diagram.tag_lower(self.LABEL_BG_TAG, self.LABEL_TAG)
 
     @property
     @abstractmethod
@@ -638,9 +631,21 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
+    TEXT_TAG = "text"
+    TEXT_BG_TAG = "text"
+    TEXT_SIZE = 10
+
     GRID_TAG = "grid"
     GRID_COLOR = "lightgrey"
     GRID_SNAP_RADIUS = 5
+
+    ANGLE_GUIDE_TAG = "angle_guide"
+    ANGLE_GUIDE_BG_TAG = "angle_guide_bg"
+    ANGLE_GUIDE_COLOR = "grey"
+    ANGLE_GUIDE_PADDING = 30
+    ANGLE_GUIDE_RADIUS = 40
+
+    NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG, ANGLE_GUIDE_BG_TAG]
 
     def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
         tk.Canvas.__init__(self, master)
@@ -649,6 +654,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
         self.grid_visible: bool = False
+        self.angle_guide_visible: bool = False
         
         #create toolbar
         self.tools = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
@@ -656,20 +662,24 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
         toolbar.pack(fill="y", side= "left")
         ttk.Style().configure("Diagram.TFrame", background="lightgrey")
-
         for tool in self.tools: self.add_button(tool, toolbar)
 
+        #statically determinate label
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
         ttk.Style().configure("Diagram.TLabel", foreground="green")
 
+        #grid and angle guide
         self.bind("<Configure>", self.on_resize)
 
     def on_resize(self, event):
         self.delete_grid()
+        self.delete_angle_guide()
         if self.settings.show_grid.get():
             self.draw_grid()
-    
+        if self.settings.show_angle_guide.get():
+            self.draw_angle_guide()
+
     def delete_grid(self):
         self.delete(self.GRID_TAG)
         self.grid_visible = False
@@ -695,6 +705,27 @@ class TwlDiagram(tk.Canvas, TwlWidget):
             return nearest_x, nearest_y
         return x, y
 
+    def delete_angle_guide(self):
+        self.delete(self.ANGLE_GUIDE_TAG, self.ANGLE_GUIDE_BG_TAG)
+        self.angle_guide_visible = False
+    
+    def draw_angle_guide(self):
+        canvas_width = self.winfo_width()
+        n_point = Point(canvas_width - self.ANGLE_GUIDE_PADDING - self.ANGLE_GUIDE_RADIUS, self.ANGLE_GUIDE_PADDING)
+        s_point = Point(n_point.x, n_point.y + 2 * self.ANGLE_GUIDE_RADIUS)
+        w_point = Point(n_point.x - self.ANGLE_GUIDE_RADIUS, n_point.y + self.ANGLE_GUIDE_RADIUS)
+        e_point = Point(canvas_width - self.ANGLE_GUIDE_PADDING, w_point.y)
+        m_point = Point(w_point.x + self.ANGLE_GUIDE_RADIUS, n_point.y + self.ANGLE_GUIDE_RADIUS)
+        circle_radius = self.ANGLE_GUIDE_RADIUS //2
+        self.create_oval(m_point.x - circle_radius, m_point.y - circle_radius, m_point.x + circle_radius, m_point.y + circle_radius, fill=self["background"], tags=self.ANGLE_GUIDE_BG_TAG)
+        self.create_line(n_point.x, n_point.y, s_point.x, s_point.y, tags=self.ANGLE_GUIDE_BG_TAG)
+        self.create_line(w_point.x, w_point.y, e_point.x, e_point.y, tags=self.ANGLE_GUIDE_BG_TAG)
+        self.create_text_with_bg(n_point.x, n_point.y, text="180°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
+        self.create_text_with_bg(s_point.x, s_point.y, text="0°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
+        self.create_text_with_bg(w_point.x, w_point.y, text="90°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
+        self.create_text_with_bg(e_point.x, e_point.y, text="270°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
+        self.angle_guide_visible = True
+
     def add_button(self, tool: Tool, master: ttk.Frame) -> ttk.Radiobutton:
         frame = tk.Frame(master, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
         frame.grid_propagate(False) #disables resizing of frame
@@ -713,15 +744,22 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def clear(self):
         for shape in self.find_all():
-            if self.GRID_TAG not in self.gettags(shape):
+            tags = set(self.gettags(shape))
+            if not tags.intersection(self.NO_UPDATE_TAGS):
                 self.delete(shape)
 
     def update(self) -> None:
         """Redraws the diagram completely from the statical system"""
+
         if not self.settings.show_grid.get() and self.grid_visible:
             self.delete_grid()
         elif self.settings.show_grid.get() and not self.grid_visible:
             self.draw_grid()
+
+        if not self.settings.show_angle_guide.get() and self.angle_guide_visible:
+            self.delete_angle_guide()
+        elif self.settings.show_angle_guide.get() and not self.angle_guide_visible:
+            self.draw_angle_guide()
 
         self.clear()
         self.shapes.clear()
@@ -774,6 +812,23 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.statical_system.forces.append(force)
         self.statical_system.update_manager.resume()
         return force
+
+    def create_text_with_bg(self, *args, **kw):
+        bg_tag = kw.pop("bg_tag", self.TEXT_BG_TAG)
+        bg_color = kw.pop("bg_color", self["background"])
+        kw.setdefault("anchor", tk.CENTER)
+        kw.setdefault("font", ('Helvetica', self.TEXT_SIZE))
+    
+        text_id = super().create_text(*args, **kw)
+        bounds = self.bbox(text_id)
+    
+        self.create_rectangle(bounds[0], bounds[1], 
+                                 bounds[2], bounds[3],
+                                 width=0,
+                                 fill=bg_color, 
+                                 tags=bg_tag)
+        self.tag_lower(bg_tag, kw["tags"])
+        return text_id
 
     def find_shape_at(self, x: int, y: int) -> Shape | None:
         """Check if there is a shape in the diagram at the specified coordinate."""

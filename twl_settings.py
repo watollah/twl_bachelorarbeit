@@ -23,3 +23,6 @@ class Settings:
         self.grid_spacing.trace_add("write", lambda *ignore: self.update_manager.update())
         self.grid_snap_radius = IntVar(value=7)
         self.grid_snap_radius.trace_add("write", lambda *ignore: self.update_manager.update())
+
+        self.show_angle_guide = BooleanVar(value=True)
+        self.show_angle_guide.trace_add("write", lambda *ignore: self.update_manager.update())
