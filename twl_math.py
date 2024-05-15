@@ -55,6 +55,9 @@ class Line:
         angle_degrees = 90 - math.degrees(math.atan2(-d.y, d.x))
         angle_degrees %= 360
         return angle_degrees
+    
+    def angle_rounded(self) -> float:
+        return (int((self.angle() + 22.5) // 45) * 45) % 360
 
     def distance(self, point: Point) -> float:
         return point.distance(self)

@@ -215,7 +215,7 @@ class SupportShape(Shape[Support]):
                                 width=self.BORDER, 
                                 tags=[*self.TAGS, str(support.id)])
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
-        if diagram.settings.show_support_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and diagram.settings.show_support_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -258,6 +258,11 @@ class SupportShape(Shape[Support]):
     def label_text(self) -> str:
         return int_to_letter(self.component.id)
 
+class TempSupportShape(SupportShape):
+
+    TAG: str = Shape.TEMP
+    COLOR = Shape.TEMP_COLOR
+
 
 class ForceShape(Shape[Force]):
 
@@ -284,7 +289,7 @@ class ForceShape(Shape[Force]):
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
         diagram.tag_lower(ForceShape.TAG, NodeShape.TAG)
-        if diagram.settings.show_force_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and diagram.settings.show_force_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -314,6 +319,11 @@ class ForceShape(Shape[Force]):
         point.rotate(n_point, self.component.angle)
         return point
 
+class TempForceShape(ForceShape):
+
+    TAG: str = Shape.TEMP
+    COLOR = Shape.TEMP_COLOR
+
 
 class Tool:
 
@@ -333,16 +343,31 @@ class Tool:
         self.diagram.selected_tool = self
 
     def activate(self):
-        """Code to be executed when the tool is selected"""
-        print('now selected: ', self.ID)
-    
+        self.diagram.bind("<Button-1>", self.action)
+        self.diagram.bind("<Motion>", self.preview)
+        self.diagram.bind("<Escape>", lambda *ignore: self.reset())
+        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(Shape.TEMP))
+
     def deactivate(self):
-        """Code to be executed when the tool is deselected"""
-        print('now deselected: ', self.NAME)
+        self.diagram.unbind("<Button-1>")
+        self.diagram.unbind("<Motion>")
+        self.diagram.unbind("<Escape>")
+        self.diagram.unbind("<Leave>")
+        self.reset()
+
+    def reset(self):
+        self.diagram.delete_with_tag(Shape.TEMP)
 
     def action(self, event):
         """Code to be executed when the user clicks on the canvas while the tool is active"""
         pass
+
+    def preview(self, event):
+        """Preview of the action when the user moves the mouse on the canvas while the tool is active"""
+        pass
+
+    def holding_shift_key(self, event) -> bool:
+        return event.state & 0x1 #bitwise ANDing the event.state with the ShiftMask flag
 
 
 class SelectTool(Tool):
@@ -352,44 +377,41 @@ class SelectTool(Tool):
     SYMBOL: str = '\u2d3d'
 
     def activate(self):
-        self.diagram.bind("<Button-1>", self.handle_selection)
-        self.diagram.bind("<Shift-Button-1>", self.handle_shift_selection)
-        self.diagram.bind("<Delete>", self.delete_selected_components)
+        super().activate()
+        self.diagram.bind("<Delete>", self.delete_selected)
 
     def deactivate(self):
-        self.diagram.unbind("<Button-1>")
-        self.diagram.unbind("<Shift-Button-1>")
+        super().deactivate()
         self.diagram.unbind("<Delete>")
+
+    def reset(self):
+        super().reset()
+        [shape.deselect() for shape in self.diagram.selection.copy()]
 
     @property
     def selectable_shapes(self) -> list[Shape]:
         return list(filter(lambda s: isinstance(s.component, (Beam, Support, Force)), self.diagram.shapes))
 
-    def clear_selection(self):
-        [shape.deselect() for shape in self.diagram.selection.copy()]
-
-    def handle_selection(self, event):
+    def action(self, event):
         self.diagram.focus_set()
-        self.clear_selection()
         shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
-        if shape == None:
-            print("not found")
-            return
-        shape.select()
+        if self.holding_shift_key(event):
+            if shape == None:
+                print("not found")
+            elif shape in self.diagram.selection:
+                shape.deselect()
+            else:
+                shape.select()
+        else:
+            self.reset()
+            if shape == None:
+                print("not found")
+            else:
+                shape.select()
 
-    def handle_shift_selection(self, event):
-        shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
-        if shape == None:
-            print("not found")
-            return
-        elif shape in self.diagram.selection:
-            shape.deselect()
-            return
-        shape.select()
-
-    def delete_selected_components(self, event):
+    def delete_selected(self, event):
         [shape.component.delete() for shape in self.diagram.selection]  
-        self.clear_selection()
+        self.reset()
 
 
 class BeamTool(Tool):
@@ -402,18 +424,8 @@ class BeamTool(Tool):
         super().__init__(editor)
         self.start_node: Node | None = None
 
-    def activate(self):
-        self.diagram.bind("<Button-1>", self.action)
-        self.diagram.bind("<Escape>", lambda *ignore: self.reset())
-        self.diagram.bind("<Motion>", self.preview)
-        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(Shape.TEMP))
-
-    def deactivate(self):
-        self.diagram.unbind("<Button-1>")
-        self.diagram.unbind("<Escape>")
-        self.diagram.unbind("<Motion>")
-        self.diagram.unbind("<Leave>")
-        self.diagram.delete_with_tag(Shape.TEMP)
+    def reset(self):
+        super().reset()
         self.start_node = None
 
     def action(self, event):
@@ -432,10 +444,6 @@ class BeamTool(Tool):
         temp_node = Node(StaticalSystem(TwlUpdateManager()), x, y)
         TempNodeShape(temp_node, self.diagram)
         return temp_node
-
-    def reset(self):
-        self.start_node = None
-        self.diagram.delete_with_tag(Shape.TEMP)
 
     def preview(self, event):
         self.diagram.delete_with_tag(Shape.TEMP)
@@ -461,19 +469,37 @@ class SupportTool(Tool):
     NAME: str = 'Support'
     SYMBOL: str = '\u29cb'
 
-    def activate(self):
-        for id in self.diagram.find_withtag("node"): self.diagram.tag_bind(id, "<Button-1>", self.action)
-    
-    def deactivate(self):
-        for id in self.diagram.find_withtag("node"): self.diagram.tag_unbind(id, "<Button-1>")
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.node: Node | None = None
+
+    def reset(self):
+        super().reset()
+        self.node = None
 
     def action(self, event):
-        clicked_node_shape: Shape[Node] | None = self.diagram.find_shape_of_type_at(Node, event.x, event.y)
-        if clicked_node_shape:
-            node: Node = clicked_node_shape.component
-            if not node.supports:
-                self.diagram.create_support(node)
-                print(f"Created support on Node {node.id}")
+        self.diagram.focus_set()
+        if not self.node:
+            clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+            if clicked_node and not clicked_node.supports:
+                self.node = clicked_node
+        else:
+            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            self.diagram.create_support(self.node, angle)
+            self.reset()
+
+    def preview(self, event):
+        self.diagram.delete_with_tag(Shape.TEMP)
+        if not self.node:
+            hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+            if hovering_node and not hovering_node.supports:
+                TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
+        else:
+            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
+        self.diagram.focus_set()
 
 
 class ForceTool(Tool):
@@ -482,19 +508,37 @@ class ForceTool(Tool):
     NAME: str = 'Force'
     SYMBOL: str = '\u2b07'
 
-    def activate(self):
-        for id in self.diagram.find_withtag("node"): self.diagram.tag_bind(id, "<Button-1>", self.action)
-    
-    def deactivate(self):
-        for id in self.diagram.find_withtag("node"): self.diagram.tag_unbind(id, "<Button-1>")
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.node: Node | None = None
+
+    def reset(self):
+        super().reset()
+        self.node = None
 
     def action(self, event):
-        clicked_node_shape: Shape[Node] | None = self.diagram.find_shape_of_type_at(Node, event.x, event.y)
-        if clicked_node_shape:
-            node: Node = clicked_node_shape.component
-            if not node.forces:
-                self.diagram.create_force(node)
-                print(f"Created force on Node {node.id}")
+        self.diagram.focus_set()
+        if not self.node:
+            clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+            if clicked_node:
+                self.node = clicked_node
+        else:
+            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            self.diagram.create_force(self.node, angle)
+            self.reset()
+
+    def preview(self, event):
+        self.diagram.delete_with_tag(Shape.TEMP)
+        if not self.node:
+            hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
+            if hovering_node:
+                TempForceShape(Force(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
+        else:
+            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            TempForceShape(Force(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
+        self.diagram.focus_set()
 
 
 class TwlDiagram(tk.Canvas, TwlWidget):
@@ -578,16 +622,16 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.statical_system.update_manager.resume()
         return beam
 
-    def create_support(self, node: Node):
+    def create_support(self, node: Node, angle: float=0):
         self.statical_system.update_manager.pause()
-        support = Support(self.statical_system, node)
+        support = Support(self.statical_system, node, angle)
         self.statical_system.supports.append(support)
         self.statical_system.update_manager.resume()
         return support
 
-    def create_force(self, node: Node):
+    def create_force(self, node: Node, angle: float=180):
         self.statical_system.update_manager.pause()
-        force = Force(self.statical_system, node)
+        force = Force(self.statical_system, node, angle)
         self.statical_system.forces.append(force)
         self.statical_system.update_manager.resume()
         return force
