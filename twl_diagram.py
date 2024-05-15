@@ -513,6 +513,8 @@ class BeamTool(Tool):
         if self.start_node is None:
             self.start_node = clicked_node if clicked_node else self.create_temp_node(event.x, event.y)
             return
+        if self.holding_shift_key(event):
+            self.shift_snap_line(event)    
         end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         if not self.start_node in self.diagram.statical_system.nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
@@ -534,6 +536,8 @@ class BeamTool(Tool):
             return
         if not self.start_node in self.diagram.statical_system.nodes:
             TempNodeShape(self.start_node, self.diagram)
+        if self.holding_shift_key(event):
+            self.shift_snap_line(event)            
         if not temp_node:
             temp_node = Node(StaticalSystem(TwlUpdateManager()), event.x, event.y)
             TempNodeShape(temp_node, self.diagram)
@@ -541,6 +545,15 @@ class BeamTool(Tool):
         TempBeamShape(temp_beam, self.diagram)
         self.diagram.focus_set()
 
+    def shift_snap_line(self, event):
+        assert(self.start_node)
+        start_point = Point(self.start_node.x, self.start_node.y)
+        inital_line = Line(start_point, Point(event.x, event.y))
+        rounded_line = Line(start_point, Point(start_point.x, start_point.y + 10))
+        rounded_line.rotate(start_point, inital_line.angle_rounded())
+        new_point = rounded_line.closest_point_on_axis(Point(event.x, event.y))
+        event.x = new_point.x
+        event.y = new_point.y
 
 class SupportTool(Tool):
 

@@ -88,6 +88,44 @@ class Line:
         self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
         self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
 
+    def slope(self) -> float | None:
+        if self.end.x - self.start.x == 0:
+            return None #line is vertical
+        else:
+            return (self.end.y - self.start.y) / (self.end.x - self.start.x)
+
+    def perp_slope(self) -> float | None:
+        original_slope = self.slope()
+        if original_slope is None:
+            return 0 #original line is vertical, return 0 for horizontal line
+        elif original_slope == 0:
+            return None #original line is horizontal, return None for vertical line
+        else:
+            return -1 / original_slope
+
+    def y_intercept(self) -> float | None:
+        slope = self.slope()
+        if slope is None:
+            return None
+        else:
+            return self.start.y - slope * self.start.x
+
+    def closest_point_on_axis(self, point: Point) -> Point:
+        slope = self.slope()
+        perp_slope = self.perp_slope()
+        if perp_slope is None:
+            return Point(point.x, round(self.start.y))
+        elif slope is None:
+            return Point(round(self.start.x), point.y)
+        else:
+            y_intercept = self.y_intercept()
+            assert(y_intercept)
+            perp_y_intercept = point.y - perp_slope * point.x
+
+            intersection_x = (y_intercept - perp_y_intercept) / (perp_slope - slope)
+            intersection_y = slope * intersection_x + y_intercept
+            return Point(round(intersection_x), round(intersection_y))
+
 
 class Triangle:
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
