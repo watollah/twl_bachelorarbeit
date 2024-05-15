@@ -159,7 +159,7 @@ class BeamShape(Shape[Beam]):
 
     def is_at(self, x: int, y: int) -> bool:
         beam = Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
-        return Point(x, y).distance(beam) < self.WIDTH/2
+        return Point(x, y).distance_to_line(beam) < self.WIDTH/2
 
     @property
     def default_style(self) -> dict[str, str]:
@@ -293,7 +293,7 @@ class ForceShape(Shape[Force]):
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
-        return Point(x, y).distance(self.arrow_coordinates) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.arrow_coordinates) < self.WIDTH/2
 
     @property
     def arrow_coordinates(self) -> Line:
@@ -343,8 +343,8 @@ class Tool:
         self.diagram.selected_tool = self
 
     def activate(self):
-        self.diagram.bind("<Button-1>", self.action)
-        self.diagram.bind("<Motion>", self.preview)
+        self.diagram.bind("<Button-1>", self._action)
+        self.diagram.bind("<Motion>", self._preview)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
         self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(Shape.TEMP))
 
@@ -358,9 +358,23 @@ class Tool:
     def reset(self):
         self.diagram.delete_with_tag(Shape.TEMP)
 
+    def snap_event_to_grid(self, event):
+        if self.diagram.settings.show_grid.get():
+            snap_point = self.diagram.grid_snap(event.x, event.y)
+            event.x = snap_point[0]
+            event.y = snap_point[1]
+
+    def _action(self, event):
+        self.snap_event_to_grid(event)
+        self.action(event)
+
     def action(self, event):
         """Code to be executed when the user clicks on the canvas while the tool is active"""
         pass
+
+    def _preview(self, event):
+        self.snap_event_to_grid(event)
+        self.preview(event)
 
     def preview(self, event):
         """Preview of the action when the user moves the mouse on the canvas while the tool is active"""
@@ -546,12 +560,17 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
+    GRID_TAG = "grid"
+    GRID_COLOR = "lightgrey"
+    GRID_SNAP_RADIUS = 5
+
     def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
         tk.Canvas.__init__(self, master)
         self.statical_system: StaticalSystem = statical_system
         self.settings: Settings = settings
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
+        self.grid_visible: bool = False
         
         #create toolbar
         self.tools = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
@@ -565,6 +584,38 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
         ttk.Style().configure("Diagram.TLabel", foreground="green")
+
+        self.bind("<Configure>", self.on_resize)
+
+    def on_resize(self, event):
+        self.delete_grid()
+        if self.settings.show_grid.get():
+            self.draw_grid()
+    
+    def delete_grid(self):
+        self.delete(self.GRID_TAG)
+        self.grid_visible = False
+
+    def draw_grid(self):
+        canvas_width = self.winfo_width()
+        canvas_height = self.winfo_height()
+
+        for i in range(0, canvas_width, self.settings.grid_spacing.get()):
+            self.create_line((i, 0), (i, canvas_height), fill=self.GRID_COLOR, tags=self.GRID_TAG)
+        for i in range(0, canvas_height, self.settings.grid_spacing.get()):
+            self.create_line((0, i), (canvas_width, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
+        
+        self.tag_lower(self.GRID_TAG)
+        self.grid_visible = True
+
+    def grid_snap(self, x: int, y: int) -> tuple[int, int]:
+        grid_spacing = self.settings.grid_spacing.get()
+        nearest_x = round(x / grid_spacing) * grid_spacing
+        nearest_y = round(y / grid_spacing) * grid_spacing
+        distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))
+        if distance < self.settings.grid_snap_radius.get():
+            return nearest_x, nearest_y
+        return x, y
 
     def add_button(self, tool: Tool, master: ttk.Frame) -> ttk.Radiobutton:
         frame = tk.Frame(master, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
@@ -582,9 +633,19 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def change_tool(self):
         """Code to be executed when the tool is changed"""
 
+    def clear(self):
+        for shape in self.find_all():
+            if self.GRID_TAG not in self.gettags(shape):
+                self.delete(shape)
+
     def update(self) -> None:
         """Redraws the diagram completely from the statical system"""
-        self.delete("all")
+        if not self.settings.show_grid.get() and self.grid_visible:
+            self.delete_grid()
+        elif self.settings.show_grid.get() and not self.grid_visible:
+            self.draw_grid()
+
+        self.clear()
         self.shapes.clear()
 
         for node in self.statical_system.nodes: self.shapes.append(NodeShape(node, self))
@@ -595,7 +656,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = "green" if self.stat_determ_text[:5] == "f = 0" else "red"
         ttk.Style().configure("Diagram.TLabel", foreground=color)
-
+        self.tag_lower(self.GRID_TAG)
         self.selected_tool.activate()
 
     @property

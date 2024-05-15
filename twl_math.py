@@ -27,7 +27,10 @@ class Point:
     def dot_product(self, other) -> float:
         return self.x * other.x + self.y * other.y
 
-    def distance(self, line: 'Line') -> float:
+    def distance_to_point(self, point: 'Point') -> float:
+        return ((self.x - point.x) ** 2 + (self.y - point.y) ** 2) ** 0.5
+
+    def distance_to_line(self, line: 'Line') -> float:
         p = line.end.subtract(line.start)
         norm = p.dot_product(p)
 
@@ -60,7 +63,7 @@ class Line:
         return (int((self.angle() + 22.5) // 45) * 45) % 360
 
     def distance(self, point: Point) -> float:
-        return point.distance(self)
+        return point.distance_to_line(self)
 
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]

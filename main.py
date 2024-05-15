@@ -128,6 +128,8 @@ class TwlTool(tk.Tk, TwlWidget):
         settings_menu.add_checkbutton(label="Show Beam Labels", variable=self.settings.show_beam_labels)
         settings_menu.add_checkbutton(label="Show Force Labels", variable=self.settings.show_force_labels)
         settings_menu.add_checkbutton(label="Show Support Labels", variable=self.settings.show_support_labels)
+        settings_menu.add_separator()
+        settings_menu.add_checkbutton(label="Show Grid", variable=self.settings.show_grid)
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
         # Create Help menu and link to 
