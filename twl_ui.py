@@ -73,7 +73,7 @@ class CremonaTab(ttk.Frame):
         label.pack(fill=tk.BOTH, expand=True)
 
         def run_animation():
-            if not play_button.state:
+            if not play_button.state.get():
                 return
             scale_value.set((scale_value.get() + 1) % 101)
             speed = speed_options.get(selected_speed.get())
