@@ -1,5 +1,5 @@
 import tkinter as tk
-from typing import final, TypeVar, Generic
+from typing import cast, final, TypeVar, Generic
 from tkinter import ttk
 
 from twl_components import Polygon
@@ -7,6 +7,7 @@ from twl_widget import *
 from twl_components import *
 from twl_help import *
 from twl_settings import *
+from twl_images import *
 
 
 C = TypeVar('C', bound=Component)
@@ -347,7 +348,8 @@ class Tool:
 
     ID: int = -1
     NAME: str = "X"
-    SYMBOL: str = "X"
+    DESCR: str = "X"
+    ICON: str = "X"
 
     def __init__(self, diagram: 'TwlDiagram'):
         self.diagram: 'TwlDiagram' = diagram
@@ -404,8 +406,9 @@ class Tool:
 class SelectTool(Tool):
 
     ID: int = 0
-    NAME: str = 'Select'
-    SYMBOL: str = '\u2d3d'
+    NAME: str = "Select"
+    DESCR: str = "Select objects in statical system."
+    ICON: str = "img/select_icon.png"
 
     def __init__(self, diagram: 'TwlDiagram'):
         super().__init__(diagram)
@@ -489,8 +492,9 @@ class SelectTool(Tool):
 class BeamTool(Tool):
 
     ID: int = 1
-    NAME: str = 'Beam'
-    SYMBOL: str = '\ua5ec'
+    NAME: str = "Beam Tool"
+    DESCR: str = "Create beam between two nodes."
+    ICON: str = "img/beam_icon.png"
 
     def __init__(self, editor):
         super().__init__(editor)
@@ -551,8 +555,9 @@ class BeamTool(Tool):
 class SupportTool(Tool):
 
     ID: int = 2
-    NAME: str = 'Support'
-    SYMBOL: str = '\u29cb'
+    NAME: str = "Support Tool"
+    DESCR: str = "Create support on node."
+    ICON: str = "img/support_icon.png"
 
     def __init__(self, editor):
         super().__init__(editor)
@@ -590,8 +595,9 @@ class SupportTool(Tool):
 class ForceTool(Tool):
 
     ID: int = 3
-    NAME: str = 'Force'
-    SYMBOL: str = '\u2b07'
+    NAME: str = "Force Tool"
+    DESCR: str = "Create force on node."
+    ICON: str = "img/force_icon.png"
 
     def __init__(self, editor):
         super().__init__(editor)
@@ -726,18 +732,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.create_text_with_bg(e_point.x, e_point.y, text="270°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
         self.angle_guide_visible = True
 
-    def add_button(self, tool: Tool, master: ttk.Frame) -> ttk.Radiobutton:
-        frame = tk.Frame(master, width=TwlDiagram.TOOL_BUTTON_SIZE, height=TwlDiagram.TOOL_BUTTON_SIZE) #their units in pixels
-        frame.grid_propagate(False) #disables resizing of frame
-        frame.columnconfigure(0, weight=1) #enables button to fill frame
-        frame.rowconfigure(0, weight=1) #any positive number would do the trick
-        frame.grid(row=tool.ID, column=0) #put frame where the button should be
-
-        button = ttk.Radiobutton(frame, text=tool.SYMBOL, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Diagram.Toolbutton")
-        button.grid(sticky="nsew") #makes the button expand
-        ttk.Style().configure('Diagram.Toolbutton', font=('Helvetica', 14))
-    
-        return button
+    def add_button(self, tool: Tool, toolbar: ttk.Frame):
+        image = add_image(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
+        button = ttk.Radiobutton(toolbar, image=image, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Diagram.Toolbutton")
+        button.pack()
 
     def change_tool(self):
         """Code to be executed when the tool is changed"""

@@ -58,8 +58,7 @@ class TwlTool(tk.Tk, TwlWidget):
 
         #Diagram Editor
         editor_frame = ttk.Frame(paned_window)
-        editor_frame.pack_propagate(False)
-        paned_window.add(editor_frame, weight=3)
+        paned_window.add(editor_frame, weight=2)
 
         diagram = TwlDiagram(editor_frame, self.statical_system, self.settings)
         diagram.pack(fill="both", expand=True)
