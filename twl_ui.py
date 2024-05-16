@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from twl_components import *
-from twl_buttons import *
+from twl_widgets import *
 
 class CremonaTab(ttk.Frame):
 

@@ -1,7 +1,7 @@
 from typing import Any
 from tkinter import BooleanVar, IntVar
 
-from twl_widget import *
+from twl_update import *
 
 class Settings:
 

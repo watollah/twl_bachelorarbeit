@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 
-from twl_toggled_frame import *
 from twl_diagram import *
 from twl_table import *
 from twl_ui import *

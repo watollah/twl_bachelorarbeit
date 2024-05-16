@@ -3,7 +3,7 @@ from typing import Any, TypeVar, List, Type, cast
 from itertools import chain
 
 from twl_math import *
-from twl_widget import *
+from twl_update import *
 from twl_classproperty import *
 
 

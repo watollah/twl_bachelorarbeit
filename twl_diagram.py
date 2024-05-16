@@ -3,7 +3,7 @@ from typing import cast, final, TypeVar, Generic
 from tkinter import ttk
 
 from twl_components import Polygon
-from twl_widget import *
+from twl_update import *
 from twl_components import *
 from twl_help import *
 from twl_settings import *
