@@ -37,7 +37,7 @@ class CustomToggleButton(CustomButton):
         text = kw.pop("text", "")
         self.text_on = kw.pop("text_on", text)
         self.text_off = kw.pop("text_off", text)
-        kw["text"] = self.text_off if not self.state else self.text_on
+        kw["text"] = self.text_off if not self.state.get() else self.text_on
         command = kw.pop("command", self.default_command)
         self.state.trace_add("write", lambda *ignore: self.toggle(command))
         kw["command"] = lambda: self.state.set(not self.state.get())
