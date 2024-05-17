@@ -3,6 +3,57 @@ from tkinter import ttk
 
 from twl_style import *
 
+
+class ToolTip(object):
+
+    DELAY: int = 500
+    WIDTH: int = 200
+    OFFSET: int = 20
+
+    """Create a tooltip for a given widget."""
+    def __init__(self, widget, text='widget info'):
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.leave)
+        self.widget.bind("<ButtonPress>", self.leave)
+        self.id = None
+        self.tooltip = None
+
+    def enter(self, event=None):
+        self.schedule()
+
+    def leave(self, event=None):
+        self.unschedule()
+        self.hide()
+
+    def schedule(self):
+        self.unschedule()
+        self.id = self.widget.after(self.DELAY, self.show)
+
+    def unschedule(self):
+        if self.id:
+            self.widget.after_cancel(self.id)
+            self.id = None
+
+    def show(self, event=None):
+        x, y, cx, cy = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + self.OFFSET
+        y += self.widget.winfo_rooty() + self.OFFSET
+
+        self.tooltip = tk.Toplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)
+        self.tooltip.wm_geometry("+%d+%d" % (x, y))
+
+        label = ttk.Label(self.tooltip, text=self.text, style="Tooltip.TLabel")
+        label.pack(ipadx=1)
+
+    def hide(self):
+        if self.tooltip:
+            self.tooltip.destroy()
+            self.tooltip = None
+
+
 class CustomButton(ttk.Button):
 
     def __init__(self, master=None, **kw):
