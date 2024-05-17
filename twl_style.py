@@ -31,7 +31,10 @@ def init_style():
     style.theme_use("clam")
 
     #General Styles
-    style.configure("TButton", background="red")
+    style.configure("TButton", background=WHITE, relief="flat", font=LARGE_FONT)
+    style.map("TButton",
+              shiftrelief=[('pressed', '!disabled', 2)],
+              background=[('pressed', '!disabled', LIGHT_GRAY), ('active', VERY_LIGHT_GRAY)])
 
     style.configure("TLabel", background=WHITE, foreground=BLACK, font=FONT)
 
@@ -47,9 +50,9 @@ def init_style():
     style.configure("TPanedwindow", background=VERY_LIGHT_GRAY)
     style.configure("Sash", sashthickness=5, gripcount=0)
 
-    style.configure("Toolbutton", background=WHITE, relief="flat", shiftrelief=0, bordercolor=BLACK)
+    style.configure("Toolbutton", background=WHITE, relief="flat")
     style.map("Toolbutton", 
-              shiftrelief=[("selected", 1)],
+              shiftrelief=[('pressed', '!disabled', 2), ("selected", 2)],
               background=[("selected", SELECTED),("active", VERY_LIGHT_GRAY)])
 
     style.configure("Treeview", background=WHITE, fieldbackground=WHITE, bordercolor=BLACK, font=FONT)

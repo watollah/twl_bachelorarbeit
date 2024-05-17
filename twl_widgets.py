@@ -3,33 +3,28 @@ from tkinter import ttk
 
 from twl_style import *
 
-class CustomButton(tk.Button):
+class CustomButton(ttk.Button):
 
     def __init__(self, master=None, **kw):
-        kw.setdefault("bg", WHITE)
-        kw.setdefault("activebackground", LIGHT_GRAY)
-        kw.setdefault("relief", "flat")
-        kw.setdefault("borderwidth", "0")
-        kw.setdefault("font", LARGE_FONT)
-        kw.setdefault("takefocus", False)
-
         outlinewidth = kw.pop("outlinewidth", None)
         outlinecolor = kw.pop("outlinecolor", BLACK)
+        anchor = kw.pop("anchor", tk.CENTER)
+        kw.setdefault("takefocus", False)
         if outlinewidth:
             outline = tk.LabelFrame(master, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
             outline.pack(fill="x")
             super().__init__(outline, **kw)
         else:
             super().__init__(master, **kw)
-
+        ttk.Style().configure(self.winfo_class(), anchor=anchor)
         self.bind("<Enter>", self.hover)
         self.bind("<Leave>", self.default)
 
     def hover(self, event):
-        event.widget.configure(bg=VERY_LIGHT_GRAY)
+        pass
 
     def default(self, event):
-        event.widget.configure(bg=WHITE)
+        pass
 
 
 class CustomToggleButton(CustomButton):
@@ -76,8 +71,8 @@ class ToggledFrame(tk.Frame):
                                                 variable=self.is_expanded, 
                                                 text_on=f"{ToggledFrame.OPEN_SYMBOL}    {self.title}", 
                                                 text_off=f"{ToggledFrame.CLOSED_SYMBOL}    {self.title}", 
-                                                padx=18, pady=16,
-                                                anchor="w",
+                                                padding=(18, 16),
+                                                anchor=tk.W,
                                                 outlinewidth=1)
         self.toggle_button.pack(fill=tk.BOTH)
         self.is_expanded.set(True)
