@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 
+from twl_style import *
 from twl_diagram import *
 from twl_table import *
 from twl_ui import *
@@ -21,7 +22,7 @@ class TwlTool(tk.Tk, TwlWidget):
 
         self.geometry("1200x800")
 
-        self.configure_styles()
+        init_style()
 
         self.update_manager = TwlUpdateManager()
         self.settings = Settings(self.update_manager)
@@ -41,7 +42,7 @@ class TwlTool(tk.Tk, TwlWidget):
         notebook.add(definition_tab, text="Definition")
         notebook.add(CremonaTab(notebook, self.statical_system), text="Cremona")
         notebook.add(result_tab, text="Result")
-        notebook.add(profiles_tab, text="(Profiles)")
+        notebook.add(profiles_tab, text="Profiles", state="disabled")
 
         label3 = tk.Label(result_tab, text="Results")
         label3.pack(padx=10, pady=10)
@@ -84,6 +85,11 @@ class TwlTool(tk.Tk, TwlWidget):
         forces_table = TwlTable(forces_entry.content, self.statical_system.forces)
         forces_table.pack(fill="both")
 
+        #todo: create custom widget BorderFrame
+        outer = ttk.Frame(menu_frame, style="Outer.Border.TFrame")
+        outer.pack(fill="both", expand=True)
+        ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
+
         self.bind("<Control-n>", lambda *ignore: clear_project(self.statical_system, self.is_saved))
         self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system, self.is_saved))
         self.bind("<Control-s>", lambda *ignore: save_project(self.statical_system, self.is_saved))
@@ -101,10 +107,6 @@ class TwlTool(tk.Tk, TwlWidget):
 
     def tab_changed(self, event):
         print("Tab changed!")
-
-    def configure_styles(self):
-        style = ttk.Style()
-        style.configure('TNotebook.Tab', padding=(20, 10), font=("Helvetica", 12))
 
     def create_menu_bar(self):
         # Create a menu bar

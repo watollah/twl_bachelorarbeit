@@ -1,18 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
 
+from twl_style import *
+
 class CustomButton(tk.Button):
 
     def __init__(self, master=None, **kw):
-        kw.setdefault("bg", "#ffffff")
-        kw.setdefault("activebackground", "grey")
+        kw.setdefault("bg", WHITE)
+        kw.setdefault("activebackground", LIGHT_GRAY)
         kw.setdefault("relief", "flat")
         kw.setdefault("borderwidth", "0")
-        kw.setdefault("font", ("Helvetica", 16))
+        kw.setdefault("font", LARGE_FONT)
         kw.setdefault("takefocus", False)
 
         outlinewidth = kw.pop("outlinewidth", None)
-        outlinecolor = kw.pop("outlinecolor", "grey")
+        outlinecolor = kw.pop("outlinecolor", BLACK)
         if outlinewidth:
             outline = tk.LabelFrame(master, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
             outline.pack(fill="x")
@@ -24,10 +26,10 @@ class CustomButton(tk.Button):
         self.bind("<Leave>", self.default)
 
     def hover(self, event):
-        event.widget.configure(bg="lightgrey")
+        event.widget.configure(bg=VERY_LIGHT_GRAY)
 
     def default(self, event):
-        event.widget.configure(bg="#ffffff")
+        event.widget.configure(bg=WHITE)
 
 
 class CustomToggleButton(CustomButton):
@@ -55,8 +57,8 @@ class ToggledFrame(tk.Frame):
 
     TABLE_WIDTH: int = 50
 
-    CLOSED_SYMBOL: str = "\u23F5"
-    OPEN_SYMBOL: str = "\u23F7"
+    CLOSED_SYMBOL: str = "\u25B6"
+    OPEN_SYMBOL: str = "\u25BC"
 
     def __init__(self, parent, title: str = "", *args, **options):
         tk.Frame.__init__(self, parent, *args, **options)
@@ -72,9 +74,9 @@ class ToggledFrame(tk.Frame):
         self.toggle_button = CustomToggleButton(self.title_frame, 
                                                 command=lambda: self.content.pack(fill="x") if self.is_expanded.get() else self.content.forget(), 
                                                 variable=self.is_expanded, 
-                                                text_on=f"{ToggledFrame.OPEN_SYMBOL} {self.title}", 
-                                                text_off=f"{ToggledFrame.CLOSED_SYMBOL} {self.title}", 
-                                                padx=10, pady=8,
+                                                text_on=f"{ToggledFrame.OPEN_SYMBOL}    {self.title}", 
+                                                text_off=f"{ToggledFrame.CLOSED_SYMBOL}    {self.title}", 
+                                                padx=18, pady=16,
                                                 anchor="w",
                                                 outlinewidth=1)
         self.toggle_button.pack(fill=tk.BOTH)

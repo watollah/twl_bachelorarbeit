@@ -8,6 +8,7 @@ from twl_components import *
 from twl_help import *
 from twl_settings import *
 from twl_images import *
+from twl_style import *
 
 
 C = TypeVar('C', bound=Component)
@@ -655,6 +656,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
         tk.Canvas.__init__(self, master)
+        self.configure(background="white", highlightthickness=0)
         self.statical_system: StaticalSystem = statical_system
         self.settings: Settings = settings
         self.shapes: list[Shape] = []
@@ -667,13 +669,16 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.selected_tool: Tool = self.tools[0]
         toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
         toolbar.pack(fill="y", side= "left")
-        ttk.Style().configure("Diagram.TFrame", background="lightgrey")
         for tool in self.tools: self.add_button(tool, toolbar)
+
+        #todo: create custom widget BorderFrame
+        outer = ttk.Frame(toolbar, style="Outer.Border.TFrame")
+        outer.pack(fill="both", expand=True)
+        ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
 
         #statically determinate label
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
-        ttk.Style().configure("Diagram.TLabel", foreground="green")
 
         #grid and angle guide
         self.bind("<Configure>", self.on_resize)
@@ -734,7 +739,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
         image = add_image(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
-        button = ttk.Radiobutton(toolbar, image=image, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Diagram.Toolbutton")
+        button = ttk.Radiobutton(toolbar, image=image, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Toolbutton")
         button.pack()
 
     def change_tool(self):
@@ -768,7 +773,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         for force in self.statical_system.forces: self.shapes.append(ForceShape(force, self))
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
-        color = "green" if self.stat_determ_text[:5] == "f = 0" else "red"
+        color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
         ttk.Style().configure("Diagram.TLabel", foreground=color)
         self.tag_lower(self.GRID_TAG)
         self.selected_tool.activate()

@@ -20,10 +20,6 @@ class CremonaTab(ttk.Frame):
 
         self.create_control_panel(vertical_panes)
 
-        style = ttk.Style()
-        style.configure("TPanedwindow", background="lightgrey")
-        style.configure("Sash", sashthickness=5)
-
     def create_statical_system_diagram(self, master: tk.PanedWindow) -> tk.Canvas:
         frame = ttk.Frame(master)
         frame.pack_propagate(False)
@@ -53,9 +49,6 @@ class CremonaTab(ttk.Frame):
     CONTROL_PANEL_PADDING: int = 5
 
     def create_control_panel(self, master: tk.PanedWindow):
-        ttk.Style().configure("ControlPanel.TFrame", background="white")
-        ttk.Style().configure("ControlPanel.TLabel", background="white")
-        ttk.Style().configure("TScale", background="white")
     
         frame = ttk.Frame(master, style="ControlPanel.TFrame")
         master.add(frame, weight=1)

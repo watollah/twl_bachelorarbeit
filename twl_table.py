@@ -36,7 +36,6 @@ class TwlTable(ttk.Treeview, TwlWidget):
 
     def __init__(self, master, component_list: ComponentList[C]):
         ttk.Treeview.__init__(self, master)
-
         self.component_list: ComponentList[C] = component_list
         component_list.update_manager.widgets.append(self)
 
@@ -47,7 +46,8 @@ class TwlTable(ttk.Treeview, TwlWidget):
 
         #force columns to resize to boundaries of parent
         self.column("#0", width=0)
-        for column in columns: self.column(column, width=0)
+        for column in columns: self.column(column, width=0, anchor=tk.CENTER)
+        #self['show'] = 'headings' todo: move the ids to the second column, hide the first to remove weird padding issue
 
         self.bind('<Double-1>', self.direct_edit_cell)
 
