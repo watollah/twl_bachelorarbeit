@@ -48,6 +48,13 @@ class CustomToggleButton(CustomButton):
         command()
 
 
+class CustomRadioButton(CustomToggleButton):
+
+    def toggle(self, command):
+        return super().toggle(command)
+        
+
+
 class ToggledFrame(tk.Frame):
 
     TABLE_WIDTH: int = 50

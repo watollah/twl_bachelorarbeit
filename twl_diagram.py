@@ -1,6 +1,6 @@
 import tkinter as tk
-from typing import cast, final, TypeVar, Generic
 from tkinter import ttk
+from typing import cast, final, TypeVar, Generic
 
 from twl_components import Polygon
 from twl_update import *
@@ -355,13 +355,6 @@ class Tool:
     def __init__(self, diagram: 'TwlDiagram'):
         self.diagram: 'TwlDiagram' = diagram
 
-    @final
-    def selected(self):
-        """Perform tool change"""
-        self.diagram.selected_tool.deactivate()
-        self.activate()
-        self.diagram.selected_tool = self
-
     def activate(self):
         self.diagram.bind("<Button-1>", self._action)
         self.diagram.bind("<Motion>", self._preview)
@@ -663,9 +656,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.selection: list[Shape] = []
         self.grid_visible: bool = False
         self.angle_guide_visible: bool = False
-        
+
         #create toolbar
-        self.tools = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
+        self.tools: List[Tool] = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
+        self._selected_tool_id: tk.IntVar = IntVar(value=0)
         self.selected_tool: Tool = self.tools[0]
         toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
         toolbar.pack(fill="y", side= "left")
@@ -682,6 +676,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         #grid and angle guide
         self.bind("<Configure>", self.on_resize)
+
+        #set initial tool
+        self.select_tool(SelectTool.ID)
 
     def on_resize(self, event):
         self.delete_grid()
@@ -739,11 +736,18 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
         image = add_image(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
-        button = ttk.Radiobutton(toolbar, image=image, variable=cast(tk.Variable, self.selected_tool), value=tool, command=tool.selected, style="Toolbutton")
+        button = ttk.Radiobutton(toolbar, image=image, variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, style="Toolbutton")
         button.pack()
 
-    def change_tool(self):
-        """Code to be executed when the tool is changed"""
+    def select_tool(self, tool_id: int):
+        self._selected_tool_id.set(tool_id)
+        self.handle_tool_change()
+
+    def handle_tool_change(self):
+        """Perform tool change"""
+        self.selected_tool.deactivate()
+        self.selected_tool = self.tools[self._selected_tool_id.get()]
+        self.selected_tool.activate()
 
     def clear(self):
         for shape in self.find_all():
@@ -776,7 +780,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
         ttk.Style().configure("Diagram.TLabel", foreground=color)
         self.tag_lower(self.GRID_TAG)
-        self.selected_tool.activate()
 
     @property
     def stat_determ_text(self) -> str:
