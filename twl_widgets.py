@@ -82,13 +82,16 @@ class CustomToggleButton(CustomButton):
 
     def __init__(self, master=None, **kw):
         self.state: tk.BooleanVar = kw.pop("variable", tk.BooleanVar())
+        self.state.trace_add("write", lambda *ignore: self.on_toggle(command))
+
         text = kw.pop("text", "")
         self.text_on = kw.pop("text_on", text)
         self.text_off = kw.pop("text_off", text)
         kw["text"] = self.text_off if not self.state.get() else self.text_on
+
         command = kw.pop("command", self.default_command)
-        self.state.trace_add("write", lambda *ignore: self.on_toggle(command))
-        kw["command"] = lambda: self.state.set(not self.state.get())
+        kw["command"] = self.toggle
+
         super().__init__(master, **kw)
 
     def toggle(self):
@@ -110,14 +113,18 @@ class CustomRadioButton(CustomToggleButton):
     def __init__(self, master=None, **kw):
         self.variable: tk.Variable = kw.pop("variable", tk.StringVar())
         self.value = kw.pop("value", "")
-        self.variable.trace_add("write", lambda *ignore: self.radio_toggle())
+        self.variable.trace_add("write", lambda *ignore: self.on_radio_toggle())
         super().__init__(master, **kw)
 
-    def toggle(self, command):
-        super().toggle(command)
-        self.configure(style="Selected.TButton" if self.state.get() else "TButton")
+    def toggle(self):
+        super().toggle()
+        self.variable.set(self.value)
 
-    def radio_toggle(self):
+    def on_toggle(self, command):
+        self.configure(style="Selected.TButton" if self.state.get() else "TButton")
+        return super().on_toggle(command)
+
+    def on_radio_toggle(self):
         if self.state.get() and not self.variable.get() == self.value:
             self.state.set(False)
 
