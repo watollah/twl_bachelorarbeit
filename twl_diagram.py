@@ -629,7 +629,7 @@ class ForceTool(Tool):
 class TwlDiagram(tk.Canvas, TwlWidget):
 
     STAT_DETERM_LABEL_PADDING: int = 10
-    TOOL_BUTTON_SIZE: int = 50
+    TOOL_BUTTON_SIZE: int = 40
 
     TEXT_TAG = "text"
     TEXT_BG_TAG = "text"

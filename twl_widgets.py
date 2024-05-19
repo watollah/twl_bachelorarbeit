@@ -125,7 +125,9 @@ class CustomRadioButton(CustomToggleButton):
         return super().on_toggle(command)
 
     def on_radio_toggle(self):
-        if self.state.get() and not self.variable.get() == self.value:
+        if not self.state.get() and self.variable.get() == self.value:
+            self.state.set(True)
+        elif self.state.get() and not self.variable.get() == self.value:
             self.state.set(False)
 
 
