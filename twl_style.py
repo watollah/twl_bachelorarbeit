@@ -67,6 +67,11 @@ def init_style():
     style.configure("Outer.Border.TFrame", background=BLACK)
     style.configure("Inner.Border.TFrame", background=LIGHT_GRAY)
 
+    style.configure("Selected.TButton", background=SELECTED, relief="flat", font=LARGE_FONT)
+    style.map("Selected.TButton",
+              shiftrelief=[('pressed', '!disabled', 2)],
+              background=[('pressed', '!disabled', SELECTED), ('active', SELECTED)])
+
     style.configure("Diagram.TFrame", background="lightgrey")
     style.configure("ControlPanel.TFrame", background=WHITE)
     style.configure("ControlPanel.TLabel", background=WHITE)

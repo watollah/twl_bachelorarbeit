@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 from typing import cast, final, TypeVar, Generic
 
-from twl_components import Polygon
 from twl_update import *
 from twl_components import *
 from twl_help import *
 from twl_settings import *
 from twl_images import *
 from twl_style import *
+from twl_widgets import *
 
 
 C = TypeVar('C', bound=Component)
@@ -736,7 +736,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
         image = add_image(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
-        button = ttk.Radiobutton(toolbar, image=image, variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, style="Toolbutton")
+        button = CustomRadioButton(toolbar, text_on="X", text_off="Y", variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, outlinewidth=1)
         button.pack()
 
     def select_tool(self, tool_id: int):

@@ -87,23 +87,39 @@ class CustomToggleButton(CustomButton):
         self.text_off = kw.pop("text_off", text)
         kw["text"] = self.text_off if not self.state.get() else self.text_on
         command = kw.pop("command", self.default_command)
-        self.state.trace_add("write", lambda *ignore: self.toggle(command))
+        self.state.trace_add("write", lambda *ignore: self.on_toggle(command))
         kw["command"] = lambda: self.state.set(not self.state.get())
         super().__init__(master, **kw)
 
-    def default_command(self):
-        pass
+    def toggle(self):
+        """Switch the state of the button when it's pressed."""
+        self.state.set(not self.state.get())
 
-    def toggle(self, command):
+    def on_toggle(self, command):
+        """Code that gets executed when the state of the button changes."""
         self.config(text=self.text_off if not self.state.get() else self.text_on)
         command()
+
+    def default_command(self):
+        """Custom defineable function that gets executed when the state of the button changes."""
+        pass
 
 
 class CustomRadioButton(CustomToggleButton):
 
+    def __init__(self, master=None, **kw):
+        self.variable: tk.Variable = kw.pop("variable", tk.StringVar())
+        self.value = kw.pop("value", "")
+        self.variable.trace_add("write", lambda *ignore: self.radio_toggle())
+        super().__init__(master, **kw)
+
     def toggle(self, command):
-        return super().toggle(command)
-        
+        super().toggle(command)
+        self.configure(style="Selected.TButton" if self.state.get() else "TButton")
+
+    def radio_toggle(self):
+        if self.state.get() and not self.variable.get() == self.value:
+            self.state.set(False)
 
 
 class ToggledFrame(tk.Frame):
