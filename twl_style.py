@@ -110,6 +110,9 @@ def init_style():
     )
     style.configure(h_ttkstyle, background=WHITE)
 
+    style.configure("TMenubutton", background=WHITE, relief="flat", font=FONT)
+    style.map("TMenubutton", background=[('pressed', '!disabled', LIGHT_GRAY), ('active', VERY_LIGHT_GRAY)])
+
 def create_scale_image(color: str) -> int:
     image = Image.new("RGBA", (100, 100))
     draw = ImageDraw.Draw(image)

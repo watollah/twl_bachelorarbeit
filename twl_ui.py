@@ -93,5 +93,6 @@ class CremonaTab(ttk.Frame):
         speed_selection_frame.grid(row=1, column=2, padx=CremonaTab.CONTROL_PANEL_PADDING, pady=CremonaTab.CONTROL_PANEL_PADDING)
         speed_options = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
         selected_speed = tk.StringVar(self)
-        speed_menu = ttk.OptionMenu(speed_selection_frame, selected_speed, list(speed_options.keys())[1], *speed_options.keys())
+        speed_menu = CustomMenuButton(speed_selection_frame, selected_speed, list(speed_options.keys())[1], *speed_options.keys(), outlinewidth=1) 
+        speed_menu.configure(takefocus=False)
         speed_menu.pack(fill=tk.BOTH, expand=True)

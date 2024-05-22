@@ -159,3 +159,18 @@ class ToggledFrame(tk.Frame):
                                                 outlinewidth=1)
         self.toggle_button.pack(fill=tk.BOTH)
         self.is_expanded.set(True)
+
+
+class CustomMenuButton(ttk.OptionMenu):
+
+    ARROW_SIZE = 5
+
+    def __init__(self, parent, *args, **options):
+        outlinewidth = options.pop("outlinewidth", None)
+        outlinecolor = options.pop("outlinecolor", BLACK)
+        if outlinewidth:
+            outline = tk.LabelFrame(parent, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
+            outline.pack(fill="both", expand=True)
+            super().__init__(outline, *args, **options)
+        else:
+            super().__init__(parent, *args, **options)
