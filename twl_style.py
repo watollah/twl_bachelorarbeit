@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw
 
+from twl_images import *
+
 TTK_CLAM = "clam"
 
 FONT_TYPE = "Helvetica"
@@ -30,8 +32,6 @@ GREEN = "#008000"
 RED = "#ff0000"
 
 SCALE_THUMB_SIZE = 22
-
-theme_images = []
 
 def init_style():
 
@@ -84,20 +84,18 @@ def init_style():
     style.configure("ControlPanel.TFrame", background=WHITE)
     style.configure("ControlPanel.TLabel", background=WHITE)
 
-    id_normal = create_scale_image(WHITE)
-    id_disabled = create_scale_image(LIGHT_GRAY)
-    id_pressed = create_scale_image(LIGHT_GRAY)
-    id_hover = create_scale_image(VERY_LIGHT_GRAY)
-    track_img = ImageTk.PhotoImage(Image.new("RGB", (40, 5), VERY_LIGHT_GRAY))
-    id_track = len(theme_images)
-    theme_images.append(track_img)
+    normal_img = create_scale_image(WHITE)
+    disabled_img = create_scale_image(LIGHT_GRAY)
+    pressed_img = create_scale_image(LIGHT_GRAY)
+    hover_img = create_scale_image(VERY_LIGHT_GRAY)
+    track_img = add_image(Image.new("RGB", (40, 5), VERY_LIGHT_GRAY))
     h_ttkstyle = "Horizontal.TScale"
     h_element = h_ttkstyle.replace('.TS', '.S')
-    style.element_create(f'{h_element}.slider', 'image', theme_images[id_normal],
-                                ('disabled', theme_images[id_disabled]),
-                                ('pressed', theme_images[id_pressed]),
-                                ('hover', theme_images[id_hover]))
-    style.element_create(f'{h_element}.track', 'image', theme_images[id_track])
+    style.element_create(f'{h_element}.slider', 'image', normal_img,
+                                ('disabled', disabled_img),
+                                ('pressed', pressed_img),
+                                ('hover', hover_img))
+    style.element_create(f'{h_element}.track', 'image', track_img)
     style.layout(h_ttkstyle,
         [(f'{h_element}.focus', {
             "expand": "1",
@@ -113,13 +111,8 @@ def init_style():
     style.configure("TMenubutton", background=WHITE, relief="flat", font=FONT)
     style.map("TMenubutton", background=[('pressed', '!disabled', LIGHT_GRAY), ('active', VERY_LIGHT_GRAY)])
 
-def create_scale_image(color: str) -> int:
+def create_scale_image(color: str) -> tk.PhotoImage:
     image = Image.new("RGBA", (100, 100))
     draw = ImageDraw.Draw(image)
     draw.ellipse((0, 0, 95, 95), fill=color, outline=BLACK, width=4)
-    hover_img = ImageTk.PhotoImage(
-        image.resize((SCALE_THUMB_SIZE, SCALE_THUMB_SIZE), Image.Resampling.LANCZOS)
-    )
-    id = len(theme_images)
-    theme_images.append(hover_img)
-    return id
+    return add_image(image, SCALE_THUMB_SIZE, SCALE_THUMB_SIZE)

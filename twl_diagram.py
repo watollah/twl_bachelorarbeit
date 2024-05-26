@@ -735,7 +735,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.angle_guide_visible = True
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
-        image = add_image(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
+        image = add_image_from_path(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
         button = CustomRadioButton(toolbar, image=image, variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, outlinewidth=1)
         button.pack()
 
