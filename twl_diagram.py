@@ -640,12 +640,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     GRID_SNAP_RADIUS = 5
 
     ANGLE_GUIDE_TAG = "angle_guide"
-    ANGLE_GUIDE_BG_TAG = "angle_guide_bg"
-    ANGLE_GUIDE_COLOR = "grey"
-    ANGLE_GUIDE_PADDING = 30
-    ANGLE_GUIDE_RADIUS = 40
+    ANGLE_GUIDE_IMG = "img/angle_guide.png"
+    ANGLE_GUIDE_SIZE = 120
+    ANGLE_GUIDE_PADDING = 10
 
-    NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG, ANGLE_GUIDE_BG_TAG]
+    NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
 
     def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
         tk.Canvas.__init__(self, master)
@@ -657,16 +656,14 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.grid_visible: bool = False
         self.angle_guide_visible: bool = False
 
-        #create toolbar
+        #toolbar
         self.tools: List[Tool] = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
         self._selected_tool_id: tk.IntVar = IntVar(value=0)
         self.selected_tool: Tool = self.tools[0]
         toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
         toolbar.pack(fill="y", side= "left")
         for tool in self.tools: self.add_button(tool, toolbar)
-
-        #todo: create custom widget BorderFrame
-        outer = ttk.Frame(toolbar, style="Outer.Border.TFrame")
+        outer = ttk.Frame(toolbar, style="Outer.Border.TFrame") #todo: create custom widget BorderFrame
         outer.pack(fill="both", expand=True)
         ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
 
@@ -674,19 +671,25 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
 
-        #grid and angle guide
+        #angle guide
+        angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
+        self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
+                                             self.ANGLE_GUIDE_PADDING, 
+                                             image=angle_guide_img, 
+                                             anchor=tk.NE, 
+                                             tags=self.ANGLE_GUIDE_TAG)
+
+        #grid and angle guide refresh
         self.bind("<Configure>", self.on_resize)
 
         #set initial tool
         self.select_tool(SelectTool.ID)
 
-    def on_resize(self, event):
+    def on_resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
         self.delete_grid()
-        self.delete_angle_guide()
         if self.settings.show_grid.get():
             self.draw_grid()
-        if self.settings.show_angle_guide.get():
-            self.draw_angle_guide()
+        self.coords(self.angle_guide, self.winfo_width() - self.ANGLE_GUIDE_PADDING, self.ANGLE_GUIDE_PADDING)
 
     def delete_grid(self):
         self.delete(self.GRID_TAG)
@@ -712,27 +715,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         if distance < self.settings.grid_snap_radius.get():
             return nearest_x, nearest_y
         return x, y
-
-    def delete_angle_guide(self):
-        self.delete(self.ANGLE_GUIDE_TAG, self.ANGLE_GUIDE_BG_TAG)
-        self.angle_guide_visible = False
-    
-    def draw_angle_guide(self):
-        canvas_width = self.winfo_width()
-        n_point = Point(canvas_width - self.ANGLE_GUIDE_PADDING - self.ANGLE_GUIDE_RADIUS, self.ANGLE_GUIDE_PADDING)
-        s_point = Point(n_point.x, n_point.y + 2 * self.ANGLE_GUIDE_RADIUS)
-        w_point = Point(n_point.x - self.ANGLE_GUIDE_RADIUS, n_point.y + self.ANGLE_GUIDE_RADIUS)
-        e_point = Point(canvas_width - self.ANGLE_GUIDE_PADDING, w_point.y)
-        m_point = Point(w_point.x + self.ANGLE_GUIDE_RADIUS, n_point.y + self.ANGLE_GUIDE_RADIUS)
-        circle_radius = self.ANGLE_GUIDE_RADIUS //2
-        self.create_oval(m_point.x - circle_radius, m_point.y - circle_radius, m_point.x + circle_radius, m_point.y + circle_radius, fill=self["background"], tags=self.ANGLE_GUIDE_BG_TAG)
-        self.create_line(n_point.x, n_point.y, s_point.x, s_point.y, tags=self.ANGLE_GUIDE_BG_TAG)
-        self.create_line(w_point.x, w_point.y, e_point.x, e_point.y, tags=self.ANGLE_GUIDE_BG_TAG)
-        self.create_text_with_bg(n_point.x, n_point.y, text="180°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
-        self.create_text_with_bg(s_point.x, s_point.y, text="0°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
-        self.create_text_with_bg(w_point.x, w_point.y, text="90°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
-        self.create_text_with_bg(e_point.x, e_point.y, text="270°", tags=self.ANGLE_GUIDE_TAG, bg_tag=self.ANGLE_GUIDE_BG_TAG)
-        self.angle_guide_visible = True
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
         image = add_image_from_path(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
@@ -763,10 +745,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         elif self.settings.show_grid.get() and not self.grid_visible:
             self.draw_grid()
 
-        if not self.settings.show_angle_guide.get() and self.angle_guide_visible:
-            self.delete_angle_guide()
-        elif self.settings.show_angle_guide.get() and not self.angle_guide_visible:
-            self.draw_angle_guide()
+        angle_guide_state = tk.NORMAL if self.settings.show_angle_guide.get() else tk.HIDDEN
+        self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
         self.clear()
         self.shapes.clear()
@@ -780,6 +760,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
         ttk.Style().configure("Diagram.TLabel", foreground=color)
         self.tag_lower(self.GRID_TAG)
+        self.tag_raise(self.ANGLE_GUIDE_TAG)
 
     @property
     def stat_determ_text(self) -> str:
