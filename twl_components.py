@@ -111,11 +111,11 @@ class Beam(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("length", "angle")
+        return ("id", "length", "angle")
 
     @property
     def attribute_values(self) -> tuple:
-        return (round(self.length, 2), round(self.angle, 2))
+        return (self.id, round(self.length, 2), round(self.angle, 2))
 
 
 class Support(Component):
@@ -133,11 +133,11 @@ class Support(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("angle", "constraints")
+        return ("id", "angle", "constraints")
 
     @property
     def attribute_values(self) -> tuple:
-        return (round(self.angle, 2), self.constraints)
+        return (self.id, round(self.angle, 2), self.constraints)
 
 
 class Force(Component):
@@ -155,11 +155,11 @@ class Force(Component):
 
     @classproperty
     def attribute_names(cls) -> tuple:
-        return ("angle", "strength")
+        return ("id", "angle", "strength")
 
     @property
     def attribute_values(self) -> tuple:
-        return (round(self.angle, 2), round(self.strength, 2))
+        return (self.id, round(self.angle, 2), round(self.strength, 2))
 
 
 class StaticalSystem:
