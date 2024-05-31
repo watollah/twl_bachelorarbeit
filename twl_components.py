@@ -41,6 +41,9 @@ class Attribute(Generic[C, V]):
     def description(self) -> str:
         return self.NAME + (f" (in {self.UNIT})" if self.UNIT != "" else "")
 
+    def get_display_value(self) -> str:
+        return str(self.get_value())
+
 
 class AttributeDescriptor(Generic[V]):
 
@@ -75,7 +78,7 @@ class IdAttribute(Attribute['Component', str]):
 
     def _generate_next_unique_id(self) -> str:
         i = 1
-        while not self.filter(self._component.gen_id(i)):
+        while not self.filter(self._component.gen_id(i))[0]:
             i += 1
         return self._component.gen_id(i)
 
@@ -113,23 +116,26 @@ class NodeAttribute(Attribute['Component', 'Node']):
     ID = "node"
     NAME = "Node"
     UNIT = ""
-    EDITABLE: bool = True
+    EDITABLE: bool = False
+
+    def get_display_value(self) -> str:
+        return self._value.id
 
 
-class StartNodeAttribute(Attribute['Component', 'Node']):
+class StartNodeAttribute(NodeAttribute):
 
     ID = "startnode"
     NAME = "Start"
     UNIT = ""
-    EDITABLE: bool = True
+    EDITABLE: bool = False
 
 
-class EndNodeAttribute(Attribute['Component', 'Node']):
+class EndNodeAttribute(NodeAttribute):
 
     ID = "endnode"
     NAME = "End"
     UNIT = ""
-    EDITABLE: bool = True
+    EDITABLE: bool = False
 
 
 class AngleAttribute(Attribute['Component', float]):
@@ -148,6 +154,9 @@ class AngleAttribute(Attribute['Component', float]):
             return False, "Angle must be between 0 and 360."
         return True, ""
 
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
 
 class BeamAngleAttribute(Attribute['Beam', float]):
 
@@ -162,6 +171,9 @@ class BeamAngleAttribute(Attribute['Beam', float]):
     def get_value(self) -> float:
         return self._component.calc_angle()
 
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
 
 class BeamLengthAttribute(Attribute['Beam', float]):
 
@@ -175,6 +187,9 @@ class BeamLengthAttribute(Attribute['Beam', float]):
 
     def get_value(self) -> float:
         return self._component.calc_length()
+
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
 
 
 class ConstraintsAttribute(Attribute['Support', int]):
@@ -213,7 +228,7 @@ class Component(ABC):
 
     TAG: str = "component"
 
-    id: AttributeDescriptor[int] = AttributeDescriptor("_id")
+    id: AttributeDescriptor[str] = AttributeDescriptor("_id")
 
     def __init__(self, statical_system: 'StaticalSystem'):
         self.statical_system: StaticalSystem = statical_system

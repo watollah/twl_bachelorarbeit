@@ -47,7 +47,7 @@ class TwlTable(ttk.Treeview, TwlWidget):
 
     def update(self) -> None:
         self.delete(*self.get_children())
-        for c in self.component_list: self.insert("", tk.END, text=str(c.id), values=[attr.get_value() for attr in c.attributes])
+        for c in self.component_list: self.insert("", tk.END, text=str(c.id), values=[attr.get_display_value() for attr in c.attributes])
 
     def direct_edit_cell(self, event):
         ''' Executed when a table entry is double-clicked. Opens popup on top of entry to enable editing its value.'''
