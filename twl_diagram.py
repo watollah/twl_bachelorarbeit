@@ -494,9 +494,9 @@ class BeamTool(Tool):
             return
         if self.holding_shift_key(event):
             self.shift_snap_line(event)    
-        end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         if not self.start_node in self.diagram.statical_system.nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
+        end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         self.diagram.create_beam(self.start_node, end_node)
         self.start_node = end_node
 
