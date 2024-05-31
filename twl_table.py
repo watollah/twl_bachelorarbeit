@@ -9,14 +9,13 @@ C = TypeVar('C', bound=Component)
 
 class TwlTableEntryPopUp(tk.Entry):
 
-    def __init__(self, table, component: Component, attribute: str, **kw):
+    def __init__(self, table, component: Component, attr_index: int, **kw):
         super().__init__(table, **kw)
         self.table = table
         self.component: Component = component
-        self.attribute: str = attribute
+        self.attribute: str = ""
 
-        attribute_index = -1 if attribute == "id" else self.component.attribute_names.index(attribute.lower())
-        current_value = str(component.id) if attribute == "id" else self.component.attribute_values[attribute_index]
+        current_value = self.component.attribute_values[attr_index]
 
         self.insert(0, current_value)
         self['exportselection'] = False #stop selected text from being copied to clipboard
@@ -39,21 +38,21 @@ class TwlTable(ttk.Treeview, TwlWidget):
         self.component_list: ComponentList[C] = component_list
         component_list.update_manager.widgets.append(self)
 
-        columns: tuple = component_list.component_class.attribute_names
-        self.configure(columns=columns)
-        for i in range(0, len(columns)): self.heading(columns[i], text=columns[i].capitalize())
-        for column in columns: self.column(column, width=0, anchor=tk.CENTER)
+        dummy = component_list.component_class.dummy()
+        self.configure(columns=[attr.ID for attr in dummy.attributes])
+        for attr in dummy.attributes: self.heading(attr.ID, text=attr.description)
+        for attr in dummy.attributes: self.column(attr.ID, width=0, anchor=tk.CENTER)
 
         self.bind('<Double-1>', self.direct_edit_cell)
 
     def update(self) -> None:
         self.delete(*self.get_children())
-        [self.insert("", tk.END, text=str(c.id), values=c.attribute_values) for c in self.component_list]
+        for c in self.component_list: self.insert("", tk.END, text=str(c.id), values=[attr.get_value() for attr in c.attributes])
 
     def direct_edit_cell(self, event):
         ''' Executed when a table entry is double-clicked. Opens popup on top of entry to enable editing its value.'''
+        columnid = self.identify_column(event.x)
         rowid = self.identify_row(event.y)
-        column = self.identify_column(event.x)
         itemid = self.item(rowid, "text")
 
         if not itemid:
@@ -61,12 +60,13 @@ class TwlTable(ttk.Treeview, TwlWidget):
 
         component = self.component_list.get_component(int(itemid))
         assert(component)
-        attribute = self.heading(column, "text").lower()
 
-        x, y, width, height = map(int, self.bbox(rowid, column))
+        attr_index = int(columnid[1:]) #remove the "#" from column id and convert to int
+
+        x, y, width, height = map(int, self.bbox(rowid, columnid))
         pady = height // 2
 
         text = self.item(rowid, 'text')
-        self.entryPopup = TwlTableEntryPopUp(self, component, attribute)
+        self.entryPopup = TwlTableEntryPopUp(self, component, attr_index)
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
     

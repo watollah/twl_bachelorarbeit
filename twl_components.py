@@ -1,44 +1,241 @@
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar, List, Type, cast
-from itertools import chain
+from typing import Any, TypeVar, List, Type, cast, Generic, Callable, Iterable
 
 from twl_math import *
 from twl_update import *
 from twl_classproperty import *
+from twl_help import *
 
 
-C = TypeVar('C', bound='Component')
+C = TypeVar("C", bound='Component')
+V = TypeVar("V")
+
+class Attribute(Generic[C, V]):
+
+    ID: str = ""
+    NAME: str = ""
+    UNIT: str = ""
+    EDITABLE: bool = False
+
+    def __init__(self, component: C, value: V) -> None:
+        self._component: C = component
+        self._value: V = value
+        component.attributes.append(self)
+
+    def get_value(self) -> V:
+        return self._value
+
+    def set_value(self, value) -> tuple[bool, str]:
+        """Set the value of this attribute. The value is tested for validity and cast to the attributes type."""
+        filter_result = self.filter(value)
+        if filter_result[0]:
+            self._value = type(self._value)(value) #type: ignore
+        return filter_result
+
+    def filter(self, value) -> tuple[bool, str]:
+        """Test if a value is valid for this attribute. If valid, it returns True and an empty String.
+        If not valid, it returns False and an explanation."""
+        return True, ""
+
+    @property
+    def description(self) -> str:
+        return self.NAME + (f" (in {self.UNIT})" if self.UNIT != "" else "")
+
+
+class AttributeDescriptor(Generic[V]):
+
+    def __init__(self, attr_name: str):
+        self.attr_name: str = attr_name
+
+    def __get__(self, instance, owner) -> V:
+        return getattr(instance, self.attr_name).get_value()
+
+    def __set__(self, instance, value: V) -> tuple[bool, str]:
+        return getattr(instance, self.attr_name).set_value(value)
+
+    # def set(self, value: V) -> tuple[bool, str]:
+    #     getattr(instance??, self.attr_name).set_value(value)
+
+
+class IdAttribute(Attribute['Component', str]):
+
+    ID = "id"
+    NAME = "Id"
+    UNIT = ""
+    EDITABLE: bool = True
+
+    def __init__(self, component: 'Component') -> None:
+        super().__init__(component, "")
+        self._value = self._generate_next_unique_id()
+
+    def filter(self, value) -> tuple[bool, str]:
+        if (value in {component.id for component in self._component.statical_system.all_components}):
+            return False, "Id already exists."
+        return True, ""
+
+    def _generate_next_unique_id(self) -> str:
+        i = 1
+        while not self.filter(self._component.gen_id(i)):
+            i += 1
+        return self._component.gen_id(i)
+
+
+class CoordinateAttribute(Attribute['Component', int]):
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = int(value)
+        except ValueError:
+            return False, "Coordinate must be a number."
+        if value <= 0:
+            return False, "Coordinate must be positive."
+        return True, ""
+
+
+class XCoordinateAttribute(CoordinateAttribute):
+
+    ID = "x"
+    NAME = "X"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class YCoordinateAttribute(CoordinateAttribute):
+
+    ID = "y"
+    NAME = "Y"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class NodeAttribute(Attribute['Component', 'Node']):
+
+    ID = "node"
+    NAME = "Node"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class StartNodeAttribute(Attribute['Component', 'Node']):
+
+    ID = "startnode"
+    NAME = "Start"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class EndNodeAttribute(Attribute['Component', 'Node']):
+
+    ID = "endnode"
+    NAME = "End"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class AngleAttribute(Attribute['Component', float]):
+
+    ID = "angle"
+    NAME = "Angle"
+    UNIT = "°"
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Angle must be a number."
+        if not 0 <= value <= 360:
+            return False, "Angle must be between 0 and 360."
+        return True, ""
+
+
+class BeamAngleAttribute(Attribute['Beam', float]):
+
+    ID = "angle"
+    NAME = "Angle"
+    UNIT = "°"
+    EDITABLE: bool = False
+
+    def __init__(self, component: 'Beam') -> None:
+        super().__init__(component, 0)
+
+    def get_value(self) -> float:
+        return self._component.calc_angle()
+
+
+class BeamLengthAttribute(Attribute['Beam', float]):
+
+    ID = "length"
+    NAME = "Length"
+    UNIT = "m"
+    EDITABLE: bool = False
+
+    def __init__(self, component: 'Beam') -> None:
+        super().__init__(component, 0)
+
+    def get_value(self) -> float:
+        return self._component.calc_length()
+
+
+class ConstraintsAttribute(Attribute['Support', int]):
+
+    ID = "constraints"
+    NAME = "Constraints"
+    UNIT = ""
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = int(value)
+        except ValueError:
+            return False, "Must be 1 or 2."
+        if not value in {1, 2}:
+            return False, "Must be 1 or 2."
+        return True, ""
+
+
+class StrengthAttribute(Attribute['Force', float]):
+
+    ID = "strength"
+    NAME = "Strength"
+    UNIT = "kN"
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Force must be a number."
+        return True, ""
 
 
 class Component(ABC):
 
     TAG: str = "component"
 
+    id: AttributeDescriptor[int] = AttributeDescriptor("_id")
+
     def __init__(self, statical_system: 'StaticalSystem'):
         self.statical_system: StaticalSystem = statical_system
-        self.id: int = Component.generate_next_unique_id(statical_system.list_for_type(type(self)))
+        self.attributes: List[Attribute] = []
+        self._id: IdAttribute = IdAttribute(self)
 
     @classmethod
-    def generate_next_unique_id(cls, existing_components: list[C]):
-        existing_ids = [component.id for component in existing_components]
-        return next(id for id in range(1, len(existing_ids) + 2) if id not in existing_ids)
+    def dummy(cls):
+        """Creates a dummy instance of this Component to extract its attributes."""
+        return cls(StaticalSystem(TwlUpdateManager()))
 
     @abstractmethod
     def delete(self):
         """Deletes the component from the statical system and deltes components dependent on it."""
-        pass
 
-    @classproperty
     @abstractmethod
-    def attribute_names(cls) -> tuple:
-        """Returns the names of attributes to display for the component type and get and set the attribute when editing in twl tables."""
-        pass
+    def displayed_attributes(self) -> List[Attribute]:
+        """Returns the attributes to display for this component."""
 
-    @property
-    @abstractmethod
-    def attribute_values(self) -> tuple:
-        """Returns the values of attributes to display for the component type."""
-        pass
+    def gen_id(self, i: int) -> str:
+        """Generate an id based on a number i."""
+        return str(i)
 
     def __setattr__(self, name: str, value: Any) -> None:
         """Automatically update the connected widgets whenever one of the components attributes is changed."""
@@ -52,10 +249,17 @@ class Node(Component):
 
     TAG: str = "node"
 
+    x: AttributeDescriptor[int] = AttributeDescriptor("_x")
+    y: AttributeDescriptor[int] = AttributeDescriptor("_y")
+
     def __init__(self, statical_system: 'StaticalSystem', x: int, y: int):
         super().__init__(statical_system)
-        self.x: int = x
-        self.y: int = y
+        self._x: XCoordinateAttribute = XCoordinateAttribute(self, x)
+        self._y: YCoordinateAttribute = YCoordinateAttribute(self, y)
+
+    @classmethod
+    def dummy(cls):
+        return cls(StaticalSystem(TwlUpdateManager()), 0, 0)
 
     def delete(self):
         for support in self.supports: support.delete()
@@ -74,92 +278,109 @@ class Node(Component):
     def forces(self) -> list['Force']:
         return [force for force in self.statical_system.forces if force.node == self]
 
-    @classproperty
-    def attribute_names(cls) -> tuple:
-        return ()
+    def displayed_attributes(self) -> List[Attribute]:
+        return [self._id, self._x, self._y]
 
-    @property
-    def attribute_values(self) -> tuple:
-        return ()
+    def gen_id(self, i: int) -> str:
+        return int_to_roman(i)
 
 
 class Beam(Component):
 
     TAG: str = "beam"
 
+    start_node: AttributeDescriptor[Node] = AttributeDescriptor("_start_node")
+    end_node: AttributeDescriptor[Node] = AttributeDescriptor("_end_node")
+    length: AttributeDescriptor[float] = AttributeDescriptor("_length")
+    angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
+
     def __init__(self, statical_system: 'StaticalSystem', start_node: Node, end_node: Node):
         super().__init__(statical_system)
-        self.start_node: Node = start_node
-        self.end_node: Node = end_node
+        self._start_node: StartNodeAttribute = StartNodeAttribute(self, start_node)
+        self._end_node: EndNodeAttribute = EndNodeAttribute(self, end_node)
+        self._length: BeamLengthAttribute = BeamLengthAttribute(self)
+        self._angle: BeamAngleAttribute = BeamAngleAttribute(self)
+
+    @classmethod
+    def dummy(cls):
+        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy(), Node.dummy())
 
     def delete(self):
         self.statical_system.beams.remove(self)
         if not self.start_node.beams: self.start_node.delete()
         if not self.end_node.beams: self.end_node.delete()
 
-    @property
-    def length(self) -> float:
+    def calc_length(self) -> float:
         p1 = Point(self.start_node.x, self.start_node.y)
         p2 = Point(self.end_node.x, self.end_node.y)
         return Line(p1, p2).length()
 
-    @property
-    def angle(self) -> float:
+    def calc_angle(self) -> float:
         p1 = Point(self.start_node.x, self.start_node.y)
         p2 = Point(self.end_node.x, self.end_node.y)
         return Line(p1, p2).angle()
 
-    @classproperty
-    def attribute_names(cls) -> tuple:
-        return ("id", "length", "angle")
+    def displayed_attributes(self) -> List[Attribute]:
+        return [self._id, self._length, self._angle]
 
-    @property
-    def attribute_values(self) -> tuple:
-        return (self.id, round(self.length, 2), round(self.angle, 2))
+    def gen_id(self, i: int) -> str:
+        return f"S{i}"
 
 
 class Support(Component):
 
     TAG: str = "support"
 
+    node: AttributeDescriptor[Node] = AttributeDescriptor("_node")
+    angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
+    constraints: AttributeDescriptor[int] = AttributeDescriptor("_constraints")
+
     def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=0, constraints: int=2):
         super().__init__(statical_system)
-        self.node: Node = node
-        self.angle: float = angle
-        self.constraints: int = constraints
+        self._node: NodeAttribute = NodeAttribute(self, node)
+        self._angle: AngleAttribute = AngleAttribute(self, angle)
+        self._constraints: ConstraintsAttribute = ConstraintsAttribute(self, constraints)
+
+    @classmethod
+    def dummy(cls):
+        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy())
 
     def delete(self):
         self.statical_system.supports.remove(self)
 
-    @classproperty
-    def attribute_names(cls) -> tuple:
-        return ("id", "angle", "constraints")
+    def displayed_attributes(self) -> List[Attribute]:
+        return [self._id, self._angle, self._constraints]
 
-    @property
-    def attribute_values(self) -> tuple:
-        return (self.id, round(self.angle, 2), self.constraints)
+    def gen_id(self, i: int) -> str:
+        return chr(i + 64)
 
 
 class Force(Component):
 
     TAG: str = "force"
 
+    node: AttributeDescriptor[Node] = AttributeDescriptor("_node")
+    angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
+    strength: AttributeDescriptor[float] = AttributeDescriptor("_strength")
+
     def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180, strength: float=1):
         super().__init__(statical_system)
-        self.node: Node = node
-        self.angle: float = angle
-        self.strength: float = strength
+        self._node: NodeAttribute = NodeAttribute(self, node)
+        self._angle: AngleAttribute = AngleAttribute(self, angle)
+        self._strength: StrengthAttribute = StrengthAttribute(self, strength)
+
+    @classmethod
+    def dummy(cls):
+        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy())
 
     def delete(self):
         self.statical_system.forces.remove(self)
 
-    @classproperty
-    def attribute_names(cls) -> tuple:
-        return ("id", "angle", "strength")
+    def displayed_attributes(self) -> List[Attribute]:
+        return [self._id, self._angle, self._strength]
 
-    @property
-    def attribute_values(self) -> tuple:
-        return (self.id, round(self.angle, 2), round(self.strength, 2))
+    def gen_id(self, i: int) -> str:
+        return f"F{i}"
 
 
 class StaticalSystem:

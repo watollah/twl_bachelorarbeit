@@ -73,14 +73,10 @@ class Shape(Generic[C]):
     def label_position(self) -> Point:
         pass
 
-    @property
-    def label_text(self) -> str:
-        return f"{self.LABEL_PREFIX}{self.component.id}"
-
     def draw_label(self):
         self.diagram.create_text_with_bg(self.label_position.x, 
                                  self.label_position.y, 
-                                 text=self.label_text, 
+                                 text=self.component.id, 
                                  tags=self.LABEL_TAG,
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
@@ -127,10 +123,6 @@ class NodeShape(Shape[Node]):
     @property
     def label_position(self) -> Point:
         return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
-
-    @property
-    def label_text(self) -> str:
-        return f"{self.LABEL_PREFIX}{int_to_roman(self.component.id)}"
 
     @property
     def bounds(self) -> Polygon:
@@ -263,10 +255,6 @@ class SupportShape(Shape[Support]):
         point = Point(self.component.node.x, self.component.node.y + self.HEIGHT + self.LABEL_OFFSET)
         point.rotate(n_point, self.component.angle)
         return point
-
-    @property
-    def label_text(self) -> str:
-        return int_to_letter(self.component.id)
 
     @property
     def bounds(self) -> Polygon:
