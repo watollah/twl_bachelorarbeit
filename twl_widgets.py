@@ -183,6 +183,7 @@ class CustomEntry(tk.Entry):
         self.validator = validator
         kwargs["validate"] = "key"
         kwargs["validatecommand"] = (master.register(self.validate), "%P")
+        kwargs["justify"] = tk.CENTER
         super().__init__(master, **kwargs)
         self['exportselection'] = False #stop selected text from being copied to clipboard
 
