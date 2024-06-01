@@ -7,6 +7,7 @@ class Point:
         self.y: int = y
 
     def rotate(self, center_of_rotation: 'Point', angle: float):
+        angle %= 360
         angle = math.radians(angle)
 
         #Translate the point to be rotated so that the center of rotation becomes the origin

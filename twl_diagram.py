@@ -229,7 +229,7 @@ class SupportShape(Shape[Support]):
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT)
         triangle = Triangle(n_point, l_point, r_point)
-        triangle.rotate(n_point, self.component.angle)
+        triangle.rotate(n_point, self.component.angle + 180)
         return triangle
 
     @property
@@ -238,7 +238,7 @@ class SupportShape(Shape[Support]):
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
         line = Line(l_point, r_point)
-        line.rotate(n_point, self.component.angle)
+        line.rotate(n_point, self.component.angle + 180)
         return line
 
     @property
@@ -253,7 +253,7 @@ class SupportShape(Shape[Support]):
     def label_position(self) -> Point:
         n_point = Point(self.component.node.x, self.component.node.y)
         point = Point(self.component.node.x, self.component.node.y + self.HEIGHT + self.LABEL_OFFSET)
-        point.rotate(n_point, self.component.angle)
+        point.rotate(n_point, self.component.angle + 180)
         return point
 
     @property
@@ -303,9 +303,9 @@ class ForceShape(Shape[Force]):
         n = Point(self.component.node.x, self.component.node.y)
         a1 = Point(n.x, n.y + self.DISTANCE_FROM_NODE)
         a2 = Point(a1.x, a1.y + self.LENGTH)
-        a1.rotate(n, self.component.angle)
-        a2.rotate(n, self.component.angle)
-        return Line(a1, a2)
+        line = Line(a1, a2)
+        line.rotate(n, self.component.angle)
+        return line
 
     @property
     def default_style(self) -> dict[str, str]:
@@ -556,7 +556,7 @@ class SupportTool(Tool):
             if clicked_node and not clicked_node.supports:
                 self.node = clicked_node
         else:
-            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             self.diagram.create_support(self.node, angle)
             self.reset()
@@ -568,7 +568,7 @@ class SupportTool(Tool):
             if hovering_node and not hovering_node.supports:
                 TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
         else:
-            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
         self.diagram.focus_set()
@@ -596,7 +596,7 @@ class ForceTool(Tool):
             if clicked_node:
                 self.node = clicked_node
         else:
-            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             self.diagram.create_force(self.node, angle)
             self.reset()
@@ -608,7 +608,7 @@ class ForceTool(Tool):
             if hovering_node:
                 TempForceShape(Force(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
         else:
-            line = Line(Point(event.x, event.y), Point(self.node.x, self.node.y))
+            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             TempForceShape(Force(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
         self.diagram.focus_set()

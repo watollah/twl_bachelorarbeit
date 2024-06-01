@@ -337,7 +337,7 @@ class Support(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     constraints: AttributeDescriptor[int] = AttributeDescriptor("_constraints")
 
-    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=0, constraints: int=2):
+    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180, constraints: int=2):
         super().__init__(statical_system)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
