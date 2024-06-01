@@ -13,6 +13,9 @@ class TwlTool(tk.Tk, TwlWidget):
 
     TITLE: str = "Twl Tool"
 
+    UNIT_CONV: float = 0.025
+    UNIT_SYMB: str = "m"
+
     def __init__(self):
         super().__init__()
 
@@ -69,6 +72,11 @@ class TwlTool(tk.Tk, TwlWidget):
         menu_frame = ttk.Frame(paned_window)
         menu_frame.pack_propagate(False)
         paned_window.add(menu_frame, weight=1)
+
+        nodes_entry = ToggledFrame(menu_frame, "Nodes")
+        nodes_entry.pack(fill="x")
+        nodes_table = TwlTable(nodes_entry.content, self.statical_system.nodes)
+        nodes_table.pack(fill="both")
 
         beams_entry = ToggledFrame(menu_frame, "Beams")
         beams_entry.pack(fill="x")
