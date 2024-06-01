@@ -174,3 +174,50 @@ class CustomMenuButton(ttk.OptionMenu):
             super().__init__(outline, *args, **options)
         else:
             super().__init__(parent, *args, **options)
+
+
+class CustomEntry(tk.Entry):
+
+    def __init__(self, master, validator, **kwargs):
+        self.popup = None
+        self.validator = validator
+        kwargs["validate"] = "key"
+        kwargs["validatecommand"] = (master.register(self.validate), "%P")
+        super().__init__(master, **kwargs)
+        self['exportselection'] = False #stop selected text from being copied to clipboard
+
+    def validate(self, new_value) -> bool:
+        validation = self.validator(new_value)
+        if validation[0]:
+            self.hide_popup()
+        else:
+            self.show_popup(validation[1])
+        return True
+
+    def show_popup(self, message):
+        if self.popup:
+            self.popup.destroy()
+        x, y, width = self.winfo_rootx(), self.winfo_rooty() + self.winfo_height(), self.winfo_width()
+
+        #add warning sign icon
+        message = "\u26A0 " + message
+
+        #create a temporary label to measure the required height
+        temp_label = tk.Label(self, text=message, wraplength=width)
+        temp_label.pack_forget()  # Pack and forget to trigger geometry computation
+        req_height = temp_label.winfo_reqheight()
+
+        #create the popup window
+        self.popup = tk.Toplevel(self)
+        self.popup.geometry(f"{width}x{req_height}+{x}+{y - req_height - self.winfo_height()}")
+        self.popup.overrideredirect(True)
+        #self.popup.attributes('-alpha', 0.6)
+
+        #create the label with the error message and pack it into the popup window
+        label = tk.Label(self.popup, text=message, wraplength=width)
+        label.pack(expand=True, fill="both")
+
+    def hide_popup(self):
+        if self.popup:
+            self.popup.destroy()
+            self.popup = None

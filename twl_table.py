@@ -3,22 +3,20 @@ from tkinter import ttk
 from typing import final, TypeVar
 
 from twl_components import *
+from twl_widgets import *
 
 C = TypeVar('C', bound=Component)
 
 
-class TwlTableEntryPopUp(tk.Entry):
+class TwlTableEntryPopUp(CustomEntry):
 
-    def __init__(self, table, component: Component, attr_index: int, **kw):
-        super().__init__(table, **kw)
-        self.table = table
+    def __init__(self, table, component: Component, attribute: Attribute, **kw):
+        super().__init__(table, attribute.filter, **kw)
         self.component: Component = component
-        self.attribute: str = ""
+        self.attribute: Attribute = attribute
 
-        current_value = self.component.attribute_values[attr_index]
-
+        current_value = attribute.get_value()
         self.insert(0, current_value)
-        self['exportselection'] = False #stop selected text from being copied to clipboard
 
         self.focus_force()
         self.bind("<Return>", self.on_return)
@@ -26,9 +24,9 @@ class TwlTableEntryPopUp(tk.Entry):
         self.bind("<FocusOut>", lambda *ignore: self.destroy())
 
     def on_return(self, event):
-        attribute_type = type(getattr(self.component, self.attribute.lower()))
-        self.component.__setattr__(self.attribute.lower(), attribute_type(self.get()))
-        self.destroy()
+        if self.attribute.filter(self.get())[0]:
+            self.attribute.set_value(self.get())
+            self.destroy()
 
 
 class TwlTable(ttk.Treeview, TwlWidget):
@@ -58,15 +56,18 @@ class TwlTable(ttk.Treeview, TwlWidget):
         if not itemid:
             return #return if the user double clicked on an empty cell
 
-        component = self.component_list.get_component(int(itemid))
+        component = self.component_list.get_component(itemid)
         assert(component)
 
-        attr_index = int(columnid[1:]) #remove the "#" from column id and convert to int
+        attr_index = int(columnid[1:]) - 1 #remove the "#" from column id and convert to int
+        attribute = component.attributes[attr_index]
+
+        if not attribute.EDITABLE:
+            return
 
         x, y, width, height = map(int, self.bbox(rowid, columnid))
         pady = height // 2
 
-        text = self.item(rowid, 'text')
-        self.entryPopup = TwlTableEntryPopUp(self, component, attr_index)
+        self.entryPopup = TwlTableEntryPopUp(self, component, attribute)
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
     

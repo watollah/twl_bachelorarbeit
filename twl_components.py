@@ -30,6 +30,8 @@ class Attribute(Generic[C, V]):
         filter_result = self.filter(value)
         if filter_result[0]:
             self._value = type(self._value)(value) #type: ignore
+            self._component.statical_system.update_manager.update()
+            print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
 
     def filter(self, value) -> tuple[bool, str]:
@@ -72,7 +74,7 @@ class IdAttribute(Attribute['Component', str]):
         self._value = self._generate_next_unique_id()
 
     def filter(self, value) -> tuple[bool, str]:
-        if (value in {component.id for component in self._component.statical_system.all_components}):
+        if value in {component.id for component in self._component.statical_system.all_components}:
             return False, "Id already exists."
         return True, ""
 
@@ -244,20 +246,9 @@ class Component(ABC):
     def delete(self):
         """Deletes the component from the statical system and deltes components dependent on it."""
 
-    @abstractmethod
-    def displayed_attributes(self) -> List[Attribute]:
-        """Returns the attributes to display for this component."""
-
     def gen_id(self, i: int) -> str:
         """Generate an id based on a number i."""
         return str(i)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Automatically update the connected widgets whenever one of the components attributes is changed."""
-        super().__setattr__(name, value)
-        if not name == "statical_system":
-            self.statical_system.update_manager.update()
-            print(f"detected change in {self}, changed attribute: {name}")
 
 
 class Node(Component):
@@ -292,9 +283,6 @@ class Node(Component):
     @property
     def forces(self) -> list['Force']:
         return [force for force in self.statical_system.forces if force.node == self]
-
-    def displayed_attributes(self) -> List[Attribute]:
-        return [self._id, self._x, self._y]
 
     def gen_id(self, i: int) -> str:
         return int_to_roman(i)
@@ -335,9 +323,6 @@ class Beam(Component):
         p2 = Point(self.end_node.x, self.end_node.y)
         return Line(p1, p2).angle()
 
-    def displayed_attributes(self) -> List[Attribute]:
-        return [self._id, self._length, self._angle]
-
     def gen_id(self, i: int) -> str:
         return f"S{i}"
 
@@ -363,9 +348,6 @@ class Support(Component):
     def delete(self):
         self.statical_system.supports.remove(self)
 
-    def displayed_attributes(self) -> List[Attribute]:
-        return [self._id, self._angle, self._constraints]
-
     def gen_id(self, i: int) -> str:
         return chr(i + 64)
 
@@ -390,9 +372,6 @@ class Force(Component):
 
     def delete(self):
         self.statical_system.forces.remove(self)
-
-    def displayed_attributes(self) -> List[Attribute]:
-        return [self._id, self._angle, self._strength]
 
     def gen_id(self, i: int) -> str:
         return f"F{i}"
@@ -452,5 +431,5 @@ class ComponentList(List[C]):
                 change = True
         if change: self.update_manager.update()
 
-    def get_component(self, id: int) -> C | None:
+    def get_component(self, id: str) -> C | None:
         return next((component for component in self if component.id == id), None)
