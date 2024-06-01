@@ -74,6 +74,8 @@ class IdAttribute(Attribute['Component', str]):
         self._value = self._generate_next_unique_id()
 
     def filter(self, value) -> tuple[bool, str]:
+        if hasattr(self._component, "_id") and self._component.id == value:
+            return True, ""
         if value in {component.id for component in self._component.statical_system.all_components}:
             return False, "Id already exists."
         return True, ""
