@@ -369,8 +369,11 @@ class Force(Component):
         self._strength: StrengthAttribute = StrengthAttribute(self, strength)
 
     @classmethod
-    def dummy(cls):
-        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy())
+    def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=180, strength: float=1):
+        node = Node.dummy() if node == None else node
+        dummy_force: Force = cls(StaticalSystem(TwlUpdateManager()), node, angle, strength)
+        dummy_force.id = id
+        return dummy_force
 
     def delete(self):
         self.statical_system.forces.remove(self)
@@ -407,9 +410,9 @@ class StaticalSystem:
     def list_for_type(self, component_type: Type[C]) -> 'ComponentList[C]':
         return cast('ComponentList[C]', next(component_list for component_list in self.component_lists if component_list.component_class == component_type))
 
-    def statically_determined(self) -> bool: #todo: implement once different types of supports have been implemented
+    def statically_determined(self) -> bool:
         """Check if the system is statically determined and thus ready for analysis."""
-        return False
+        return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 
 
 class ComponentList(List[C]):

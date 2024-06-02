@@ -8,6 +8,7 @@ from twl_table import *
 from twl_ui import *
 from twl_io import *
 from twl_settings import *
+from twl_reaction_forces import *
 
 class TwlTool(tk.Tk, TwlWidget):
 
@@ -114,7 +115,11 @@ class TwlTool(tk.Tk, TwlWidget):
             self.is_saved.set(False)
 
     def tab_changed(self, event):
-        print("Tab changed!")
+        selected_tab = event.widget.select()
+        tab_index = event.widget.index(selected_tab)
+        print(f"Tab changed! Selected: {tab_index}")
+        if tab_index == 1:
+            TwlReactionForcesCalculator(self.statical_system)
 
     def create_menu_bar(self):
         # Create a menu bar

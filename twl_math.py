@@ -1,5 +1,17 @@
 import math
+from enum import Enum
+
 from typing import Tuple
+
+class Orientation(Enum):
+    HORIZONTAL = "h"
+    VERTICAL = "v"
+    DIAGONAL = "d"
+
+class Direction(Enum):
+    CLOCKWISE = "clw"
+    COUNTER_CLOCKWISE = "ccw"
+    COLINEAR = "col"
 
 class Point:
     def __init__(self, x: int, y: int):
@@ -126,6 +138,19 @@ class Line:
             intersection_x = (y_intercept - perp_y_intercept) / (perp_slope - slope)
             intersection_y = slope * intersection_x + y_intercept
             return Point(round(intersection_x), round(intersection_y))
+
+    def direction_to_point(self, point: Point) -> Direction:
+        vector1 = (self.start.x - point.x, self.start.y - point.y)
+        vector2 = (self.end.x - point.x, self.end.y - point.y)
+
+        cross_product = vector1[0] * vector2[1] - vector1[1] * vector2[0]
+
+        if cross_product > 0:
+            return Direction.CLOCKWISE
+        elif cross_product < 0:
+            return Direction.COUNTER_CLOCKWISE
+        else:
+            return Direction.COLINEAR
 
 
 class Triangle:
