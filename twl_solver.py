@@ -9,19 +9,25 @@ class TwlSolver:
     def __init__(self, statical_system: StaticalSystem) -> None:
         self.statical_system = statical_system
 
+        self.unknown_forces: List[Force] = []
+        self.factor_matrix: List[List[float]] = []
+        self.result_vector: List[float] = []
+        self.solution_vector: List[float] = []
+
     def solve(self):
         if not self.statical_system.statically_determined() or self.statical_system.is_empty():
             return
-        unknown_forces = self.get_unknown_forces()
-        factor_matrix: List[List[float]] = []
-        result_vector: List[float] = []
+        self.unknown_forces = self.get_unknown_forces()
+        self.factor_matrix = []
+        self.result_vector = []
         for node in self.statical_system.nodes:
-            factor_matrix.append(self.get_node_factors(node, Orientation.HORIZONTAL))
-            factor_matrix.append(self.get_node_factors(node, Orientation.VERTICAL))
-            result_vector.append(self.get_node_forces(node, Orientation.HORIZONTAL))
-            result_vector.append(self.get_node_forces(node, Orientation.VERTICAL))
-        solution_vector = np.linalg.solve(factor_matrix, result_vector).tolist()
-        self.print_result(factor_matrix, unknown_forces, result_vector, solution_vector)
+            self.factor_matrix.append(self.get_node_factors(node, Orientation.HORIZONTAL))
+            self.factor_matrix.append(self.get_node_factors(node, Orientation.VERTICAL))
+            self.result_vector.append(self.get_node_forces(node, Orientation.HORIZONTAL))
+            self.result_vector.append(self.get_node_forces(node, Orientation.VERTICAL))
+        self.solution_vector = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
+        self.print_result()
+        self.statical_system.update_manager.update_results()
 
     def get_unknown_forces(self) -> List[Force]:
         unknown_forces: List[Force] = []
@@ -72,24 +78,24 @@ class TwlSolver:
             return Line(Point(node.x, node.y), Point(other_node.x, other_node.y)).angle()
         return beam.angle
 
-    def print_result(self, factor_matrix: List[List[float]], unknown_forces: List[Force], result_vector: List[float], solution_vector: List[float]):
+    def print_result(self):
         prefix_max_width = max(len(node.id) for node in self.statical_system.nodes) + 8
-        factors_max_width = max(len(self.format_float(f)) for row in factor_matrix for f in row)
-        unknowns_max_width = max(len(force.id) for force in unknown_forces)
-        result_max_width = max(len(self.format_float(f)) for f in result_vector)
-        solved_max_width = max(len(self.format_float(f)) for f in solution_vector)
+        factors_max_width = max(len(self.format_float(f)) for row in self.factor_matrix for f in row)
+        unknowns_max_width = max(len(force.id) for force in self.unknown_forces)
+        result_max_width = max(len(self.format_float(f)) for f in self.result_vector)
+        solved_max_width = max(len(self.format_float(f)) for f in self.solution_vector)
 
-        center_index = len(unknown_forces) // 2
-        for i in range(len(unknown_forces)):
+        center_index = len(self.unknown_forces) // 2
+        for i in range(len(self.unknown_forces)):
             orientation = Orientation.HORIZONTAL if i % 2 == 0 else Orientation.VERTICAL
             prefix = f"({self.statical_system.nodes[i // 2].id}, {orientation.value}) ".ljust(prefix_max_width)
             space1 = "   " if i != center_index else " x "
             space2 = "   " if i != center_index else " = "
             space3 = "    " if i != center_index else " -> "
-            print(prefix + "[{}]".format(" ".join(self.format_float(factor).ljust(factors_max_width) for factor in factor_matrix[i])) 
-                  + space1 + f"[{unknown_forces[i].id.ljust(unknowns_max_width)}]" 
-                  + space2 + f"[{self.format_float(result_vector[i]).ljust(result_max_width)}]" 
-                  + space3 + f"[{self.format_float(solution_vector[i]).ljust(solved_max_width)}]")
+            print(prefix + "[{}]".format(" ".join(self.format_float(factor).ljust(factors_max_width) for factor in self.factor_matrix[i])) 
+                  + space1 + f"[{self.unknown_forces[i].id.ljust(unknowns_max_width)}]" 
+                  + space2 + f"[{self.format_float(self.result_vector[i]).ljust(result_max_width)}]" 
+                  + space3 + f"[{self.format_float(self.solution_vector[i]).ljust(solved_max_width)}]")
 
     def format_float(self, f) -> str:
         return "{:.2f}".format(f)
