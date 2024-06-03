@@ -119,7 +119,8 @@ class TwlTool(tk.Tk, TwlWidget):
         tab_index = event.widget.index(selected_tab)
         print(f"Tab changed! Selected: {tab_index}")
         if tab_index == 1:
-            TwlReactionForcesCalculator(self.statical_system)
+            solver = TwlSolver(self.statical_system)
+            solver.solve()
 
     def create_menu_bar(self):
         # Create a menu bar
