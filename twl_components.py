@@ -318,7 +318,7 @@ class Beam(Component):
     def calc_length(self) -> float:
         p1 = Point(self.start_node.x, self.start_node.y)
         p2 = Point(self.end_node.x, self.end_node.y)
-        return Line(p1, p2).length()
+        return Line(p1, p2).length_scaled()
 
     def calc_angle(self) -> float:
         p1 = Point(self.start_node.x, self.start_node.y)
