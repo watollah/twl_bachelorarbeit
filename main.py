@@ -32,7 +32,7 @@ class TwlTool(tk.Tk, TwlWidget):
         self.settings = Settings(self.update_manager)
     
         self.statical_system = StaticalSystem(self.update_manager)
-        self.update_manager.widgets.append(self)
+        self.update_manager.design_widgets.append(self)
     
     
         self.create_menu_bar()
@@ -67,7 +67,7 @@ class TwlTool(tk.Tk, TwlWidget):
         diagram = TwlDiagram(editor_frame, self.statical_system, self.settings)
         diagram.pack(fill="both", expand=True)
 
-        self.update_manager.widgets.append(diagram)
+        self.update_manager.design_widgets.append(diagram)
         
         #Tables
         menu_frame = ttk.Frame(paned_window)

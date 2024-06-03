@@ -34,7 +34,7 @@ class TwlTable(ttk.Treeview, TwlWidget):
     def __init__(self, master, component_list: ComponentList[C]):
         ttk.Treeview.__init__(self, master, show="headings")
         self.component_list: ComponentList[C] = component_list
-        component_list.update_manager.widgets.append(self)
+        component_list.update_manager.design_widgets.append(self)
 
         dummy = component_list.component_class.dummy()
         self.configure(columns=[attr.ID for attr in dummy.attributes])
