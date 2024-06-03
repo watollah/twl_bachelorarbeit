@@ -8,7 +8,7 @@ from twl_table import *
 from twl_ui import *
 from twl_io import *
 from twl_settings import *
-from twl_reaction_forces import *
+from twl_solver import *
 
 class TwlTool(tk.Tk, TwlWidget):
 
