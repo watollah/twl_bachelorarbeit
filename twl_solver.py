@@ -9,36 +9,40 @@ class TwlSolver:
     def __init__(self, model: Model) -> None:
         self.model = model
 
-        self.unknown_forces: List[Force] = []
         self.factor_matrix: List[List[float]] = []
         self.result_vector: List[float] = []
-        self.solution_vector: List[float] = []
+        self.solution: dict[Force, Component] = {}
 
     def solve(self):
         if not self.model.statically_determined() or self.model.is_empty():
             return
-        self.unknown_forces = self.get_unknown_forces()
+
         self.factor_matrix = []
         self.result_vector = []
+        self.solution = self.get_unknown_forces()
+
         for node in self.model.nodes:
             self.factor_matrix.append(self.get_node_factors(node, Orientation.HORIZONTAL))
             self.factor_matrix.append(self.get_node_factors(node, Orientation.VERTICAL))
             self.result_vector.append(self.get_node_forces(node, Orientation.HORIZONTAL))
             self.result_vector.append(self.get_node_forces(node, Orientation.VERTICAL))
-        self.solution_vector = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
+
+        np_solution = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
+        for i, force in enumerate(self.solution.keys()):
+            force.strength = np_solution[i]
         self.print_result()
 
-    def get_unknown_forces(self) -> List[Force]:
-        unknown_forces: List[Force] = []
+    def get_unknown_forces(self) -> dict[Force, Component]:
+        unknown_forces: dict[Force, Component] = {}
         for support in self.model.supports:
             if support.constraints == 2:
-                unknown_forces.append(Force.dummy(f"{support.id}_h", support.node, 90))
-                unknown_forces.append(Force.dummy(f"{support.id}_v", support.node, 0))
+                unknown_forces[Force.dummy(f"{support.id}_h", support.node, 90)] = support
+                unknown_forces[Force.dummy(f"{support.id}_v", support.node, 0)] = support
             if support.constraints == 1:
                 angle = (support.angle + 180) % 360
-                unknown_forces.append(Force.dummy(support.id, support.node, angle))
+                unknown_forces[Force.dummy(support.id, support.node, angle)] = support
         for beam in self.model.beams:
-            unknown_forces.append(Force.dummy(beam.id, angle=beam.angle))
+            unknown_forces[Force.dummy(beam.id, angle=beam.angle)] = beam
         return unknown_forces
 
     def get_node_factors(self, node: Node, orientation: Orientation) -> List[float]:
@@ -78,23 +82,25 @@ class TwlSolver:
         return beam.angle
 
     def print_result(self):
+        unknown_forces = list(self.solution.keys())
+
         prefix_max_width = max(len(node.id) for node in self.model.nodes) + 8
         factors_max_width = max(len(self.format_float(f)) for row in self.factor_matrix for f in row)
-        unknowns_max_width = max(len(force.id) for force in self.unknown_forces)
+        unknowns_max_width = max(len(force.id) for force in unknown_forces)
         result_max_width = max(len(self.format_float(f)) for f in self.result_vector)
-        solved_max_width = max(len(self.format_float(f)) for f in self.solution_vector)
+        solved_max_width = max(len(self.format_float(force.strength)) for force in unknown_forces)
 
-        center_index = len(self.unknown_forces) // 2
-        for i in range(len(self.unknown_forces)):
+        center_index = len(unknown_forces) // 2
+        for i in range(len(unknown_forces)):
             orientation = Orientation.HORIZONTAL if i % 2 == 0 else Orientation.VERTICAL
             prefix = f"({self.model.nodes[i // 2].id}, {orientation.value}) ".ljust(prefix_max_width)
             space1 = "   " if i != center_index else " x "
             space2 = "   " if i != center_index else " = "
             space3 = "    " if i != center_index else " -> "
             print(prefix + "[{}]".format(" ".join(self.format_float(factor).ljust(factors_max_width) for factor in self.factor_matrix[i])) 
-                  + space1 + f"[{self.unknown_forces[i].id.ljust(unknowns_max_width)}]" 
+                  + space1 + f"[{unknown_forces[i].id.ljust(unknowns_max_width)}]" 
                   + space2 + f"[{self.format_float(self.result_vector[i]).ljust(result_max_width)}]" 
-                  + space3 + f"[{self.format_float(self.solution_vector[i]).ljust(solved_max_width)}]")
+                  + space3 + f"[{self.format_float(unknown_forces[i].strength).ljust(solved_max_width)}]")
 
     def format_float(self, f) -> str:
         return "{:.2f}".format(f)
