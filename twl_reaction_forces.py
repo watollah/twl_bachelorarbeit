@@ -1,3 +1,5 @@
+import numpy as np
+
 from twl_components import *
 
 class TwlReactionForcesCalculator:
@@ -14,19 +16,25 @@ class TwlReactionForcesCalculator:
             self.calculate_reaction_forces()
 
     def calculate_reaction_forces(self):
-        hor_known_forces = [self.get_axial_force_component(force, Orientation.HORIZONTAL) for force in self.statical_system.forces]
-        vert_known_forces = [self.get_axial_force_component(force, Orientation.VERTICAL) for force in self.statical_system.forces]
-        unknown_forces = self.get_unknown_forces()
-        hor_force_factors = self.get_unknown_force_factors(unknown_forces, Orientation.HORIZONTAL)
-        vert_force_factors = self.get_unknown_force_factors(unknown_forces, Orientation.VERTICAL)
         node_for_moments = next(support.node for support in self.statical_system.supports if support.constraints == 2)
-        moment_force_factors = self.calculate_unknown_force_moment_factors(unknown_forces, node_for_moments)
+        hor_forces = [self.get_axial_force_component(force, Orientation.HORIZONTAL) for force in self.statical_system.forces]
+        vert_forces = [self.get_axial_force_component(force, Orientation.VERTICAL) for force in self.statical_system.forces]
+        moment_force_factors = self.calculate_force_moment_factors(self.statical_system.forces, node_for_moments)
+        moments = [(force.strength * factor) for force, factor in zip(self.statical_system.forces, moment_force_factors)]
+        result_vector = [-sum([force.strength for force in hor_forces]), -sum([force.strength for force in vert_forces]), -sum(moments)]
 
-        print("Horizontal known forces: " + ", ".join([f"{force.id}={force.strength}" for force in hor_known_forces]))
-        print("Vertical known forces: " + ", ".join([f"{force.id}={force.strength}" for force in vert_known_forces]))
-        print("Unknown forces: " + ", ".join([force.id for force in unknown_forces]))
-        print(f"Factors (node for moments = {node_for_moments.id}):")
-        self.print_matrix(hor_force_factors, vert_force_factors, moment_force_factors)
+        unknowns = self.get_unknown_forces()
+        hor_unknowns_factors = self.get_unknown_force_factors(unknowns, Orientation.HORIZONTAL)
+        vert_unknowns_factors = self.get_unknown_force_factors(unknowns, Orientation.VERTICAL)
+        moment_unknowns_factors = self.calculate_force_moment_factors(unknowns, node_for_moments)
+        factors = [hor_unknowns_factors, vert_unknowns_factors, moment_unknowns_factors]
+
+        solved = np.linalg.solve(factors, result_vector).tolist()
+
+        print("Horizontal known forces: " + ", ".join([f"{force.id}={self.format_float(force.strength)}" for force in hor_forces]))
+        print("Vertical known forces: " + ", ".join([f"{force.id}={self.format_float(force.strength)}" for force in vert_forces]))
+        print(f"Result (node for moments = {node_for_moments.id}):")
+        self.print_result(factors , unknowns, result_vector, solved)
 
     def get_axial_force_component(self, force: Force, orientation: Orientation) -> Force:
         angle_radians = math.radians(force.angle)
@@ -64,22 +72,46 @@ class TwlReactionForcesCalculator:
                     factors.append(math.cos(math.radians(force.angle)))
         return factors
 
-    def calculate_unknown_force_moment_factors(self, unknown_forces: List[Force], node: Node) -> List[float]:
+    def calculate_force_moment_factors(self, forces: List[Force], node: Node) -> List[float]:
         factors: List[float] = []
         node_point = Point(node.x, node.y)
-        for force in unknown_forces:
+        for force in forces:
             force_node_point = Point(force.node.x, force.node.y)
-            force_line = Line(force_node_point, Point(force_node_point.x, force_node_point.y - 1))
+            force_line = Line(force_node_point, Point(force_node_point.x, force_node_point.y - 10000))
             force_line.rotate(force_node_point, force.angle)
             distance = node_point.distance_to_line(force_line)
             factor = self.direction_to_factor.get(force_line.direction_to_point(node_point), 0)
             factors.append(factor * distance)
         return factors
 
-    def print_matrix(self, *rows: List[float]):
-        max_width = max(len(self.format_float(f)) for row in rows for f in row)
-        for row in rows:
-            print("[{}]".format(" ".join(self.format_float(f).ljust(max_width) for f in row)))
+    def print_result(self, factors: List[List[float]], unknown_forces: List[Force], result: List[float], solved: List[float]):
+        unknown_force_str = [force.id for force in unknown_forces]
+        factors_max_width = max(len(self.format_float(f)) for row in factors for f in row)
+        factors_total_width = factors_max_width * len(unknown_forces) + len(unknown_forces) - 1 + 2
+        unknowns_max_width = max(len(force) for force in unknown_force_str)
+        result_max_width = max(len(self.format_float(f)) for f in result)
+        solved_max_width = max(len(self.format_float(f)) for f in solved)
+        center_index = len(unknown_forces) // 2
+        for i, force in enumerate(unknown_forces):
+            factors_matrix = factors_total_width * " "
+            y = i - center_index + 1
+            if 0 <= y <= 2:
+                factors_matrix = self.matrix_row(factors, y)
+            space1 = "   " if i != center_index else " x "
+            space2 = "   " if i != center_index else " = "
+            space3 = "    " if i != center_index else " -> "
+            print(factors_matrix + space1 + f"[{unknown_force_str[i].ljust(unknowns_max_width)}]" 
+                  + space2 + f"[{self.format_float(result[i]).ljust(result_max_width)}]" 
+                  + space3 + f"[{self.format_float(solved[i]).ljust(solved_max_width)}]")
+
+    def matrix_row(self, factors: List[List[float]], i: int):
+        factors_max_width = max(len(self.format_float(factor)) for row in factors for factor in row)
+        return "[{}]".format(" ".join(self.format_float(factor).ljust(factors_max_width) for factor in factors[i]))
+
+    def print_vector(self, vector: List[float]):
+        max_width = max(len(self.format_float(value)) for value in vector)
+        for value in vector:
+            print(f"[{self.format_float(value).ljust(max_width)}]")
 
     def format_float(self, f) -> str:
         return "{:.2f}".format(f)
