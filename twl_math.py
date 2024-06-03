@@ -43,6 +43,9 @@ class Point:
     def distance_to_point(self, point: 'Point') -> float:
         return ((self.x - point.x) ** 2 + (self.y - point.y) ** 2) ** 0.5
 
+    def distance_to_point_scaled(self, point: 'Point') -> float:
+        return self.distance_to_point(point) * 0.01
+
     def distance_to_line(self, line: 'Line') -> float:
         p = line.end.subtract(line.start)
         norm = p.dot_product(p)
@@ -54,6 +57,9 @@ class Point:
         dy = self.y - (line.start.y + u * p.y)
 
         return (dx*dx + dy*dy)**.5
+
+    def distance_to_line_scaled(self, line: 'Line') -> float:
+        return self.distance_to_line(line) * 0.01
 
     def in_bounds(self, point_1: 'Point', point_2: 'Point'):
         min_x = min(point_1.x, point_2.x)
@@ -74,6 +80,9 @@ class Line:
         distance_squared = p.x**2 + p.y**2
         return math.sqrt(distance_squared)
 
+    def length_scaled(self) -> float:
+        return self.length() * 0.01
+
     def angle(self) -> float:
         d = self.end.subtract(self.start)
         angle_degrees = 90 - math.degrees(math.atan2(-d.y, d.x))
@@ -85,6 +94,9 @@ class Line:
 
     def distance(self, point: Point) -> float:
         return point.distance_to_line(self)
+
+    def distance_scaled(self, point: Point) -> float:
+        return point.distance_to_line_scaled(self)
 
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]
