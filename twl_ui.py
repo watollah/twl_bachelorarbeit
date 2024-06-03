@@ -6,32 +6,32 @@ from twl_widgets import *
 
 class CremonaTab(ttk.Frame):
 
-    def __init__(self, notebook: ttk.Notebook, statical_system: StaticalSystem) -> None:
+    def __init__(self, notebook: ttk.Notebook, model: Model) -> None:
         ttk.Frame.__init__(self, notebook)
-        self.statical_system = statical_system
+        self.model = model
 
         vertical_panes = ttk.Panedwindow(self, orient=tk.VERTICAL)
         vertical_panes.pack(fill=tk.BOTH, expand=True)
 
         horizontal_panes = ttk.Panedwindow(vertical_panes, orient=tk.HORIZONTAL)
-        self.create_statical_system_diagram(horizontal_panes)
+        self.create_model_diagram(horizontal_panes)
         self.create_cremona_diagram(horizontal_panes)
         vertical_panes.add(horizontal_panes, weight=8)
 
         self.create_control_panel(vertical_panes)
 
-    def create_statical_system_diagram(self, master: tk.PanedWindow) -> tk.Canvas:
+    def create_model_diagram(self, master: tk.PanedWindow) -> tk.Canvas:
         frame = ttk.Frame(master)
         frame.pack_propagate(False)
         master.add(frame, weight = 1)
             
-        statical_system_diagram = tk.Canvas(frame)
-        statical_system_diagram.pack(fill=tk.BOTH, expand=True)
+        model_diagram = tk.Canvas(frame)
+        model_diagram.pack(fill=tk.BOTH, expand=True)
     
-        title_label = ttk.Label(frame, text="Statical System", font=("Helvetica", 12))
+        title_label = ttk.Label(frame, text="Model", font=("Helvetica", 12))
         title_label.place(x=10, y=10)
     
-        return statical_system_diagram
+        return model_diagram
 
     def create_cremona_diagram(self, master: tk.PanedWindow) -> tk.Canvas:
         frame = ttk.Frame(master)

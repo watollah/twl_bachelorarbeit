@@ -31,7 +31,7 @@ class TwlTool(tk.Tk, TwlWidget):
         self.update_manager = TwlUpdateManager()
         self.settings = Settings(self.update_manager)
     
-        self.statical_system = StaticalSystem(self.update_manager)
+        self.model = Model(self.update_manager)
         self.update_manager.design_widgets.append(self)
     
     
@@ -44,7 +44,7 @@ class TwlTool(tk.Tk, TwlWidget):
         profiles_tab = ttk.Frame(notebook)
 
         notebook.add(definition_tab, text="Definition")
-        notebook.add(CremonaTab(notebook, self.statical_system), text="Cremona")
+        notebook.add(CremonaTab(notebook, self.model), text="Cremona")
         notebook.add(result_tab, text="Result")
         notebook.add(profiles_tab, text="Profiles", state="disabled")
 
@@ -64,7 +64,7 @@ class TwlTool(tk.Tk, TwlWidget):
         editor_frame = ttk.Frame(paned_window)
         paned_window.add(editor_frame, weight=2)
 
-        diagram = TwlDiagram(editor_frame, self.statical_system, self.settings)
+        diagram = TwlDiagram(editor_frame, self.model, self.settings)
         diagram.pack(fill="both", expand=True)
 
         self.update_manager.design_widgets.append(diagram)
@@ -76,22 +76,22 @@ class TwlTool(tk.Tk, TwlWidget):
 
         nodes_entry = ToggledFrame(menu_frame, "Nodes")
         nodes_entry.pack(fill="x")
-        nodes_table = TwlTable(nodes_entry.content, self.statical_system.nodes)
+        nodes_table = TwlTable(nodes_entry.content, self.model.nodes)
         nodes_table.pack(fill="both")
 
         beams_entry = ToggledFrame(menu_frame, "Beams")
         beams_entry.pack(fill="x")
-        beams_table = TwlTable(beams_entry.content, self.statical_system.beams)
+        beams_table = TwlTable(beams_entry.content, self.model.beams)
         beams_table.pack(fill="both")
         
         supports_entry = ToggledFrame(menu_frame, "Supports")
         supports_entry.pack(fill="x")
-        supports_table = TwlTable(supports_entry.content, self.statical_system.supports)
+        supports_table = TwlTable(supports_entry.content, self.model.supports)
         supports_table.pack(fill="both")
 
         forces_entry = ToggledFrame(menu_frame, "Forces")
         forces_entry.pack(fill="x")
-        forces_table = TwlTable(forces_entry.content, self.statical_system.forces)
+        forces_table = TwlTable(forces_entry.content, self.model.forces)
         forces_table.pack(fill="both")
 
         #todo: create custom widget BorderFrame
@@ -99,17 +99,17 @@ class TwlTool(tk.Tk, TwlWidget):
         outer.pack(fill="both", expand=True)
         ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
 
-        self.bind("<Control-n>", lambda *ignore: clear_project(self.statical_system, self.is_saved))
-        self.bind("<Control-o>", lambda *ignore: open_project(self.statical_system, self.is_saved))
-        self.bind("<Control-s>", lambda *ignore: save_project(self.statical_system, self.is_saved))
-        self.bind("<Control-S>", lambda *ignore: save_project_as(self.statical_system, self.is_saved))
+        self.bind("<Control-n>", lambda *ignore: clear_project(self.model, self.is_saved))
+        self.bind("<Control-o>", lambda *ignore: open_project(self.model, self.is_saved))
+        self.bind("<Control-s>", lambda *ignore: save_project(self.model, self.is_saved))
+        self.bind("<Control-S>", lambda *ignore: save_project_as(self.model, self.is_saved))
 
     def update_window_title(self):
         project_name = get_project_name()
         self.title(f"{"" if self.is_saved.get() else "*"}{self.TITLE}{" - " + project_name if project_name else ""}")
 
     def update(self):
-        if self.statical_system.is_empty():
+        if self.model.is_empty():
             self.is_saved.set(True)
         else:
             self.is_saved.set(False)
@@ -119,7 +119,7 @@ class TwlTool(tk.Tk, TwlWidget):
         tab_index = event.widget.index(selected_tab)
         print(f"Tab changed! Selected: {tab_index}")
         if tab_index == 1:
-            solver = TwlSolver(self.statical_system)
+            solver = TwlSolver(self.model)
             solver.solve()
 
     def create_menu_bar(self):
@@ -128,12 +128,12 @@ class TwlTool(tk.Tk, TwlWidget):
 
         # Create File menu
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.statical_system, self.is_saved), accelerator="Ctrl+N")
+        file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.model, self.is_saved), accelerator="Ctrl+N")
         file_menu.add_separator()
-        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.statical_system, self.is_saved), accelerator="Ctrl+O")
+        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.model, self.is_saved), accelerator="Ctrl+O")
         file_menu.add_separator()
-        file_menu.add_command(label="Save", command=lambda *ignore: save_project(self.statical_system, self.is_saved), accelerator="Ctrl+S")
-        file_menu.add_command(label="Save As...", command=lambda *ignore: save_project_as(self.statical_system, self.is_saved), accelerator="Ctrl+Shift+S")
+        file_menu.add_command(label="Save", command=lambda *ignore: save_project(self.model, self.is_saved), accelerator="Ctrl+S")
+        file_menu.add_command(label="Save As...", command=lambda *ignore: save_project_as(self.model, self.is_saved), accelerator="Ctrl+Shift+S")
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Create Settings menu

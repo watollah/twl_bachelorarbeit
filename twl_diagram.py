@@ -389,7 +389,7 @@ class SelectTool(Tool):
 
     ID: int = 0
     NAME: str = "Select"
-    DESCR: str = "Select objects in statical system."
+    DESCR: str = "Select objects in model."
     ICON: str = "img/select_icon.png"
 
     def __init__(self, diagram: 'TwlDiagram'):
@@ -465,9 +465,9 @@ class SelectTool(Tool):
                 shape.select()
 
     def delete_selected(self, event):
-        self.diagram.statical_system.update_manager.pause()
+        self.diagram.model.update_manager.pause()
         [shape.component.delete() for shape in self.diagram.selection]
-        self.diagram.statical_system.update_manager.resume()
+        self.diagram.model.update_manager.resume()
         self.reset()
 
 
@@ -494,14 +494,14 @@ class BeamTool(Tool):
             return
         if self.holding_shift_key(event):
             self.shift_snap_line(event)    
-        if not self.start_node in self.diagram.statical_system.nodes:
+        if not self.start_node in self.diagram.model.nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
         end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         self.diagram.create_beam(self.start_node, end_node)
         self.start_node = end_node
 
     def create_temp_node(self, x, y) -> Node:
-        temp_node = Node(StaticalSystem(TwlUpdateManager()), x, y)
+        temp_node = Node(Model(TwlUpdateManager()), x, y)
         TempNodeShape(temp_node, self.diagram)
         return temp_node
 
@@ -510,17 +510,17 @@ class BeamTool(Tool):
         temp_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if not self.start_node:
             if not temp_node:
-                temp_node = Node(StaticalSystem(TwlUpdateManager()), event.x, event.y)
+                temp_node = Node(Model(TwlUpdateManager()), event.x, event.y)
                 TempNodeShape(temp_node, self.diagram)
             return
-        if not self.start_node in self.diagram.statical_system.nodes:
+        if not self.start_node in self.diagram.model.nodes:
             TempNodeShape(self.start_node, self.diagram)
         if self.holding_shift_key(event):
             self.shift_snap_line(event)            
         if not temp_node:
-            temp_node = Node(StaticalSystem(TwlUpdateManager()), event.x, event.y)
+            temp_node = Node(Model(TwlUpdateManager()), event.x, event.y)
             TempNodeShape(temp_node, self.diagram)
-        temp_beam = Beam(StaticalSystem(TwlUpdateManager()), self.start_node, temp_node)
+        temp_beam = Beam(Model(TwlUpdateManager()), self.start_node, temp_node)
         TempBeamShape(temp_beam, self.diagram)
         self.diagram.focus_set()
 
@@ -566,11 +566,11 @@ class SupportTool(Tool):
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node and not hovering_node.supports:
-                TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
+                TempSupportShape(Support(Model(TwlUpdateManager()), hovering_node), self.diagram)
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempSupportShape(Support(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
+            TempSupportShape(Support(Model(TwlUpdateManager()), self.node, angle), self.diagram)
         self.diagram.focus_set()
 
 
@@ -606,11 +606,11 @@ class ForceTool(Tool):
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node:
-                TempForceShape(Force(StaticalSystem(TwlUpdateManager()), hovering_node), self.diagram)
+                TempForceShape(Force(Model(TwlUpdateManager()), hovering_node), self.diagram)
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempForceShape(Force(StaticalSystem(TwlUpdateManager()), self.node, angle), self.diagram)
+            TempForceShape(Force(Model(TwlUpdateManager()), self.node, angle), self.diagram)
         self.diagram.focus_set()
 
 
@@ -634,10 +634,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
 
-    def __init__(self, master, statical_system: StaticalSystem, settings: Settings):
+    def __init__(self, master, model: Model, settings: Settings):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
-        self.statical_system: StaticalSystem = statical_system
+        self.model: Model = model
         self.settings: Settings = settings
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
@@ -726,7 +726,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
                 self.delete(shape)
 
     def update(self) -> None:
-        """Redraws the diagram completely from the statical system"""
+        """Redraws the diagram completely from the model."""
 
         if not self.settings.show_grid.get() and self.grid_visible:
             self.delete_grid()
@@ -739,10 +739,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.clear()
         self.shapes.clear()
 
-        for node in self.statical_system.nodes: self.shapes.append(NodeShape(node, self))
-        for beam in self.statical_system.beams: self.shapes.append(BeamShape(beam, self))
-        for support in self.statical_system.supports: self.shapes.append(SupportShape(support, self))
-        for force in self.statical_system.forces: self.shapes.append(ForceShape(force, self))
+        for node in self.model.nodes: self.shapes.append(NodeShape(node, self))
+        for beam in self.model.beams: self.shapes.append(BeamShape(beam, self))
+        for support in self.model.supports: self.shapes.append(SupportShape(support, self))
+        for force in self.model.forces: self.shapes.append(ForceShape(force, self))
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
@@ -752,40 +752,40 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     @property
     def stat_determ_text(self) -> str:
-        nodes = len(self.statical_system.nodes)
+        nodes = len(self.model.nodes)
         equations = 2 * nodes
-        constraints = sum(support.constraints for support in self.statical_system.supports)
-        beams = len(self.statical_system.beams)
+        constraints = sum(support.constraints for support in self.model.supports)
+        beams = len(self.model.beams)
         unknowns = constraints + beams
         f = equations - unknowns
-        return f"f = {f}, the system ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
+        return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def create_node(self, x: int, y: int) -> Node:
-        self.statical_system.update_manager.pause()
-        node = Node(self.statical_system, x, y)
-        self.statical_system.nodes.append(node)
-        self.statical_system.update_manager.resume()
+        self.model.update_manager.pause()
+        node = Node(self.model, x, y)
+        self.model.nodes.append(node)
+        self.model.update_manager.resume()
         return node
 
     def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        self.statical_system.update_manager.pause()
-        beam = Beam(self.statical_system, start_node, end_node)
-        self.statical_system.beams.append(beam)
-        self.statical_system.update_manager.resume()
+        self.model.update_manager.pause()
+        beam = Beam(self.model, start_node, end_node)
+        self.model.beams.append(beam)
+        self.model.update_manager.resume()
         return beam
 
     def create_support(self, node: Node, angle: float=0):
-        self.statical_system.update_manager.pause()
-        support = Support(self.statical_system, node, angle)
-        self.statical_system.supports.append(support)
-        self.statical_system.update_manager.resume()
+        self.model.update_manager.pause()
+        support = Support(self.model, node, angle)
+        self.model.supports.append(support)
+        self.model.update_manager.resume()
         return support
 
     def create_force(self, node: Node, angle: float=180):
-        self.statical_system.update_manager.pause()
-        force = Force(self.statical_system, node, angle)
-        self.statical_system.forces.append(force)
-        self.statical_system.update_manager.resume()
+        self.model.update_manager.pause()
+        force = Force(self.model, node, angle)
+        self.model.forces.append(force)
+        self.model.update_manager.resume()
         return force
 
     def create_text_with_bg(self, *args, **kw):

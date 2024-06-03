@@ -30,7 +30,7 @@ class Attribute(Generic[C, V]):
         filter_result = self.filter(value)
         if filter_result[0]:
             self._value = type(self._value)(value) #type: ignore
-            self._component.statical_system.update_manager.update()
+            self._component.model.update_manager.update()
             print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
 
@@ -76,7 +76,7 @@ class IdAttribute(Attribute['Component', str]):
     def filter(self, value) -> tuple[bool, str]:
         if hasattr(self._component, "_id") and self._component.id == value:
             return True, ""
-        if value in {component.id for component in self._component.statical_system.all_components}:
+        if value in {component.id for component in self._component.model.all_components}:
             return False, "Id already exists."
         return True, ""
 
@@ -234,19 +234,19 @@ class Component(ABC):
 
     id: AttributeDescriptor[str] = AttributeDescriptor("_id")
 
-    def __init__(self, statical_system: 'StaticalSystem'):
-        self.statical_system: StaticalSystem = statical_system
+    def __init__(self, model: 'Model'):
+        self.model: Model = model
         self.attributes: List[Attribute] = []
         self._id: IdAttribute = IdAttribute(self)
 
     @classmethod
     def dummy(cls):
         """Creates a dummy instance of this Component to extract its attributes."""
-        return cls(StaticalSystem(TwlUpdateManager()))
+        return cls(Model(TwlUpdateManager()))
 
     @abstractmethod
     def delete(self):
-        """Deletes the component from the statical system and deltes components dependent on it."""
+        """Deletes the component from the model and deltes components dependent on it."""
 
     def gen_id(self, i: int) -> str:
         """Generate an id based on a number i."""
@@ -260,31 +260,31 @@ class Node(Component):
     x: AttributeDescriptor[int] = AttributeDescriptor("_x")
     y: AttributeDescriptor[int] = AttributeDescriptor("_y")
 
-    def __init__(self, statical_system: 'StaticalSystem', x: int, y: int):
-        super().__init__(statical_system)
+    def __init__(self, model: 'Model', x: int, y: int):
+        super().__init__(model)
         self._x: XCoordinateAttribute = XCoordinateAttribute(self, x)
         self._y: YCoordinateAttribute = YCoordinateAttribute(self, y)
 
     @classmethod
     def dummy(cls):
-        return cls(StaticalSystem(TwlUpdateManager()), 0, 0)
+        return cls(Model(TwlUpdateManager()), 0, 0)
 
     def delete(self):
         for support in self.supports: support.delete()
         for force in self.forces: force.delete()
-        self.statical_system.nodes.remove(self)
+        self.model.nodes.remove(self)
 
     @property
     def beams(self) -> list['Beam']:
-        return [beam for beam in self.statical_system.beams if beam.start_node == self or beam.end_node == self]
+        return [beam for beam in self.model.beams if beam.start_node == self or beam.end_node == self]
 
     @property
     def supports(self) -> list['Support']:
-        return [support for support in self.statical_system.supports if support.node == self]
+        return [support for support in self.model.supports if support.node == self]
 
     @property
     def forces(self) -> list['Force']:
-        return [force for force in self.statical_system.forces if force.node == self]
+        return [force for force in self.model.forces if force.node == self]
 
     def gen_id(self, i: int) -> str:
         return int_to_roman(i)
@@ -299,8 +299,8 @@ class Beam(Component):
     length: AttributeDescriptor[float] = AttributeDescriptor("_length")
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
 
-    def __init__(self, statical_system: 'StaticalSystem', start_node: Node, end_node: Node):
-        super().__init__(statical_system)
+    def __init__(self, model: 'Model', start_node: Node, end_node: Node):
+        super().__init__(model)
         self._start_node: StartNodeAttribute = StartNodeAttribute(self, start_node)
         self._end_node: EndNodeAttribute = EndNodeAttribute(self, end_node)
         self._length: BeamLengthAttribute = BeamLengthAttribute(self)
@@ -308,10 +308,10 @@ class Beam(Component):
 
     @classmethod
     def dummy(cls):
-        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy(), Node.dummy())
+        return cls(Model(TwlUpdateManager()), Node.dummy(), Node.dummy())
 
     def delete(self):
-        self.statical_system.beams.remove(self)
+        self.model.beams.remove(self)
         if not self.start_node.beams: self.start_node.delete()
         if not self.end_node.beams: self.end_node.delete()
 
@@ -337,18 +337,18 @@ class Support(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     constraints: AttributeDescriptor[int] = AttributeDescriptor("_constraints")
 
-    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180, constraints: int=2):
-        super().__init__(statical_system)
+    def __init__(self, model: 'Model', node: Node, angle: float=180, constraints: int=2):
+        super().__init__(model)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._constraints: ConstraintsAttribute = ConstraintsAttribute(self, constraints)
 
     @classmethod
     def dummy(cls):
-        return cls(StaticalSystem(TwlUpdateManager()), Node.dummy())
+        return cls(Model(TwlUpdateManager()), Node.dummy())
 
     def delete(self):
-        self.statical_system.supports.remove(self)
+        self.model.supports.remove(self)
 
     def gen_id(self, i: int) -> str:
         return chr(i + 64)
@@ -362,8 +362,8 @@ class Force(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     strength: AttributeDescriptor[float] = AttributeDescriptor("_strength")
 
-    def __init__(self, statical_system: 'StaticalSystem', node: Node, angle: float=180, strength: float=1):
-        super().__init__(statical_system)
+    def __init__(self, model: 'Model', node: Node, angle: float=180, strength: float=1):
+        super().__init__(model)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._strength: StrengthAttribute = StrengthAttribute(self, strength)
@@ -371,18 +371,18 @@ class Force(Component):
     @classmethod
     def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=180, strength: float=1):
         node = Node.dummy() if node == None else node
-        dummy_force: Force = cls(StaticalSystem(TwlUpdateManager()), node, angle, strength)
+        dummy_force: Force = cls(Model(TwlUpdateManager()), node, angle, strength)
         dummy_force.id = id
         return dummy_force
 
     def delete(self):
-        self.statical_system.forces.remove(self)
+        self.model.forces.remove(self)
 
     def gen_id(self, i: int) -> str:
         return f"F{i}"
 
 
-class StaticalSystem:
+class Model:
     def __init__(self, update_manager: TwlUpdateManager):
         self.nodes: ComponentList[Node] = ComponentList(Node, update_manager)
         self.beams: ComponentList[Beam] = ComponentList(Beam, update_manager)
@@ -411,7 +411,7 @@ class StaticalSystem:
         return cast('ComponentList[C]', next(component_list for component_list in self.component_lists if component_list.component_class == component_type))
 
     def statically_determined(self) -> bool:
-        """Check if the system is statically determined and thus ready for analysis."""
+        """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 
 

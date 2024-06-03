@@ -6,8 +6,8 @@ from twl_components import *
 
 class TwlSolver:
 
-    def __init__(self, statical_system: StaticalSystem) -> None:
-        self.statical_system = statical_system
+    def __init__(self, model: Model) -> None:
+        self.model = model
 
         self.unknown_forces: List[Force] = []
         self.factor_matrix: List[List[float]] = []
@@ -15,46 +15,46 @@ class TwlSolver:
         self.solution_vector: List[float] = []
 
     def solve(self):
-        if not self.statical_system.statically_determined() or self.statical_system.is_empty():
+        if not self.model.statically_determined() or self.model.is_empty():
             return
         self.unknown_forces = self.get_unknown_forces()
         self.factor_matrix = []
         self.result_vector = []
-        for node in self.statical_system.nodes:
+        for node in self.model.nodes:
             self.factor_matrix.append(self.get_node_factors(node, Orientation.HORIZONTAL))
             self.factor_matrix.append(self.get_node_factors(node, Orientation.VERTICAL))
             self.result_vector.append(self.get_node_forces(node, Orientation.HORIZONTAL))
             self.result_vector.append(self.get_node_forces(node, Orientation.VERTICAL))
         self.solution_vector = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
         self.print_result()
-        self.statical_system.update_manager.update_results()
+        self.model.update_manager.update_results()
 
     def get_unknown_forces(self) -> List[Force]:
         unknown_forces: List[Force] = []
-        for support in self.statical_system.supports:
+        for support in self.model.supports:
             if support.constraints == 2:
                 unknown_forces.append(Force.dummy(f"{support.id}_h", support.node, 90))
                 unknown_forces.append(Force.dummy(f"{support.id}_v", support.node, 0))
             if support.constraints == 1:
                 angle = (support.angle + 180) % 360
                 unknown_forces.append(Force.dummy(support.id, support.node, angle))
-        for beam in self.statical_system.beams:
+        for beam in self.model.beams:
             unknown_forces.append(Force.dummy(beam.id))
         return unknown_forces
 
     def get_node_factors(self, node: Node, orientation: Orientation) -> List[float]:
         factors: List[float] = []
-        for support in self.statical_system.supports:
+        for support in self.model.supports:
             support_factors = self.generate_factors((support.angle - 180) % 360)
             factors.extend(support_factors[(support in node.supports, support.constraints, orientation)])
-        for beam in self.statical_system.beams:
+        for beam in self.model.beams:
             beam_factors = self.generate_factors(self.beam_angle(node, beam))
             factors.extend(beam_factors[(beam in node.beams, 1, orientation)])
         return factors
 
     def get_node_forces(self, node: Node, orientation: Orientation) -> float:
         forces: List[float] = []
-        for force in self.statical_system.forces:
+        for force in self.model.forces:
             force_factors = self.generate_factors(force.angle)
             forces.append(force_factors[(force in node.forces, 1, orientation)][0])
         return -sum(forces)
@@ -79,7 +79,7 @@ class TwlSolver:
         return beam.angle
 
     def print_result(self):
-        prefix_max_width = max(len(node.id) for node in self.statical_system.nodes) + 8
+        prefix_max_width = max(len(node.id) for node in self.model.nodes) + 8
         factors_max_width = max(len(self.format_float(f)) for row in self.factor_matrix for f in row)
         unknowns_max_width = max(len(force.id) for force in self.unknown_forces)
         result_max_width = max(len(self.format_float(f)) for f in self.result_vector)
@@ -88,7 +88,7 @@ class TwlSolver:
         center_index = len(self.unknown_forces) // 2
         for i in range(len(self.unknown_forces)):
             orientation = Orientation.HORIZONTAL if i % 2 == 0 else Orientation.VERTICAL
-            prefix = f"({self.statical_system.nodes[i // 2].id}, {orientation.value}) ".ljust(prefix_max_width)
+            prefix = f"({self.model.nodes[i // 2].id}, {orientation.value}) ".ljust(prefix_max_width)
             space1 = "   " if i != center_index else " x "
             space2 = "   " if i != center_index else " = "
             space3 = "    " if i != center_index else " -> "
