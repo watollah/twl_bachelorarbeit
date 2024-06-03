@@ -27,7 +27,6 @@ class TwlSolver:
             self.result_vector.append(self.get_node_forces(node, Orientation.VERTICAL))
         self.solution_vector = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
         self.print_result()
-        self.model.update_manager.update_results()
 
     def get_unknown_forces(self) -> List[Force]:
         unknown_forces: List[Force] = []
@@ -39,7 +38,7 @@ class TwlSolver:
                 angle = (support.angle + 180) % 360
                 unknown_forces.append(Force.dummy(support.id, support.node, angle))
         for beam in self.model.beams:
-            unknown_forces.append(Force.dummy(beam.id))
+            unknown_forces.append(Force.dummy(beam.id, angle=beam.angle))
         return unknown_forces
 
     def get_node_factors(self, node: Node, orientation: Orientation) -> List[float]:
@@ -56,7 +55,7 @@ class TwlSolver:
         forces: List[float] = []
         for force in self.model.forces:
             force_factors = self.generate_factors(force.angle)
-            forces.append(force_factors[(force in node.forces, 1, orientation)][0])
+            forces.append(force_factors[(force in node.forces, 1, orientation)][0] * force.strength)
         return -sum(forces)
 
     def generate_factors(self, angle: float) -> Dict[Tuple[bool, int, Orientation], List[float]]:
