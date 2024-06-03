@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from twl_app import *
+from twl_cremona_diagram import *
 from twl_components import *
 from twl_widgets import *
 
@@ -37,8 +39,9 @@ class CremonaTab(ttk.Frame):
         frame.pack_propagate(False)
         master.add(frame, weight = 1)
     
-        cremona_diagram = tk.Canvas(frame)
+        cremona_diagram = CremonaDiagram(frame)
         cremona_diagram.pack(fill=tk.BOTH, expand=True)
+        TwlApp.update_manager().result_widgets.append(cremona_diagram)
     
         title_label = ttk.Label(frame, text="Cremona Plan", font=("Helvetica", 12))
         title_label.place(x=10, y=10)

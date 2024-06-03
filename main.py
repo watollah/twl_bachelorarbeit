@@ -6,7 +6,7 @@ from twl_app import *
 from twl_style import *
 from twl_diagram import *
 from twl_table import *
-from twl_ui import *
+from cremona_tab import *
 from twl_io import *
 from twl_settings import *
 from twl_solver import *
