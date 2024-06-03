@@ -466,9 +466,9 @@ class SelectTool(Tool):
                 shape.select()
 
     def delete_selected(self, event):
-        TwlApp.update_manager.pause()
+        TwlApp.update_manager().pause()
         [shape.component.delete() for shape in self.diagram.selection]
-        TwlApp.update_manager.resume()
+        TwlApp.update_manager().resume()
         self.reset()
 
 
