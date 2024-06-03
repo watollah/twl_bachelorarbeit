@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import cast, final, TypeVar, Generic
 
+from twl_app import *
 from twl_update import *
 from twl_components import *
 from twl_help import *
@@ -106,7 +107,7 @@ class NodeShape(Shape[Node]):
                             outline=self.COLOR, 
                             width = self.BORDER, 
                             tags=[*self.TAGS, str(node.id)])
-        if (not self.TAG == Shape.TEMP) and diagram.settings.show_node_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_node_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -151,7 +152,7 @@ class BeamShape(Shape[Beam]):
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
-        if (not self.TAG == Shape.TEMP) and diagram.settings.show_beam_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_beam_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -217,7 +218,7 @@ class SupportShape(Shape[Support]):
                                 width=self.BORDER, 
                                 tags=[*self.TAGS, str(support.id)])
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
-        if (not self.TAG == Shape.TEMP) and diagram.settings.show_support_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_support_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -292,7 +293,7 @@ class ForceShape(Shape[Force]):
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
         diagram.tag_lower(ForceShape.TAG, NodeShape.TAG)
-        if (not self.TAG == Shape.TEMP) and diagram.settings.show_force_labels.get(): 
+        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_force_labels.get(): 
             self.draw_label()
 
     def is_at(self, x: int, y: int) -> bool:
@@ -360,7 +361,7 @@ class Tool:
         self.diagram.delete_with_tag(Shape.TEMP)
 
     def snap_event_to_grid(self, event):
-        if self.diagram.settings.show_grid.get():
+        if TwlApp.settings().show_grid.get():
             snap_point = self.diagram.grid_snap(event.x, event.y)
             event.x = snap_point[0]
             event.y = snap_point[1]
@@ -465,9 +466,9 @@ class SelectTool(Tool):
                 shape.select()
 
     def delete_selected(self, event):
-        self.diagram.model.update_manager.pause()
+        TwlApp.update_manager.pause()
         [shape.component.delete() for shape in self.diagram.selection]
-        self.diagram.model.update_manager.resume()
+        TwlApp.update_manager.resume()
         self.reset()
 
 
@@ -494,7 +495,7 @@ class BeamTool(Tool):
             return
         if self.holding_shift_key(event):
             self.shift_snap_line(event)    
-        if not self.start_node in self.diagram.model.nodes:
+        if not self.start_node in TwlApp.model().nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
         end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         self.diagram.create_beam(self.start_node, end_node)
@@ -513,7 +514,7 @@ class BeamTool(Tool):
                 temp_node = Node(Model(TwlUpdateManager()), event.x, event.y)
                 TempNodeShape(temp_node, self.diagram)
             return
-        if not self.start_node in self.diagram.model.nodes:
+        if not self.start_node in TwlApp.model().nodes:
             TempNodeShape(self.start_node, self.diagram)
         if self.holding_shift_key(event):
             self.shift_snap_line(event)            
@@ -634,11 +635,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
 
-    def __init__(self, master, model: Model, settings: Settings):
+    def __init__(self, master):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
-        self.model: Model = model
-        self.settings: Settings = settings
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
         self.grid_visible: bool = False
@@ -675,7 +674,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def on_resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
         self.delete_grid()
-        if self.settings.show_grid.get():
+        if TwlApp.settings().show_grid.get():
             self.draw_grid()
         self.coords(self.angle_guide, self.winfo_width() - self.ANGLE_GUIDE_PADDING, self.ANGLE_GUIDE_PADDING)
 
@@ -687,20 +686,20 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         canvas_width = self.winfo_width()
         canvas_height = self.winfo_height()
 
-        for i in range(0, canvas_width, self.settings.grid_spacing.get()):
+        for i in range(0, canvas_width, TwlApp.settings().grid_spacing.get()):
             self.create_line((i, 0), (i, canvas_height), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        for i in range(0, canvas_height, self.settings.grid_spacing.get()):
+        for i in range(0, canvas_height, TwlApp.settings().grid_spacing.get()):
             self.create_line((0, i), (canvas_width, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
         
         self.tag_lower(self.GRID_TAG)
         self.grid_visible = True
 
     def grid_snap(self, x: int, y: int) -> tuple[int, int]:
-        grid_spacing = self.settings.grid_spacing.get()
+        grid_spacing = TwlApp.settings().grid_spacing.get()
         nearest_x = round(x / grid_spacing) * grid_spacing
         nearest_y = round(y / grid_spacing) * grid_spacing
         distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))
-        if distance < self.settings.grid_snap_radius.get():
+        if distance < TwlApp.settings().grid_snap_radius.get():
             return nearest_x, nearest_y
         return x, y
 
@@ -728,21 +727,21 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def update(self) -> None:
         """Redraws the diagram completely from the model."""
 
-        if not self.settings.show_grid.get() and self.grid_visible:
+        if not TwlApp.settings().show_grid.get() and self.grid_visible:
             self.delete_grid()
-        elif self.settings.show_grid.get() and not self.grid_visible:
+        elif TwlApp.settings().show_grid.get() and not self.grid_visible:
             self.draw_grid()
 
-        angle_guide_state = tk.NORMAL if self.settings.show_angle_guide.get() else tk.HIDDEN
+        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
         self.clear()
         self.shapes.clear()
 
-        for node in self.model.nodes: self.shapes.append(NodeShape(node, self))
-        for beam in self.model.beams: self.shapes.append(BeamShape(beam, self))
-        for support in self.model.supports: self.shapes.append(SupportShape(support, self))
-        for force in self.model.forces: self.shapes.append(ForceShape(force, self))
+        for node in TwlApp.model().nodes: self.shapes.append(NodeShape(node, self))
+        for beam in TwlApp.model().beams: self.shapes.append(BeamShape(beam, self))
+        for support in TwlApp.model().supports: self.shapes.append(SupportShape(support, self))
+        for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
@@ -752,40 +751,40 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     @property
     def stat_determ_text(self) -> str:
-        nodes = len(self.model.nodes)
+        nodes = len(TwlApp.model().nodes)
         equations = 2 * nodes
-        constraints = sum(support.constraints for support in self.model.supports)
-        beams = len(self.model.beams)
+        constraints = sum(support.constraints for support in TwlApp.model().supports)
+        beams = len(TwlApp.model().beams)
         unknowns = constraints + beams
         f = equations - unknowns
         return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def create_node(self, x: int, y: int) -> Node:
-        self.model.update_manager.pause()
-        node = Node(self.model, x, y)
-        self.model.nodes.append(node)
-        self.model.update_manager.resume()
+        TwlApp.update_manager().pause()
+        node = Node(TwlApp.model(), x, y)
+        TwlApp.model().nodes.append(node)
+        TwlApp.update_manager().resume()
         return node
 
     def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        self.model.update_manager.pause()
-        beam = Beam(self.model, start_node, end_node)
-        self.model.beams.append(beam)
-        self.model.update_manager.resume()
+        TwlApp.update_manager().pause()
+        beam = Beam(TwlApp.model(), start_node, end_node)
+        TwlApp.model().beams.append(beam)
+        TwlApp.update_manager().resume()
         return beam
 
     def create_support(self, node: Node, angle: float=0):
-        self.model.update_manager.pause()
-        support = Support(self.model, node, angle)
-        self.model.supports.append(support)
-        self.model.update_manager.resume()
+        TwlApp.update_manager().pause()
+        support = Support(TwlApp.model(), node, angle)
+        TwlApp.model().supports.append(support)
+        TwlApp.update_manager().resume()
         return support
 
     def create_force(self, node: Node, angle: float=180):
-        self.model.update_manager.pause()
-        force = Force(self.model, node, angle)
-        self.model.forces.append(force)
-        self.model.update_manager.resume()
+        TwlApp.update_manager().pause()
+        force = Force(TwlApp.model(), node, angle)
+        TwlApp.model().forces.append(force)
+        TwlApp.update_manager().resume()
         return force
 
     def create_text_with_bg(self, *args, **kw):

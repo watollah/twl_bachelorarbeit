@@ -6,9 +6,8 @@ from twl_widgets import *
 
 class CremonaTab(ttk.Frame):
 
-    def __init__(self, notebook: ttk.Notebook, model: Model) -> None:
+    def __init__(self, notebook: ttk.Notebook) -> None:
         ttk.Frame.__init__(self, notebook)
-        self.model = model
 
         vertical_panes = ttk.Panedwindow(self, orient=tk.VERTICAL)
         vertical_panes.pack(fill=tk.BOTH, expand=True)
