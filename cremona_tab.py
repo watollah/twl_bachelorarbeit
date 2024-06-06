@@ -102,7 +102,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
         scale_frame.grid(row=1, column=1, padx=ControlPanel.PADDING, pady=ControlPanel.PADDING)
         scale = ttk.Scale(scale_frame, from_=1, to=100, variable=self.selected_step, orient="horizontal", takefocus=False, style="TScale")
         scale.pack(fill=tk.BOTH, expand=True)
-        self.selected_step.trace_add("write", lambda *ignore: self.label_text.set(f"Step {self.selected_step.get()}: Node X, Beam X"))
+        self.selected_step.trace_add("write", lambda *ignore: self.display_selected_step())
         self.selected_step.set(0)
         return scale
 
@@ -115,13 +115,19 @@ class ControlPanel(ttk.Frame, TwlWidget):
         speed_selection.pack(fill=tk.BOTH, expand=True)
         return speed_selection
 
+    def display_selected_step(self):
+        self.label_text.set(f"Step {self.selected_step.get()}: Node X, Beam X")
+        for i in range(len(self.cremona_diagram.lines)):
+            line_visible = tk.NORMAL if i + 1 <= self.selected_step.get() else tk.HIDDEN
+            self.cremona_diagram.itemconfig(self.cremona_diagram.lines[i], state=line_visible)
+
     def run_animation(self):
         if not self.play_state.get():
             return
         steps = len(self.cremona_diagram.lines)
         if steps == 0:
             return
-        self.selected_step.set(((self.selected_step.get() + 1) % steps) + 1)
+        self.selected_step.set((self.selected_step.get() + 1) % steps)
         speed = self.SPEED_OPTIONS.get(self.selected_speed.get())
         assert(speed)
         self.after(speed, self.run_animation)
