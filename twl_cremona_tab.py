@@ -152,7 +152,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
         steps = len(self.cremona_diagram.steps)
         if steps == 0:
             return
-        self.selected_step.set((self.selected_step.get() + 1) % steps)
+        self.selected_step.set((self.selected_step.get() + 1) % (steps + 2))
         speed = self.SPEED_OPTIONS.get(self.selected_speed.get())
         assert(speed)
         self.after(speed, self.run_animation)
