@@ -14,11 +14,10 @@ class TwlSolver:
         self.solution: dict[Force, Component] = {}
 
     def solve(self):
+        self.reset()
         if not self.model.statically_determined() or self.model.is_empty():
             return
 
-        self.factor_matrix = []
-        self.result_vector = []
         self.solution = self.get_unknown_forces()
 
         for node in self.model.nodes:
@@ -31,6 +30,11 @@ class TwlSolver:
         for i, force in enumerate(self.solution.keys()):
             force.strength = np_solution[i]
         self.print_result()
+
+    def reset(self):
+        self.factor_matrix = []
+        self.result_vector = []
+        self.solution = {}
 
     def get_unknown_forces(self) -> dict[Force, Component]:
         unknown_forces: dict[Force, Component] = {}
