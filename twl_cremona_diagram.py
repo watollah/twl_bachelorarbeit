@@ -89,7 +89,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         self.create_line(pos.x - self.BASE_LINE_LENGTH - self.BASE_LINE_SPACING, pos.y, pos.x + self.BASE_LINE_LENGTH + self.BASE_LINE_SPACING, pos.y, dash=(2, 1, 1, 1))
 
     def draw_line(self, start: Point, force: Force, component: Component) -> Point:
-        angle = math.radians(force.angle)
+        angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
         self.steps.append((self.create_line(start.x, start.y, end.x, end.y, width=self.LINE_WIDTH, arrow=tk.LAST, arrowshape=self.ARROW_SHAPE, tags=force.id), force, component))
         return end
