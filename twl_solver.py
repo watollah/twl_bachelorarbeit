@@ -52,7 +52,7 @@ class TwlSolver:
     def get_node_factors(self, node: Node, orientation: Orientation) -> List[float]:
         factors: List[float] = []
         for support in self.model.supports:
-            support_factors = self.generate_factors((support.angle - 180) % 360)
+            support_factors = self.generate_factors((support.angle + 180) % 360)
             factors.extend(support_factors[(support in node.supports, support.constraints, orientation)])
         for beam in self.model.beams:
             beam_factors = self.generate_factors(self.beam_angle(node, beam))
@@ -62,7 +62,7 @@ class TwlSolver:
     def get_node_forces(self, node: Node, orientation: Orientation) -> float:
         forces: List[float] = []
         for force in self.model.forces:
-            force_factors = self.generate_factors(force.angle)
+            force_factors = self.generate_factors((force.angle + 180) % 360)
             forces.append(force_factors[(force in node.forces, 1, orientation)][0] * force.strength)
         return -sum(forces)
 
