@@ -42,10 +42,9 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         node = self.find_next_node()
         while node:
             start_angle = self.get_start_angle(self.forces_for_nodes[node])
-            list_sorted_test = sorted(self.forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360)
-            sorted_forces = dict(list_sorted_test)
+            sorted_forces = dict(sorted(self.forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360))
             start_coords = self.coords(self.find_withtag(list(sorted_forces.keys())[0].id)[0])
-            pos = Point(round(start_coords[0]), round(start_coords[1]))
+            pos = Point(round(start_coords[2]), round(start_coords[3])) #start from start or end of existing line? -> bug
             for force, component in sorted_forces.items():
                 if type(component) == Support or type(component) == Force:
                     line_id = self.find_withtag(force.id)[0]
@@ -65,7 +64,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         return sum(len(self.find_withtag(force.id)) == 0 for force in self.forces_for_nodes[node])
 
     def get_start_angle(self, forces: dict[Force, Component]):
-        return next(force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0)
+        return next(force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0 and force.strength > 0.001)
 
     def get_forces_for_node(self, node: Node) -> dict[Force, Component]:
         forces: dict[Force, Component] = {force: force for force in node.forces}

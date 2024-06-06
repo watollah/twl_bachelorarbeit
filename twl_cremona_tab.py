@@ -129,6 +129,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
         if self.selected_step.get() == 0:
             self.label_text.set("")
         elif self.selected_step.get() == len(steps) + 1:
+            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK)
             self.label_text.set("Cremona diagram complete!")
         else:
             line, force, component = steps[self.selected_step.get() - 1]
