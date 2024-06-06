@@ -362,14 +362,14 @@ class Force(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     strength: AttributeDescriptor[float] = AttributeDescriptor("_strength")
 
-    def __init__(self, model: 'Model', node: Node, angle: float=180, strength: float=1.0):
+    def __init__(self, model: 'Model', node: Node, angle: float=0, strength: float=1.0):
         super().__init__(model)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._strength: StrengthAttribute = StrengthAttribute(self, strength)
 
     @classmethod
-    def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=180, strength: float=1.0):
+    def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=0, strength: float=1.0):
         node = Node.dummy() if node == None else node
         dummy_force: Force = cls(Model(TwlUpdateManager()), node, angle, strength)
         dummy_force.id = id

@@ -302,8 +302,8 @@ class ForceShape(Shape[Force]):
     @property
     def arrow_coordinates(self) -> Line:
         n = Point(self.component.node.x, self.component.node.y)
-        a1 = Point(n.x, n.y + self.DISTANCE_FROM_NODE)
-        a2 = Point(a1.x, a1.y + self.LENGTH)
+        a1 = Point(n.x, n.y - self.DISTANCE_FROM_NODE)
+        a2 = Point(a1.x, a1.y - self.LENGTH)
         line = Line(a1, a2)
         line.rotate(n, self.component.angle)
         return line
@@ -319,7 +319,7 @@ class ForceShape(Shape[Force]):
     @property
     def label_position(self) -> Point:
         n_point = Point(self.component.node.x, self.component.node.y)
-        point = Point(n_point.x - self.LABEL_OFFSET, n_point.y + self.DISTANCE_FROM_NODE + ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
+        point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
         point.rotate(n_point, self.component.angle)
         return point
 
