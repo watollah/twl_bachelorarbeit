@@ -69,7 +69,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         return sum(len(self.find_withtag(force.id)) == 0 for force in self.forces_for_nodes[node])
 
     def get_start_angle(self, forces: dict[Force, Component]):
-        return next(force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0 and force.strength > 0.001)
+        return next((force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0 and force.strength > 0.001), 0)
 
     def get_forces_for_node(self, node: Node) -> dict[Force, Component]:
         forces: dict[Force, Component] = {force: force for force in node.forces}
