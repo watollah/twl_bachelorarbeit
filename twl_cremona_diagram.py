@@ -10,10 +10,15 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
 
     START_POINT = Point(800, 50)
     SCALE = 6
+
+    BASE_LINE_TAG = "baseline"
     BASE_LINE_LENGTH = 20
     BASE_LINE_SPACING = 20
+    BASE_LINE_DASH = (2, 1, 1, 1)
+    BASE_LINE_WIDTH = 1
 
     LINE_WIDTH = 2
+    SELECTED_LINE_WIDTH = 3
     ARROW_SHAPE = (12,12,4)
 
     def __init__(self, master):
@@ -44,7 +49,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
             start_angle = self.get_start_angle(self.forces_for_nodes[node])
             sorted_forces = dict(sorted(self.forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360))
             start_coords = self.coords(self.find_withtag(list(sorted_forces.keys())[0].id)[0])
-            pos = Point(round(start_coords[2]), round(start_coords[3])) #start from start or end of existing line? -> bug
+            pos = Point(round(start_coords[2]), round(start_coords[3]))
             for force, component in sorted_forces.items():
                 if type(component) == Support or type(component) == Force:
                     line_id = self.find_withtag(force.id)[0]
@@ -85,7 +90,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         return next(node for node in TwlApp.model().nodes if len(node.beams) <= 2)
 
     def draw_baseline(self, pos: Point):
-        self.create_line(pos.x - self.BASE_LINE_LENGTH - self.BASE_LINE_SPACING, pos.y, pos.x + self.BASE_LINE_LENGTH + self.BASE_LINE_SPACING, pos.y, dash=(2, 1, 1, 1))
+        self.create_line(pos.x - self.BASE_LINE_LENGTH - self.BASE_LINE_SPACING, pos.y, pos.x + self.BASE_LINE_LENGTH + self.BASE_LINE_SPACING, pos.y, dash=self.BASE_LINE_DASH, tags=self.BASE_LINE_TAG)
 
     def draw_line(self, start: Point, force: Force, component: Component) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)

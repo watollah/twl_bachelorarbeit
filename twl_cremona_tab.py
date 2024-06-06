@@ -43,7 +43,7 @@ class CremonaTab(ttk.Frame):
         cremona_diagram.pack(fill=tk.BOTH, expand=True)
         TwlApp.update_manager().result_widgets.append(cremona_diagram)
     
-        title_label = ttk.Label(frame, text="Cremona Plan", font=("Helvetica", 12))
+        title_label = ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12))
         title_label.place(x=10, y=10)
 
         return cremona_diagram
@@ -127,16 +127,19 @@ class ControlPanel(ttk.Frame, TwlWidget):
                 line_visibility = tk.NORMAL
             self.cremona_diagram.itemconfig(steps[i][0], state=line_visibility)
         if self.selected_step.get() == 0:
+            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
             self.label_text.set("")
         elif self.selected_step.get() == len(steps) + 1:
-            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK)
+            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK, width=CremonaDiagram.LINE_WIDTH)
+            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
             self.label_text.set("Cremona diagram complete!")
         else:
             line, force, component = steps[self.selected_step.get() - 1]
-            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK)
+            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK, width=CremonaDiagram.LINE_WIDTH)
             for l in self.lines_for_node(force.node):
-                self.cremona_diagram.itemconfig(l, fill=SELECTED) 
+                self.cremona_diagram.itemconfig(l, fill=SELECTED, width=CremonaDiagram.SELECTED_LINE_WIDTH) 
             self.cremona_diagram.itemconfig(line, fill=DARK_SELECTED)
+            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
             current_descr = force.id if (type(component) == Support or type(component) == Force) and visible.count(line) == 1 else f"Node {force.node.id}, {force.id}"
             self.label_text.set(f"Step {self.selected_step.get()}: {current_descr}")
 
