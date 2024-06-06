@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from twl_app import *
+from twl_style import *
 from twl_cremona_diagram import *
 from twl_components import *
 from twl_widgets import *
@@ -116,15 +117,35 @@ class ControlPanel(ttk.Frame, TwlWidget):
         return speed_selection
 
     def display_selected_step(self):
-        self.label_text.set(f"Step {self.selected_step.get()}: Node X, Beam X")
-        for i in range(len(self.cremona_diagram.lines)):
-            line_visible = tk.NORMAL if i + 1 <= self.selected_step.get() else tk.HIDDEN
-            self.cremona_diagram.itemconfig(self.cremona_diagram.lines[i], state=line_visible)
+        steps = self.cremona_diagram.steps
+        visible = []
+        for i in range(len(steps)):
+            line_visibility = tk.HIDDEN
+            if i <= self.selected_step.get() - 1:
+                visible.append(steps[i][0])
+            if steps[i][0] in visible:
+                line_visibility = tk.NORMAL
+            self.cremona_diagram.itemconfig(steps[i][0], state=line_visibility)
+        if self.selected_step.get() == 0:
+            self.label_text.set("")
+        elif self.selected_step.get() == len(steps) + 1:
+            self.label_text.set("Cremona diagram complete!")
+        else:
+            line, force, component = steps[self.selected_step.get() - 1]
+            self.cremona_diagram.itemconfig(tk.ALL, fill=BLACK)
+            for l in self.lines_for_node(force.node):
+                self.cremona_diagram.itemconfig(l, fill=SELECTED) 
+            self.cremona_diagram.itemconfig(line, fill=DARK_SELECTED)
+            current_descr = force.id if (type(component) == Support or type(component) == Force) and visible.count(line) == 1 else f"Node {force.node.id}, {force.id}"
+            self.label_text.set(f"Step {self.selected_step.get()}: {current_descr}")
+
+    def lines_for_node(self, node: Node) -> List[int]:
+        return [line for line, force, component in self.cremona_diagram.steps if force.node == node]
 
     def run_animation(self):
         if not self.play_state.get():
             return
-        steps = len(self.cremona_diagram.lines)
+        steps = len(self.cremona_diagram.steps)
         if steps == 0:
             return
         self.selected_step.set((self.selected_step.get() + 1) % steps)
@@ -133,10 +154,6 @@ class ControlPanel(ttk.Frame, TwlWidget):
         self.after(speed, self.run_animation)
 
     def update(self) -> None:
-        steps = len(self.cremona_diagram.lines)
-        if steps == 0:
-            self._scale.config(from_=0, to=0)
-            self.selected_step.set(0)
-        else:
-            self._scale.config(from_=1, to=steps+1)
-            self.selected_step.set(1)
+        steps = len(self.cremona_diagram.steps) + 1
+        self._scale.config(from_=0, to=steps)
+        self.selected_step.set(steps)

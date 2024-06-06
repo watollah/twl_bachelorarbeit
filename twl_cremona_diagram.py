@@ -13,41 +13,48 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
     BASE_LINE_LENGTH = 20
     BASE_LINE_SPACING = 20
 
+    LINE_WIDTH = 2
+    ARROW_SHAPE = (12,12,4)
+
     def __init__(self, master):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
-        self.support_forces = []
-        self.beam_forces = []
-        self.forces_for_nodes: dict[Node, List[Force]] = {}
-        self.lines: List[int] = []
+        self.support_forces: dict[Force, Support] = {}
+        self.beam_forces: dict[Force, Beam] = {}
+        self.forces_for_nodes: dict[Node, dict[Force, Component]] = {}
+        self.steps: List[tuple[int, Force, Component]] = []
 
     def update(self) -> None:
         self.delete("all")
         pos = self.START_POINT
-        self.support_forces = [force for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)]
-        self.beam_forces = [force for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)]
+        self.support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
+        self.beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         self.forces_for_nodes = {node: self.get_forces_for_node(node) for node in TwlApp.model().nodes}
-        self.lines = []
+        self.steps = []
         self.draw_baseline(pos)
         for force in TwlApp.model().forces:
-            pos = self.draw_line(pos, force)
+            pos = self.draw_line(pos, force, force)
         self.draw_baseline(pos)
         pos = Point(pos.x + self.BASE_LINE_SPACING, pos.y)
-        for force in self.support_forces:
-            pos = self.draw_line(pos, force)
+        for force, support in self.support_forces.items():
+            pos = self.draw_line(pos, force, support)
         pos = Point(pos.x - 2 * self.BASE_LINE_SPACING, pos.y)
         node = self.find_next_node()
         while node:
             start_angle = self.get_start_angle(self.forces_for_nodes[node])
-            sorted_forces = sorted(self.forces_for_nodes[node], key=lambda force: (force.angle - start_angle) % 360)
-            start_coords = self.coords(self.find_withtag(sorted_forces[0].id)[0])
+            list_sorted_test = sorted(self.forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360)
+            sorted_forces = dict(list_sorted_test)
+            start_coords = self.coords(self.find_withtag(list(sorted_forces.keys())[0].id)[0])
             pos = Point(round(start_coords[0]), round(start_coords[1]))
-            for force in sorted_forces:
-                if force in self.support_forces or force in node.forces:
-                    coords = self.coords(self.find_withtag(force.id)[0])
-                    pos = Point(round(coords[2]), round(coords[3]))
+            for force, component in sorted_forces.items():
+                if type(component) == Support or type(component) == Force:
+                    line_id = self.find_withtag(force.id)[0]
+                    self.steps.append((line_id, force, component))
+                    coords = self.coords(line_id)
+                    x = round(coords[2] - (coords[2] - self.START_POINT.x) - self.BASE_LINE_SPACING)
+                    pos = Point(x, round(coords[3]))
                 else:
-                    pos = self.draw_line(pos, force)
+                    pos = self.draw_line(pos, force, component)
             self.forces_for_nodes.pop(node)
             node = self.find_next_node()
 
@@ -57,22 +64,22 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
     def count_unknown_on_node(self, node) -> int:
         return sum(len(self.find_withtag(force.id)) == 0 for force in self.forces_for_nodes[node])
 
-    def get_start_angle(self, forces: List[Force]):
-        return next(force.angle for force in forces if len(self.find_withtag(force.id)) > 0)
+    def get_start_angle(self, forces: dict[Force, Component]):
+        return next(force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0)
 
-    def get_forces_for_node(self, node: Node):
-        forces: List[Force] = node.forces
-        forces.extend([force for force in self.support_forces if force.node == node])
-        forces.extend(self.get_beam_forces_on_node(node))
+    def get_forces_for_node(self, node: Node) -> dict[Force, Component]:
+        forces: dict[Force, Component] = {force: force for force in node.forces}
+        forces.update({force: support for force, support in self.support_forces.items() if force.node == node})
+        forces.update(self.get_beam_forces_on_node(node))
         return forces
 
-    def get_beam_forces_on_node(self, node: Node) -> List[Force]:
-        forces: List[Force] = []
+    def get_beam_forces_on_node(self, node: Node) -> dict[Force, Beam]:
+        forces: dict[Force, Beam] = {}
         for beam in node.beams:
             other_node = beam.start_node if beam.start_node != node else beam.end_node
             angle = Line(Point(node.x, node.y), Point(other_node.x, other_node.y)).angle()
             strength = next((force.strength for force in TwlApp.solver().solution.keys() if force.id == beam.id))
-            forces.append(Force.dummy(beam.id, node, angle, strength))
+            forces[Force.dummy(beam.id, node, angle, strength)] = beam
         return forces
 
     def find_start_node(self):
@@ -81,10 +88,10 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
     def draw_baseline(self, pos: Point):
         self.create_line(pos.x - self.BASE_LINE_LENGTH - self.BASE_LINE_SPACING, pos.y, pos.x + self.BASE_LINE_LENGTH + self.BASE_LINE_SPACING, pos.y, dash=(2, 1, 1, 1))
 
-    def draw_line(self, start: Point, force: Force) -> Point:
+    def draw_line(self, start: Point, force: Force, component: Component) -> Point:
         angle = math.radians(force.angle)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
-        self.lines.append(self.create_line(start.x, start.y, end.x, end.y, arrow=tk.LAST, tags=force.id))
+        self.steps.append((self.create_line(start.x, start.y, end.x, end.y, width=self.LINE_WIDTH, arrow=tk.LAST, arrowshape=self.ARROW_SHAPE, tags=force.id), force, component))
         return end
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
