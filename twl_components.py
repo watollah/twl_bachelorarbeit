@@ -94,8 +94,6 @@ class CoordinateAttribute(Attribute['Component', int]):
             value = int(value)
         except ValueError:
             return False, "Coordinate must be a number."
-        if value <= 0:
-            return False, "Coordinate must be positive."
         return True, ""
 
 
