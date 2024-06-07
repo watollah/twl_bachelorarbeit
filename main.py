@@ -6,6 +6,7 @@ from twl_app import *
 from twl_style import *
 from twl_diagram import *
 from twl_table import *
+from twl_definition_tab import *
 from twl_cremona_tab import *
 from twl_io import *
 from twl_settings import *
@@ -15,9 +16,6 @@ class TwlTool(tk.Tk, TwlWidget):
 
     TITLE: str = "Twl Tool"
 
-    UNIT_CONV: float = 0.025
-    UNIT_SYMB: str = "m"
-
     def __init__(self):
         super().__init__()
 
@@ -26,74 +24,18 @@ class TwlTool(tk.Tk, TwlWidget):
         self.is_saved.set(True)
 
         self.geometry("1200x800")
-
-        init_style()
-    
+        init_style()    
         TwlApp.update_manager().design_widgets.append(self)
-        
-        self.create_menu_bar()
+        menubar = self.create_menu_bar()
+        self.config(menu=menubar)
 
         notebook = ttk.Notebook(self)
-
-        definition_tab = ttk.Frame(notebook)
-        result_tab = ttk.Frame(notebook)
-        profiles_tab = ttk.Frame(notebook)
-
-        notebook.add(definition_tab, text="Definition")
+        notebook.add(DefinitionTab(notebook), text="Definition")
         notebook.add(CremonaTab(notebook), text="Cremona")
-        notebook.add(result_tab, text="Result")
-        notebook.add(profiles_tab, text="Profiles", state="disabled")
-
-        label3 = tk.Label(result_tab, text="Results")
-        label3.pack(padx=10, pady=10)
-
-        label4 = tk.Label(profiles_tab, text="Profiles (maybe added later)")
-        label4.pack(padx=10, pady=10)
-
-        notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
+        notebook.add(ttk.Frame(notebook), text="Result")
+        notebook.add(ttk.Frame(notebook), text="Profiles", state="disabled")
         notebook.pack(fill=tk.BOTH, expand=True)
-
-        paned_window = ttk.PanedWindow(definition_tab, orient=tk.HORIZONTAL)
-        paned_window.pack(fill=tk.BOTH, expand=True)
-
-        #Diagram Editor
-        editor_frame = ttk.Frame(paned_window)
-        paned_window.add(editor_frame, weight=2)
-
-        diagram = TwlDiagram(editor_frame)
-        diagram.pack(fill="both", expand=True)
-
-        TwlApp.update_manager().design_widgets.append(diagram)
-        
-        #Tables
-        menu_frame = ttk.Frame(paned_window)
-        menu_frame.pack_propagate(False)
-        paned_window.add(menu_frame, weight=1)
-
-        nodes_entry = ToggledFrame(menu_frame, "Nodes")
-        nodes_entry.pack(fill="x")
-        nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes)
-        nodes_table.pack(fill="both")
-
-        beams_entry = ToggledFrame(menu_frame, "Beams")
-        beams_entry.pack(fill="x")
-        beams_table = TwlTable(beams_entry.content, TwlApp.model().beams)
-        beams_table.pack(fill="both")
-        
-        supports_entry = ToggledFrame(menu_frame, "Supports")
-        supports_entry.pack(fill="x")
-        supports_table = TwlTable(supports_entry.content, TwlApp.model().supports)
-        supports_table.pack(fill="both")
-
-        forces_entry = ToggledFrame(menu_frame, "Forces")
-        forces_entry.pack(fill="x")
-        forces_table = TwlTable(forces_entry.content, TwlApp.model().forces)
-        forces_table.pack(fill="both")
-
-        #todo: create custom widget BorderFrame
-        outer = ttk.Frame(menu_frame, style="Outer.Border.TFrame")
-        outer.pack(fill="both", expand=True)
-        ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
+        notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
 
         self.bind("<Control-n>", lambda *ignore: clear_project(self.is_saved))
         self.bind("<Control-o>", lambda *ignore: open_project(self.is_saved))
@@ -119,10 +61,8 @@ class TwlTool(tk.Tk, TwlWidget):
             TwlApp.update_manager().update_results()
 
     def create_menu_bar(self):
-        # Create a menu bar
         menubar = tk.Menu(self)
 
-        # Create File menu
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.is_saved), accelerator="Ctrl+N")
         file_menu.add_separator()
@@ -132,7 +72,6 @@ class TwlTool(tk.Tk, TwlWidget):
         file_menu.add_command(label="Save As...", command=lambda *ignore: save_project_as(self.is_saved), accelerator="Ctrl+Shift+S")
         menubar.add_cascade(label="File", menu=file_menu)
 
-        # Create Settings menu
         settings_menu = tk.Menu(menubar, tearoff=0)
         settings_menu.add_checkbutton(label="Show Angle Guide", variable=TwlApp.settings().show_angle_guide)
         settings_menu.add_separator()
@@ -144,12 +83,10 @@ class TwlTool(tk.Tk, TwlWidget):
         settings_menu.add_checkbutton(label="Show Grid", variable=TwlApp.settings().show_grid)
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
-        # Create Help menu and link to 
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_command(label="Help", command=lambda: webbrowser.open("https://example.com"))
 
-        # Configure the root window to use the menu bar
-        self.config(menu=menubar)
+        return menubar
 
 if __name__ == "__main__":
     twl_tool = TwlTool()

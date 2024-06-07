@@ -7,10 +7,15 @@ from twl_images import *
 TTK_CLAM = "clam"
 
 FONT_TYPE = "Helvetica"
+
 FONT_SIZE = 10
 FONT = (FONT_TYPE, FONT_SIZE)
+
 LARGE_FONT_SIZE = 12
 LARGE_FONT = (FONT_TYPE, LARGE_FONT_SIZE)
+
+VERY_LARGE_FONT_SIZE = 20
+VERY_LARGE_FONT = (FONT_TYPE, VERY_LARGE_FONT_SIZE)
 
 #Colors
 ACCENT = ""
@@ -47,6 +52,9 @@ def init_style():
               shiftrelief=[('pressed', '!disabled', 2)],
               background=[('pressed', '!disabled', LIGHT_GRAY), ('active', VERY_LIGHT_GRAY)])
 
+    style.configure("ToggledFrame.TButton", anchor=tk.W)
+    style.configure("Play.TButton", font=VERY_LARGE_FONT, padding=(4, -6, 0, 0))
+
     style.configure("TLabel", background=WHITE, foreground=BLACK, font=FONT)
 
     style.configure("TNotebook", background=GRAY, borderwidth=0, bordercolor=BLACK)
@@ -78,8 +86,9 @@ def init_style():
     style.configure("Outer.Border.TFrame", background=BLACK)
     style.configure("Inner.Border.TFrame", background=VERY_LIGHT_GRAY)
 
-    style.configure("Selected.TButton", background=SELECTED, relief="flat", font=LARGE_FONT)
-    style.map("Selected.TButton",
+    style.configure("Radio.TButton", padding=(0, 0))
+    style.configure("Selected.Radio.TButton", background=SELECTED, relief="flat", font=LARGE_FONT)
+    style.map("Selected.Radio.TButton",
               shiftrelief=[('pressed', '!disabled', 2)],
               background=[('pressed', '!disabled', SELECTED), ('active', SELECTED)])
 

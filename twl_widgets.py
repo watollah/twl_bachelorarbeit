@@ -59,7 +59,6 @@ class CustomButton(ttk.Button):
     def __init__(self, master=None, **kw):
         outlinewidth = kw.pop("outlinewidth", None)
         outlinecolor = kw.pop("outlinecolor", BLACK)
-        anchor = kw.pop("anchor", tk.CENTER)
         kw.setdefault("takefocus", False)
         if outlinewidth:
             outline = tk.LabelFrame(master, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
@@ -67,7 +66,6 @@ class CustomButton(ttk.Button):
             super().__init__(outline, **kw)
         else:
             super().__init__(master, **kw)
-        ttk.Style().configure(self.winfo_class(), anchor=anchor)
         self.bind("<Enter>", self.hover)
         self.bind("<Leave>", self.default)
 
@@ -87,7 +85,13 @@ class CustomToggleButton(CustomButton):
         text = kw.pop("text", "")
         self.text_on = kw.pop("text_on", text)
         self.text_off = kw.pop("text_off", text)
-        kw["text"] = self.text_off if not self.state.get() else self.text_on
+        kw["text"] = self.text_on if self.state.get() else self.text_off
+
+        self.icon_on = kw.pop("icon_on", None)
+        self.icon_off = kw.pop("icon_off", None)
+        if self.icon_on and self.icon_off:
+            kw["image"] = self.icon_on if self.state.get() else self.icon_off
+            kw["compound"] = tk.LEFT
 
         command = kw.pop("command", self.default_command)
         kw["command"] = self.toggle
@@ -100,7 +104,9 @@ class CustomToggleButton(CustomButton):
 
     def on_toggle(self, command):
         """Code that gets executed when the state of the button changes."""
-        self.config(text=self.text_off if not self.state.get() else self.text_on)
+        self.configure(text=self.text_off if not self.state.get() else self.text_on)
+        if self.icon_on and self.icon_off:
+            self.configure(image=self.icon_on if self.state.get() else self.icon_off)
         command()
 
     def default_command(self):
@@ -115,13 +121,14 @@ class CustomRadioButton(CustomToggleButton):
         self.value = kw.pop("value", "")
         self.variable.trace_add("write", lambda *ignore: self.on_radio_toggle())
         super().__init__(master, **kw)
+        self.configure(style="Selected.Radio.TButton" if self.state.get() else "Radio.TButton")
 
     def toggle(self):
         super().toggle()
         self.variable.set(self.value)
 
     def on_toggle(self, command):
-        self.configure(style="Selected.TButton" if self.state.get() else "TButton")
+        self.configure(style="Selected.Radio.TButton" if self.state.get() else "Radio.TButton")
         return super().on_toggle(command)
 
     def on_radio_toggle(self):
@@ -133,10 +140,10 @@ class CustomRadioButton(CustomToggleButton):
 
 class ToggledFrame(tk.Frame):
 
-    TABLE_WIDTH: int = 50
+    HEADER_SIZE = 50
 
-    CLOSED_SYMBOL: str = "\u25B6"
-    OPEN_SYMBOL: str = "\u25BC"
+    OPEN_ICON: str = "img/arrow_open_icon.png"
+    CLOSED_ICON: str = "img/arrow_closed_icon.png"
 
     def __init__(self, parent, title: str = "", *args, **options):
         tk.Frame.__init__(self, parent, *args, **options)
@@ -148,14 +155,18 @@ class ToggledFrame(tk.Frame):
         self.title_frame.pack(fill="x")
 
         self.content: ttk.Frame = ttk.Frame(self)
-    
+
+        open_icon = add_image_from_path(self.OPEN_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+        closed_icon = add_image_from_path(self.CLOSED_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+
         self.toggle_button = CustomToggleButton(self.title_frame, 
+                                                style="ToggledFrame.TButton",
                                                 command=lambda: self.content.pack(fill="x") if self.is_expanded.get() else self.content.forget(), 
                                                 variable=self.is_expanded, 
-                                                text_on=f"{ToggledFrame.OPEN_SYMBOL}    {self.title}", 
-                                                text_off=f"{ToggledFrame.CLOSED_SYMBOL}    {self.title}", 
-                                                padding=(18, 16),
-                                                anchor=tk.W,
+                                                icon_on=open_icon,
+                                                icon_off=closed_icon,
+                                                text=self.title,
+                                                padding=(0, 0),
                                                 outlinewidth=1)
         self.toggle_button.pack(fill=tk.BOTH)
         self.is_expanded.set(True)

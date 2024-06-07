@@ -93,7 +93,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
         play_button_frame = ttk.Frame(self, width=60, height=30)
         play_button_frame.pack_propagate(False)
         play_button_frame.grid(row=1, column=0, padx=ControlPanel.PADDING, pady=ControlPanel.PADDING)
-        play_button = CustomToggleButton(play_button_frame, variable=self.play_state, text_on="\u23F8", text_off="\u23F5", command=self.run_animation)
+        play_button = CustomToggleButton(play_button_frame, variable=self.play_state, text_on="\u23F8", text_off="\u23F5", command=self.run_animation, style="Play.TButton")
         play_button.pack(fill=tk.BOTH, expand=True)
         return play_button
 

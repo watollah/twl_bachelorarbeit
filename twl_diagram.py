@@ -618,7 +618,7 @@ class ForceTool(Tool):
 class TwlDiagram(tk.Canvas, TwlWidget):
 
     STAT_DETERM_LABEL_PADDING: int = 10
-    TOOL_BUTTON_SIZE: int = 40
+    TOOL_BUTTON_SIZE: int = 50
 
     TEXT_TAG = "text"
     TEXT_BG_TAG = "text"
@@ -638,6 +638,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def __init__(self, master):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
+        self.configure(scrollregion=self.bbox("all"))
+
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
         self.grid_visible: bool = False
@@ -668,9 +670,22 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         #grid and angle guide refresh
         self.bind("<Configure>", self.on_resize)
+        self.bind("<MouseWheel>", self.zoom)
 
         #set initial tool
         self.select_tool(SelectTool.ID)
+
+    def zoom(self, event):
+        scale = 1.0
+        if event.delta > 0:  # Scroll up
+            scale = 1.1
+        elif event.delta < 0:  # Scroll down
+            scale = 0.9
+
+        x = self.canvasx(event.x)
+        y = self.canvasy(event.y)
+        self.scale("all", x, y, scale, scale)
+        self.configure(scrollregion=self.bbox("all"))
 
     def on_resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
         self.delete_grid()
