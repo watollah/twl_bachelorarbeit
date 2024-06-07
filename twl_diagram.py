@@ -360,6 +360,14 @@ class Tool:
     def reset(self):
         self.diagram.delete_with_tag(Shape.TEMP)
 
+    def correct_event_pos(self, event):
+        """Correct the coordinates of the mouse pointer to account for the scrolling position of the diagram."""
+        x_min, y_min, x_max, y_max = self.diagram.get_scrollregion()
+        sr_width = abs(x_min) + abs(x_max)
+        sr_height = abs(y_min) + abs(y_max)
+        event.x = event.x + self.diagram.xview()[0] * sr_width - abs(x_min)
+        event.y = event.y + self.diagram.yview()[0] * sr_height - abs(y_min)
+
     def snap_event_to_grid(self, event):
         if TwlApp.settings().show_grid.get():
             snap_point = self.diagram.grid_snap(event.x, event.y)
@@ -367,6 +375,7 @@ class Tool:
             event.y = snap_point[1]
 
     def _action(self, event):
+        self.correct_event_pos(event)
         self.snap_event_to_grid(event)
         self.action(event)
 
@@ -375,6 +384,7 @@ class Tool:
         pass
 
     def _preview(self, event):
+        self.correct_event_pos(event)
         self.snap_event_to_grid(event)
         self.preview(event)
 
