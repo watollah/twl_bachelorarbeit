@@ -677,6 +677,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.bind("<Configure>", self.resize)
         #self.bind("<MouseWheel>", self.zoom)
 
+        self.update_scrollregion()
         #set initial tool
         self.select_tool(SelectTool.ID)
 
@@ -697,20 +698,29 @@ class TwlDiagram(tk.Canvas, TwlWidget):
             self.yview(*args)
         elif scroll_type == tk.HORIZONTAL:
             self.xview(*args)
+        self.delete_grid()
+        if TwlApp.settings().show_grid.get():
+            self.draw_grid()
         self.update_angle_guide_position()
 
     def update_scrollregion(self):
         shapes = [shape.tk_id for shape in self.shapes]
         if shapes:
-            bbox = self.bbox(*shapes)
+            bbox = self.bbox(*shapes) if shapes else (0, 0, 0, 0)
             self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
                                      min(0, bbox[1] - self.SCROLL_EXTEND), 
                                      max(self.winfo_width(), bbox[2] + self.SCROLL_EXTEND), 
                                      max(self.winfo_height(), bbox[3] + self.SCROLL_EXTEND)))
         else:
-            self.configure(scrollregion=(0, 0, 0, 0))
+            self.configure(scrollregion=(0, 0, self.winfo_width(), self.winfo_height()))
             self.scroll("horizontal", "moveto", 0)
             self.scroll("vertical", "moveto", 0)
+
+    def get_scrollregion(self) -> tuple[int, int, int, int]:
+        sr_str = self.cget("scrollregion") or "0 0 0 0"
+        sr_int = tuple([int(num) for num in sr_str.split()])
+        assert len(sr_int) == 4
+        return sr_int
 
     def zoom(self, event):
         scale = 0.9 if event.delta < 0 else 1.1
@@ -719,33 +729,33 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.scale("all", x, y, scale, scale)
         self.configure(scrollregion=self.bbox("all"))
 
-    def resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
+    def resize(self, event):
+        self.update_scrollregion()
         self.delete_grid()
         if TwlApp.settings().show_grid.get():
             self.draw_grid()
         self.update_angle_guide_position()
 
     def update_angle_guide_position(self):
-        sr_str = self.cget("scrollregion") or "0 0 0 0"
-        sr_int = [int(num) for num in sr_str.split()]
-        sr_width = abs(sr_int[0]) + abs(sr_int[2])
-        sr_height = abs(sr_int[1]) + abs(sr_int[3])
-        self.coords(self.angle_guide, self.winfo_width() + (self.xview()[0] * sr_width) - abs(sr_int[0]) - self.ANGLE_GUIDE_PADDING, 
-                    self.ANGLE_GUIDE_PADDING + (self.yview()[0] * sr_height) - abs(sr_int[1]))
+        x_min, y_min, x_max, y_max = self.get_scrollregion()
+        sr_width = abs(x_min) + abs(x_max)
+        sr_height = abs(y_min) + abs(y_max)
+        self.coords(self.angle_guide, self.winfo_width() + (self.xview()[0] * sr_width) - abs(x_min) - self.ANGLE_GUIDE_PADDING, 
+                    self.ANGLE_GUIDE_PADDING + (self.yview()[0] * sr_height) - abs(y_min))
 
     def delete_grid(self):
         self.delete(self.GRID_TAG)
         self.grid_visible = False
 
     def draw_grid(self):
-        canvas_width = self.winfo_width()
-        canvas_height = self.winfo_height()
-
-        for i in range(0, canvas_width, TwlApp.settings().grid_spacing.get()):
-            self.create_line((i, 0), (i, canvas_height), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        for i in range(0, canvas_height, TwlApp.settings().grid_spacing.get()):
-            self.create_line((0, i), (canvas_width, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        
+        grid_spacing = TwlApp.settings().grid_spacing.get()
+        x_min, y_min, x_max, y_max = self.get_scrollregion()
+        x_start = x_min - (x_min % grid_spacing) + grid_spacing
+        y_start = y_min - (y_min % grid_spacing) + grid_spacing
+        for i in range(x_start, x_max, grid_spacing):
+            self.create_line((i, y_min), (i, y_max), fill=self.GRID_COLOR, tags=self.GRID_TAG)
+        for i in range(y_start, y_max, grid_spacing):
+            self.create_line((x_min, i), (x_max, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
         self.tag_lower(self.GRID_TAG)
         self.grid_visible = True
 
@@ -768,12 +778,13 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.handle_tool_change()
 
     def handle_tool_change(self):
-        """Perform tool change"""
+        """Perform tool change."""
         self.selected_tool.deactivate()
         self.selected_tool = self.tools[self._selected_tool_id.get()]
         self.selected_tool.activate()
 
     def clear(self):
+        """Removes all model shapes from the diagram."""
         for shape in self.find_all():
             tags = set(self.gettags(shape))
             if not tags.intersection(self.NO_UPDATE_TAGS):
@@ -781,15 +792,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def update(self) -> None:
         """Redraws the diagram completely from the model."""
-
-        if not TwlApp.settings().show_grid.get() and self.grid_visible:
-            self.delete_grid()
-        elif TwlApp.settings().show_grid.get() and not self.grid_visible:
-            self.draw_grid()
-
-        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
-        self.itemconfigure(self.angle_guide, state=angle_guide_state)
-
         self.clear()
         self.shapes.clear()
 
@@ -806,10 +808,17 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         self.update_scrollregion()
 
+        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
+        self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
+        if not TwlApp.settings().show_grid.get() and self.grid_visible:
+            self.delete_grid()
+        elif TwlApp.settings().show_grid.get() and not self.grid_visible:
+            self.draw_grid()
 
     @property
     def stat_determ_text(self) -> str:
+        """Get the explanation text about static determinacy."""
         nodes = len(TwlApp.model().nodes)
         equations = 2 * nodes
         constraints = sum(support.constraints for support in TwlApp.model().supports)
@@ -819,6 +828,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def create_node(self, x: int, y: int) -> Node:
+        """Creates a new node in the model."""
         TwlApp.update_manager().pause()
         node = Node(TwlApp.model(), x, y)
         TwlApp.model().nodes.append(node)
@@ -826,6 +836,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return node
 
     def create_beam(self, start_node: Node, end_node: Node) -> Beam:
+        """Creates a new beam in the model."""
         TwlApp.update_manager().pause()
         beam = Beam(TwlApp.model(), start_node, end_node)
         TwlApp.model().beams.append(beam)
@@ -833,6 +844,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return beam
 
     def create_support(self, node: Node, angle: float=0):
+        """Creates a new support in the model."""
         TwlApp.update_manager().pause()
         support = Support(TwlApp.model(), node, angle)
         TwlApp.model().supports.append(support)
@@ -840,6 +852,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return support
 
     def create_force(self, node: Node, angle: float=180):
+        """Creates a new force in the model."""
         TwlApp.update_manager().pause()
         force = Force(TwlApp.model(), node, angle)
         TwlApp.model().forces.append(force)
@@ -847,6 +860,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return force
 
     def create_text_with_bg(self, *args, **kw):
+        """Creates a label with a specific bg color to ensure readability. Used for model component labels."""
         bg_tag = kw.pop("bg_tag", self.TEXT_BG_TAG)
         bg_color = kw.pop("bg_color", self["background"])
         kw.setdefault("anchor", tk.CENTER)
@@ -868,6 +882,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         return next(filter(lambda shape: shape.is_at(x, y), self.shapes), None)
 
     def find_shape_of_list_at(self, shapes: list[Shape], x: int, y: int) -> Shape | None:
+        """Check if there is a shape that is included in the list in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), shapes), None)
 
     def find_shape_of_type_at(self, component_type: Type[C], x: int, y: int) -> Shape[C] | None:
