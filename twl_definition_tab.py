@@ -17,20 +17,21 @@ class DefinitionTab(ttk.Frame):
         paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True)
 
-        self.toolbar = self.create_toolbar(paned_window)
-        self.definition_diagram = self.create_diagram(paned_window)
+        definition_diagram_frame = ttk.Frame(paned_window)
+        paned_window.add(definition_diagram_frame, weight=2)
+        self.toolbar = self.create_toolbar(definition_diagram_frame)
+        self.definition_diagram = self.create_diagram(definition_diagram_frame)
         self.tables = self.create_tables(paned_window)
 
-    def create_toolbar(self, master: tk.PanedWindow):
-        pass
+    def create_toolbar(self, master: ttk.Frame):
+        toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
+        toolbar.pack(side=tk.LEFT, fill=tk.Y)
+        return toolbar
 
-    def create_diagram(self, master: tk.PanedWindow):
+    def create_diagram(self, master: ttk.Frame):
         editor_frame = ttk.Frame(master)
-        master.add(editor_frame, weight=2)
-
-        diagram = TwlDiagram(editor_frame)
-        diagram.pack(fill="both", expand=True)
-
+        editor_frame.pack(fill="both", expand=True)
+        diagram = TwlDiagram(editor_frame, self.toolbar)
         TwlApp.update_manager().design_widgets.append(diagram)
 
     def create_tables(self, master: tk.PanedWindow):

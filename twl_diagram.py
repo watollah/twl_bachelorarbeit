@@ -617,6 +617,8 @@ class ForceTool(Tool):
 
 class TwlDiagram(tk.Canvas, TwlWidget):
 
+    SCROLL_EXTEND: int = 100
+
     STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
@@ -635,10 +637,15 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
 
-    def __init__(self, master):
+    def __init__(self, master, toolbar):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
         self.configure(scrollregion=self.bbox("all"))
+        self.grid(column=0, row=0, sticky=tk.NSEW)
+        master.grid_rowconfigure(0, weight=1)
+        master.grid_columnconfigure(0, weight=1)
+
+        self.create_scrollbars(master)
 
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
@@ -649,8 +656,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.tools: List[Tool] = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
         self._selected_tool_id: tk.IntVar = IntVar(value=0)
         self.selected_tool: Tool = self.tools[0]
-        toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")
-        toolbar.pack(fill="y", side= "left")
         for tool in self.tools: self.add_button(tool, toolbar)
         outer = ttk.Frame(toolbar, style="Outer.Border.TFrame") #todo: create custom widget BorderFrame
         outer.pack(fill="both", expand=True)
@@ -670,18 +675,31 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         #grid and angle guide refresh
         self.bind("<Configure>", self.on_resize)
-        self.bind("<MouseWheel>", self.zoom)
+        #self.bind("<MouseWheel>", self.zoom)
 
         #set initial tool
         self.select_tool(SelectTool.ID)
 
-    def zoom(self, event):
-        scale = 1.0
-        if event.delta > 0:  # Scroll up
-            scale = 1.1
-        elif event.delta < 0:  # Scroll down
-            scale = 0.9
+    def create_scrollbars(self, master):
+        v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda *args: self.scroll(tk.VERTICAL, *args))
+        v_scrollbar.grid(column=1, row=0, sticky=tk.NS)
 
+        h_scrollbar = tk.Scrollbar(master, orient=tk.HORIZONTAL, command=lambda *args: self.scroll(tk.HORIZONTAL, *args))
+        h_scrollbar.grid(column=0, row=1, sticky=tk.EW)
+
+        corner = tk.Frame(master, background=LIGHT_GRAY)
+        corner.grid(column=1, row=1, sticky=tk.NSEW)
+
+        self.configure(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set)
+
+    def scroll(self, scroll_type, *args):
+        if scroll_type == tk.VERTICAL:
+            self.yview(*args)
+        elif scroll_type == tk.HORIZONTAL:
+            self.xview(*args)
+
+    def zoom(self, event):
+        scale = 0.9 if event.delta < 0 else 1.1
         x = self.canvasx(event.x)
         y = self.canvasy(event.y)
         self.scale("all", x, y, scale, scale)
@@ -691,6 +709,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.delete_grid()
         if TwlApp.settings().show_grid.get():
             self.draw_grid()
+        self.update_angle_guide_position()
+
+    def update_angle_guide_position(self):
         self.coords(self.angle_guide, self.winfo_width() - self.ANGLE_GUIDE_PADDING, self.ANGLE_GUIDE_PADDING)
 
     def delete_grid(self):
@@ -763,6 +784,22 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         ttk.Style().configure("Diagram.TLabel", foreground=color)
         self.tag_lower(self.GRID_TAG)
         self.tag_raise(self.ANGLE_GUIDE_TAG)
+
+        self.update_scrollregion()
+
+
+    def update_scrollregion(self):
+        shapes = [shape.tk_id for shape in self.shapes]
+        if shapes:
+            bbox = self.bbox(*shapes)
+            self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
+                                     min(0, bbox[1] - self.SCROLL_EXTEND), 
+                                     max(self.winfo_width(), bbox[2] + self.SCROLL_EXTEND), 
+                                     max(self.winfo_height(), bbox[3] + self.SCROLL_EXTEND)))
+        else:
+            self.configure(scrollregion=(0, 0, 0, 0))
+            self.scroll("horizontal", "moveto", 0)
+            self.scroll("vertical", "moveto", 0)
 
     @property
     def stat_determ_text(self) -> str:
@@ -839,6 +876,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
         return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))
+
+    def find_except_withtags(self, *tagOrIds: str | int) -> tuple[int, ...]:
+        return tuple([id for id in self.find_all() if all(id != tagOrId and tagOrId not in self.gettags(id) for tagOrId in tagOrIds)])
 
     def tag_lower(self, lower: str | int, upper: str | int | None = None) -> None:
         if self.find_withtag(lower) and (not upper or self.find_withtag(upper)):
