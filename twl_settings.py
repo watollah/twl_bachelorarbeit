@@ -26,3 +26,6 @@ class Settings:
 
         self.show_angle_guide = BooleanVar(value=True)
         self.show_angle_guide.trace_add("write", lambda *ignore: self.update_manager.update())
+
+        self.force_spacing = BooleanVar(value=True)
+        self.force_spacing.trace_add("write", lambda *ignore: self.update_manager.update_results())

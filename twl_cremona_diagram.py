@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 
 from twl_app import *
 from twl_update import *
@@ -21,6 +22,8 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
     SELECTED_LINE_WIDTH = 3
     ARROW_SHAPE = (12,12,4)
 
+    SPACING_CHECK_PADDING = 5
+
     def __init__(self, master):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
@@ -29,6 +32,17 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         self.forces_for_nodes: dict[Node, dict[Force, Component]] = {}
         self.steps: List[tuple[int, Force, Component]] = []
 
+        self.force_spacing_check = ttk.Checkbutton(master, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
+        self.force_spacing_check.place(x=self.winfo_width() - self.SPACING_CHECK_PADDING, 
+                                       y=self.winfo_height() - self.SPACING_CHECK_PADDING, 
+                                       anchor=tk.SE)
+        self.bind("<Configure>", self.on_resize)
+    
+    def on_resize(self, event):
+        self.force_spacing_check.place(x=self.winfo_width() - self.SPACING_CHECK_PADDING, 
+                                       y=self.winfo_height() - self.SPACING_CHECK_PADDING, 
+                                       anchor=tk.SE)
+
     def update(self) -> None:
         self.delete("all")
         pos = self.START_POINT
@@ -36,14 +50,17 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         self.beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         self.forces_for_nodes = {node: self.get_forces_for_node(node) for node in TwlApp.model().nodes}
         self.steps = []
-        self.draw_baseline(pos)
+        if TwlApp.settings().force_spacing.get():
+            self.draw_baseline(pos)
         for force in TwlApp.model().forces:
             pos = self.draw_line(pos, force, force)
-        self.draw_baseline(pos)
-        pos = Point(pos.x + self.BASE_LINE_SPACING, pos.y)
+        if TwlApp.settings().force_spacing.get():
+            self.draw_baseline(pos)
+            pos = Point(pos.x + self.BASE_LINE_SPACING, pos.y)
         for force, support in self.support_forces.items():
             pos = self.draw_line(pos, force, support)
-        pos = Point(pos.x - 2 * self.BASE_LINE_SPACING, pos.y)
+        if TwlApp.settings().force_spacing.get():
+            pos = Point(pos.x - 2 * self.BASE_LINE_SPACING, pos.y)
         node = self.find_next_node()
         while node:
             start_angle = self.get_start_angle(self.forces_for_nodes[node])
@@ -55,8 +72,9 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
                     line_id = self.find_withtag(force.id)[0]
                     self.steps.append((line_id, force, component))
                     coords = self.coords(line_id)
-                    x = round(coords[2] - (coords[2] - self.START_POINT.x) - self.BASE_LINE_SPACING)
-                    pos = Point(x, round(coords[3]))
+                    if TwlApp.settings().force_spacing.get():
+                        coords[2] = round(coords[2] - (coords[2] - self.START_POINT.x) - self.BASE_LINE_SPACING)
+                    pos = Point(round(coords[2]), round(coords[3]))
                 else:
                     pos = self.draw_line(pos, force, component)
             self.forces_for_nodes.pop(node)
