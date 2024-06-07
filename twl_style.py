@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 from twl_images import *
 
@@ -32,6 +32,9 @@ GREEN = "#008000"
 RED = "#ff0000"
 
 SCALE_THUMB_SIZE = 22
+
+CHECK_SIZE = 18
+CHECK_SYMBOL = "✔"
 
 def init_style():
 
@@ -108,6 +111,30 @@ def init_style():
     )
     style.configure(h_ttkstyle, background=WHITE)
 
+    cb_ttk_style = "Custom.TCheckbutton"
+    cb_element = cb_ttk_style.replace(".TC", ".C")
+    cb_off_image = create_checkbutton_image(BLACK, "")
+    cb_on_image = create_checkbutton_image(BLACK, CHECK_SYMBOL)
+    cb_disabled_image = create_checkbutton_image(GRAY, "")
+    style.element_create(f'{cb_element}.indicator', 'image', cb_on_image,
+                                  ('disabled', cb_disabled_image),
+                                  ('!selected', cb_off_image),
+                                  width=CHECK_SIZE + 5, border=2, sticky=tk.W)
+    style.configure(cb_ttk_style, foreground=BLACK, background=WHITE, takefocus="false")
+    style.map(cb_ttk_style, foreground=[('disabled', GRAY)], background=[("active", VERY_LIGHT_GRAY)])
+    style.layout(cb_ttk_style,
+        [("Checkbutton.padding", {
+            "children": [(f'{cb_element}.indicator', {
+                "side": tk.LEFT, "sticky": ""
+                }), ("Checkbutton.focus", {
+                    "children": [
+                    ("Checkbutton.label", {"sticky": tk.NSEW})], 
+                    "side": tk.LEFT, "sticky": ""
+                })
+            ], "sticky": tk.NSEW
+        })]
+    )
+
     style.configure("TMenubutton", background=WHITE, relief="flat", font=FONT)
     style.map("TMenubutton", background=[('pressed', '!disabled', LIGHT_GRAY), ('active', VERY_LIGHT_GRAY)])
 
@@ -116,3 +143,16 @@ def create_scale_image(color: str) -> tk.PhotoImage:
     draw = ImageDraw.Draw(image)
     draw.ellipse((0, 0, 95, 95), fill=color, outline=BLACK, width=4)
     return add_image(image, SCALE_THUMB_SIZE, SCALE_THUMB_SIZE)
+
+def create_checkbutton_image(color: str, text: str) -> tk.PhotoImage:
+        checkbutton_on = Image.new("RGBA", (134, 134))
+        draw = ImageDraw.Draw(checkbutton_on)
+        draw.rectangle(
+            [2, 2, 132, 132],
+            outline=color,
+            width=6,
+            fill=WHITE,
+        )
+        fnt = ImageFont.truetype("seguisym.ttf", 110)
+        draw.text((20, -10), text, font=fnt, fill=BLACK)
+        return add_image(checkbutton_on, CHECK_SIZE, CHECK_SIZE)
