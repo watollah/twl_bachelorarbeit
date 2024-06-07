@@ -674,7 +674,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
                                              tags=self.ANGLE_GUIDE_TAG)
 
         #grid and angle guide refresh
-        self.bind("<Configure>", self.on_resize)
+        self.bind("<Configure>", self.resize)
         #self.bind("<MouseWheel>", self.zoom)
 
         #set initial tool
@@ -697,6 +697,20 @@ class TwlDiagram(tk.Canvas, TwlWidget):
             self.yview(*args)
         elif scroll_type == tk.HORIZONTAL:
             self.xview(*args)
+        self.update_angle_guide_position()
+
+    def update_scrollregion(self):
+        shapes = [shape.tk_id for shape in self.shapes]
+        if shapes:
+            bbox = self.bbox(*shapes)
+            self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
+                                     min(0, bbox[1] - self.SCROLL_EXTEND), 
+                                     max(self.winfo_width(), bbox[2] + self.SCROLL_EXTEND), 
+                                     max(self.winfo_height(), bbox[3] + self.SCROLL_EXTEND)))
+        else:
+            self.configure(scrollregion=(0, 0, 0, 0))
+            self.scroll("horizontal", "moveto", 0)
+            self.scroll("vertical", "moveto", 0)
 
     def zoom(self, event):
         scale = 0.9 if event.delta < 0 else 1.1
@@ -705,14 +719,19 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.scale("all", x, y, scale, scale)
         self.configure(scrollregion=self.bbox("all"))
 
-    def on_resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
+    def resize(self, event): #todo: instead of redrawing the grid, change its coordinates?
         self.delete_grid()
         if TwlApp.settings().show_grid.get():
             self.draw_grid()
         self.update_angle_guide_position()
 
     def update_angle_guide_position(self):
-        self.coords(self.angle_guide, self.winfo_width() - self.ANGLE_GUIDE_PADDING, self.ANGLE_GUIDE_PADDING)
+        sr_str = self.cget("scrollregion") or "0 0 0 0"
+        sr_int = [int(num) for num in sr_str.split()]
+        sr_width = abs(sr_int[0]) + abs(sr_int[2])
+        sr_height = abs(sr_int[1]) + abs(sr_int[3])
+        self.coords(self.angle_guide, self.winfo_width() + (self.xview()[0] * sr_width) - abs(sr_int[0]) - self.ANGLE_GUIDE_PADDING, 
+                    self.ANGLE_GUIDE_PADDING + (self.yview()[0] * sr_height) - abs(sr_int[1]))
 
     def delete_grid(self):
         self.delete(self.GRID_TAG)
@@ -788,18 +807,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.update_scrollregion()
 
 
-    def update_scrollregion(self):
-        shapes = [shape.tk_id for shape in self.shapes]
-        if shapes:
-            bbox = self.bbox(*shapes)
-            self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
-                                     min(0, bbox[1] - self.SCROLL_EXTEND), 
-                                     max(self.winfo_width(), bbox[2] + self.SCROLL_EXTEND), 
-                                     max(self.winfo_height(), bbox[3] + self.SCROLL_EXTEND)))
-        else:
-            self.configure(scrollregion=(0, 0, 0, 0))
-            self.scroll("horizontal", "moveto", 0)
-            self.scroll("vertical", "moveto", 0)
 
     @property
     def stat_determ_text(self) -> str:
