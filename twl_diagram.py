@@ -43,6 +43,12 @@ class Shape(Generic[C]):
         self.diagram: 'TwlDiagram' = diagram
         self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
+        if (not self.TAG == Shape.TEMP) and self.label_visible(): 
+            label_tk_id, label_bg_tk_id = self.draw_label()
+            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
+            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
     def select(self):
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
@@ -82,6 +88,10 @@ class Shape(Generic[C]):
     def label_position(self) -> Point:
         pass
 
+    @abstractmethod
+    def label_visible(self) -> bool:
+        return False
+
     def draw_label(self) -> tuple[int, int]:
         return self.diagram.create_text_with_bg(self.label_position.x, 
                                  self.label_position.y, 
@@ -115,11 +125,6 @@ class NodeShape(Shape[Node]):
                             width = self.BORDER, 
                             tags=[*self.TAGS, str(node.id)])
         self.tk_shapes[tk_id] = Polygon(p1, p2)
-        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_node_labels.get(): 
-            label_tk_id, label_bg_tk_id = self.draw_label()
-            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
-            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def circle_coords(self) -> tuple[Point, Point]:
         return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
@@ -136,6 +141,9 @@ class NodeShape(Shape[Node]):
     @property
     def label_position(self) -> Point:
         return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
+
+    def label_visible(self) -> bool:
+        return TwlApp.settings().show_node_labels.get()
 
     @property
     def bounds(self) -> Polygon:
@@ -165,11 +173,6 @@ class BeamShape(Shape[Beam]):
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
-        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_beam_labels.get(): 
-            label_tk_id, label_bg_tk_id = self.draw_label()
-            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
-            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def line_coords(self) -> Line:
         return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
@@ -186,6 +189,9 @@ class BeamShape(Shape[Beam]):
     @property
     def label_position(self) -> Point:
         return self.line_coords().midpoint()
+
+    def label_visible(self) -> bool:
+        return TwlApp.settings().show_beam_labels.get()
 
 
 class TempBeamShape(BeamShape):
@@ -232,11 +238,6 @@ class SupportShape(Shape[Support]):
                                 tags=[*self.TAGS, str(support.id), self.LINE_TAG])
             self.tk_shapes[tk_id] = Polygon(line.start, line.end)
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
-        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_support_labels.get(): 
-            label_tk_id, label_bg_tk_id = self.draw_label()
-            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
-            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def is_at(self, x: int, y: int) -> bool:
         return self.triangle_coords().inside_triangle(Point(x, y))
@@ -271,6 +272,9 @@ class SupportShape(Shape[Support]):
         point.rotate(n_point, self.component.angle + 180)
         return point
 
+    def label_visible(self) -> bool:
+        return TwlApp.settings().show_support_labels.get()
+
 
 class TempSupportShape(SupportShape):
 
@@ -288,7 +292,6 @@ class ForceShape(Shape[Force]):
     ARROW_SHAPE = (15,14,10)
 
     LABEL_OFFSET = 20
-    LABEL_PREFIX = "F"
 
     def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
         super().__init__(force, diagram)
@@ -303,11 +306,6 @@ class ForceShape(Shape[Force]):
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
         self.tk_shapes[tk_id] = Polygon(arrow.start, arrow.end)
-        if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_force_labels.get(): 
-            label_tk_id, label_bg_tk_id = self.draw_label()
-            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
-            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.arrow_coords()) < self.WIDTH/2
@@ -332,6 +330,9 @@ class ForceShape(Shape[Force]):
         point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
         point.rotate(n_point, self.component.angle)
         return point
+
+    def label_visible(self) -> bool:
+        return TwlApp.settings().show_force_labels.get()
 
 
 class TempForceShape(ForceShape):
@@ -662,6 +663,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.configure(background="white", highlightthickness=0)
         self.scale_origin = Point(0, 0)
         self.current_scale = 1.0
+
+        self.pan_pos = Point(0, 0)
+        self.pan_xview_start = 0
+        self.pan_yview_start = 0
+
         self.grid(column=0, row=0, sticky=tk.NSEW)
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
@@ -702,6 +708,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         #grid and angle guide refresh
         self.bind("<Configure>", self.resize)
         self.bind("<MouseWheel>", self.zoom)
+
+        self.bind("<Button-2>", self.start_pan)
+        self.bind("<B2-Motion>", self.pan)  
 
         self.update_scrollregion()
         #set initial tool
@@ -757,6 +766,29 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.zoom_label.configure(text=f"Zoom: {round(self.current_scale * 100, 2)}%")
         for shape in self.shapes:
             shape.scale(self.current_scale)
+        self.delete_grid()
+        if TwlApp.settings().show_grid.get():
+            self.draw_grid()
+
+    def start_pan(self, event):
+        self.pan_pos = Point(event.x, event.y)
+        self.pan_xview_start = self.xview()[0]
+        self.pan_yview_start = self.yview()[0]
+
+    def pan(self, event):
+        delta_x = event.x - self.pan_pos.x
+        delta_y = event.y - self.pan_pos.y
+        x_min, y_min, x_max, y_max = self.get_scrollregion()
+        sr_width = abs(x_min) + abs(x_max)
+        sr_height = abs(y_min) + abs(y_max)
+        frac_x = delta_x / sr_width
+        frac_y = delta_y / sr_height
+        self.xview_moveto(self.pan_xview_start - frac_x)
+        self.yview_moveto(self.pan_yview_start - frac_y)
+        self.delete_grid()
+        if TwlApp.settings().show_grid.get():
+            self.draw_grid()
+        self.update_angle_guide_position()
 
     def resize(self, event):
         self.update_scrollregion()
@@ -832,8 +864,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
         ttk.Style().configure("Diagram.TLabel", foreground=color)
+
         self.tag_lower(self.GRID_TAG)
         self.tag_raise(self.ANGLE_GUIDE_TAG)
+        self.tag_raise(Shape.LABEL_BG_TAG)
+        self.tag_raise(Shape.LABEL_TAG)
 
         self.update_scrollregion()
 
