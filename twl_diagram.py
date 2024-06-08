@@ -38,18 +38,28 @@ class Shape(Generic[C]):
         cls.TAGS = cls.TAGS.copy()
         cls.TAGS.append(cls.TAG)
 
-    def __init__(self, component: C, diagram: 'TwlDiagram') -> None:
+    def __init__(self, component: C, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
         self.component: C = component
         self.diagram: 'TwlDiagram' = diagram
-        self.tk_id: int = -1
+        self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
     def select(self):
-        self.diagram.itemconfig(self.tk_id, self.selected_style)
+        for tk_id in self.tk_shapes.keys():
+            tags = self.diagram.gettags(tk_id)
+            if self.LABEL_TAG in tags:
+                self.diagram.itemconfig(tk_id, fill=DARK_SELECTED)
+            elif self.LABEL_BG_TAG not in tags:
+                self.diagram.itemconfig(tk_id, self.selected_style(*tags))
         self.diagram.selection.append(self)
         print(f"selected: {self.component.id}")
 
     def deselect(self):
-        self.diagram.itemconfig(self.tk_id, self.default_style)
+        for tk_id in self.tk_shapes.keys():
+            tags = self.diagram.gettags(tk_id)
+            if self.LABEL_TAG in tags:
+                self.diagram.itemconfig(tk_id, fill=BLACK)
+            elif self.LABEL_BG_TAG not in tags:
+                self.diagram.itemconfig(tk_id, self.default_style(*tags))
         self.diagram.selection.remove(self)
         print(f"deselected: {self.component.id}")
 
@@ -57,15 +67,13 @@ class Shape(Generic[C]):
     def is_at(self, x: int, y: int) -> bool:
         return False
 
-    @property
     @abstractmethod
-    def default_style(self) -> dict[str, str]:
+    def default_style(self, *tags: str) -> dict[str, str]:
         """Style attributes when the shape is not selected."""
         pass
 
-    @property
     @abstractmethod
-    def selected_style(self) -> dict[str, str]:
+    def selected_style(self, *tags: str) -> dict[str, str]:
         """Style attributes when the shape is selected."""
         pass
 
@@ -74,18 +82,19 @@ class Shape(Generic[C]):
     def label_position(self) -> Point:
         pass
 
-    def draw_label(self):
-        self.diagram.create_text_with_bg(self.label_position.x, 
+    def draw_label(self) -> tuple[int, int]:
+        return self.diagram.create_text_with_bg(self.label_position.x, 
                                  self.label_position.y, 
                                  text=self.component.id, 
                                  tags=self.LABEL_TAG,
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
 
-    @property
     @abstractmethod
-    def bounds(self) -> Polygon:
-        pass
+    def scale(self, factor: float):
+        for tk_id, polygon in self.tk_shapes.items():
+            coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
+            self.diagram.coords(tk_id, coords)
 
 
 class NodeShape(Shape[Node]):
@@ -99,26 +108,29 @@ class NodeShape(Shape[Node]):
 
     def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
         super().__init__(node, diagram)
-        self.tk_id = diagram.create_oval(node.x - self.RADIUS, 
-                            node.y - self.RADIUS, 
-                            node.x + self.RADIUS, 
-                            node.y + self.RADIUS, 
+        p1, p2 = self.circle_coords()
+        tk_id = diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
                             fill=self.BG_COLOR, 
                             outline=self.COLOR, 
                             width = self.BORDER, 
                             tags=[*self.TAGS, str(node.id)])
+        self.tk_shapes[tk_id] = Polygon(p1, p2)
         if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_node_labels.get(): 
-            self.draw_label()
+            label_tk_id, label_bg_tk_id = self.draw_label()
+            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
+            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
+    def circle_coords(self) -> tuple[Point, Point]:
+        return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
 
     def is_at(self, x: int, y: int) -> bool:
         return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
 
-    @property
-    def default_style(self) -> dict[str, str]:
+    def default_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
-    @property
-    def selected_style(self) -> dict[str, str]:
+    def selected_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     @property
@@ -128,6 +140,7 @@ class NodeShape(Shape[Node]):
     @property
     def bounds(self) -> Polygon:
         return Polygon(Point(self.component.x, self.component.y))
+
 
 class TempNodeShape(NodeShape):
 
@@ -142,41 +155,38 @@ class BeamShape(Shape[Beam]):
 
     def __init__(self, beam: Beam, diagram: 'TwlDiagram') -> None:
         super().__init__(beam, diagram)
-        self.tk_id = diagram.create_line(beam.start_node.x,
-                            beam.start_node.y,
-                            beam.end_node.x,
-                            beam.end_node.y,
+        line = self.line_coords()
+        tk_id = diagram.create_line(line.start.x, line.start.y,
+                            line.end.x, line.end.y,
                             fill=self.COLOR,
                             width=self.WIDTH,
                             tags=[*self.TAGS, str(beam.id)])
+        self.tk_shapes[tk_id] = Polygon(line.start, line.end)
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
         if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_beam_labels.get(): 
-            self.draw_label()
+            label_tk_id, label_bg_tk_id = self.draw_label()
+            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
+            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
+    def line_coords(self) -> Line:
+        return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
 
     def is_at(self, x: int, y: int) -> bool:
-        beam = Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
-        return Point(x, y).distance_to_line(beam) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
-    @property
-    def default_style(self) -> dict[str, str]:
+    def default_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.COLOR}
 
-    @property
-    def selected_style(self) -> dict[str, str]:
+    def selected_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
-        p1 = Point(self.component.start_node.x, self.component.start_node.y)
-        p2 = Point(self.component.end_node.x, self.component.end_node.y)
-        return Line(p1, p2).midpoint()
+        return self.line_coords().midpoint()
 
-    @property
-    def bounds(self) -> Polygon:
-        return Polygon(Point(self.component.start_node.x, self.component.start_node.y),
-                       Point(self.component.end_node.x, self.component.end_node.y))
 
 class TempBeamShape(BeamShape):
 
@@ -191,14 +201,16 @@ class SupportShape(Shape[Support]):
     HEIGHT: int = 24
     WIDTH: int = 28
     BORDER: int = 2
+
+    LINE_TAG: str = "support_line"
     LINE_SPACING: int = 5
 
     LABEL_OFFSET = 20
 
     def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
         super().__init__(support, diagram)
-        triangle = self.triangle_coordinates
-        self.tk_id = diagram.create_polygon(triangle.p1.x, 
+        triangle = self.triangle_coords()
+        tk_id = diagram.create_polygon(triangle.p1.x, 
                                triangle.p1.y, 
                                triangle.p2.x, 
                                triangle.p2.y, 
@@ -208,24 +220,28 @@ class SupportShape(Shape[Support]):
                                outline=self.COLOR, 
                                width=self.BORDER, 
                                tags=[*self.TAGS, str(support.id)])
+        self.tk_shapes[tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
         if support.constraints == 1:
             line = self.line_coordinates
-            diagram.create_line(line.start.x, 
+            tk_id = diagram.create_line(line.start.x, 
                                 line.start.y, 
                                 line.end.x, 
                                 line.end.y, 
                                 fill=self.COLOR, 
                                 width=self.BORDER, 
-                                tags=[*self.TAGS, str(support.id)])
+                                tags=[*self.TAGS, str(support.id), self.LINE_TAG])
+            self.tk_shapes[tk_id] = Polygon(line.start, line.end)
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
         if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_support_labels.get(): 
-            self.draw_label()
+            label_tk_id, label_bg_tk_id = self.draw_label()
+            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
+            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def is_at(self, x: int, y: int) -> bool:
-        return self.triangle_coordinates.inside_triangle(Point(x, y))
+        return self.triangle_coords().inside_triangle(Point(x, y))
 
-    @property
-    def triangle_coordinates(self) -> Triangle:
+    def triangle_coords(self) -> Triangle:
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT)
@@ -242,13 +258,11 @@ class SupportShape(Shape[Support]):
         line.rotate(n_point, self.component.angle + 180)
         return line
 
-    @property
-    def default_style(self) -> dict[str, str]:
-        return {"fill": self.BG_COLOR, "outline": self.COLOR}
+    def default_style(self, *tags: str) -> dict[str, str]:
+        return {"fill": self.COLOR} if self.LINE_TAG in tags else {"fill": self.BG_COLOR, "outline": self.COLOR}
 
-    @property
-    def selected_style(self) -> dict[str, str]:
-        return {"fill": self.SELECTED_BG_COLOR, "outline": self.SELECTED_COLOR}
+    def selected_style(self, *tags: str) -> dict[str, str]:
+        return {"fill": self.SELECTED_COLOR} if self.LINE_TAG in tags else {"fill": self.SELECTED_BG_COLOR, "outline": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
@@ -257,10 +271,6 @@ class SupportShape(Shape[Support]):
         point.rotate(n_point, self.component.angle + 180)
         return point
 
-    @property
-    def bounds(self) -> Polygon:
-        triangle = self.triangle_coordinates
-        return Polygon(triangle.p1, triangle.p2, triangle.p3)
 
 class TempSupportShape(SupportShape):
 
@@ -282,8 +292,8 @@ class ForceShape(Shape[Force]):
 
     def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
         super().__init__(force, diagram)
-        arrow: Line = self.arrow_coordinates
-        self.tk_id = diagram.create_line(arrow.start.x, 
+        arrow = self.arrow_coords()
+        tk_id = diagram.create_line(arrow.start.x, 
                             arrow.start.y, 
                             arrow.end.x, 
                             arrow.end.y, 
@@ -292,15 +302,17 @@ class ForceShape(Shape[Force]):
                             arrowshape=self.ARROW_SHAPE, 
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
-        diagram.tag_lower(ForceShape.TAG, NodeShape.TAG)
+        self.tk_shapes[tk_id] = Polygon(arrow.start, arrow.end)
         if (not self.TAG == Shape.TEMP) and TwlApp.settings().show_force_labels.get(): 
-            self.draw_label()
+            label_tk_id, label_bg_tk_id = self.draw_label()
+            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
+            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def is_at(self, x: int, y: int) -> bool:
-        return Point(x, y).distance_to_line(self.arrow_coordinates) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.arrow_coords()) < self.WIDTH/2
 
-    @property
-    def arrow_coordinates(self) -> Line:
+    def arrow_coords(self) -> Line:
         n = Point(self.component.node.x, self.component.node.y)
         a1 = Point(n.x, n.y - self.DISTANCE_FROM_NODE)
         a2 = Point(a1.x, a1.y - self.LENGTH)
@@ -308,12 +320,10 @@ class ForceShape(Shape[Force]):
         line.rotate(n, self.component.angle)
         return line
 
-    @property
-    def default_style(self) -> dict[str, str]:
+    def default_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.COLOR}
 
-    @property
-    def selected_style(self) -> dict[str, str]:
+    def selected_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.SELECTED_COLOR}
 
     @property
@@ -323,10 +333,6 @@ class ForceShape(Shape[Force]):
         point.rotate(n_point, self.component.angle)
         return point
 
-    @property
-    def bounds(self) -> Polygon:
-        arrow = self.arrow_coordinates
-        return Polygon(arrow.start, arrow.end)
 
 class TempForceShape(ForceShape):
 
@@ -457,7 +463,7 @@ class SelectTool(Tool):
         print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
         p1 = Point(x1, y1)
         p2 = Point(x2, y2)
-        selection = [shape for shape in self.selectable_shapes if all(point.in_bounds(p1, p2) for point in shape.bounds.points)]
+        selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
         self.process_selection(event, *selection)
 
     def process_selection(self, event, *selection: Shape):
@@ -627,6 +633,10 @@ class ForceTool(Tool):
 
 class TwlDiagram(tk.Canvas, TwlWidget):
 
+    ZOOM_STEP: float = 0.05
+    MIN_ZOOM: float = 0.1
+    MAX_ZOOM: float = 5
+
     SCROLL_EXTEND: int = 100
 
     STAT_DETERM_LABEL_PADDING: int = 10
@@ -650,7 +660,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def __init__(self, master, toolbar):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
-        self.configure(scrollregion=self.bbox("all"))
+        self.scale_origin = Point(0, 0)
+        self.current_scale = 1.0
         self.grid(column=0, row=0, sticky=tk.NSEW)
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
@@ -675,6 +686,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
         self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
 
+        #zoom label
+        self.zoom_label = ttk.Label(self, style="Diagram.TLabel", text="Zoom: 100%")
+        self.zoom_label.place(x=200, y=200, anchor=tk.SW)
+        #self.zoom_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=self.winfo_height() - TwlDiagram.STAT_DETERM_LABEL_PADDING, anchor=tk.SW)
+
         #angle guide
         angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
         self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
@@ -685,7 +701,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         #grid and angle guide refresh
         self.bind("<Configure>", self.resize)
-        #self.bind("<MouseWheel>", self.zoom)
+        self.bind("<MouseWheel>", self.zoom)
 
         self.update_scrollregion()
         #set initial tool
@@ -714,7 +730,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.update_angle_guide_position()
 
     def update_scrollregion(self):
-        shapes = [shape.tk_id for shape in self.shapes]
+        shapes = [tk_id for shape in self.shapes for tk_id in shape.tk_shapes.keys()]
         if shapes:
             bbox = self.bbox(*shapes) if shapes else (0, 0, 0, 0)
             self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
@@ -732,12 +748,15 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         assert len(sr_int) == 4
         return sr_int
 
-    def zoom(self, event):
-        scale = 0.9 if event.delta < 0 else 1.1
-        x = self.canvasx(event.x)
-        y = self.canvasy(event.y)
-        self.scale("all", x, y, scale, scale)
-        self.configure(scrollregion=self.bbox("all"))
+    def zoom(self, event): #todo: scroll to previous position in drawing
+        if event.delta < 0:
+            self.current_scale = max(self.MIN_ZOOM, self.current_scale - self.ZOOM_STEP)
+        else:
+            self.current_scale = min(self.MAX_ZOOM, self.current_scale + self.ZOOM_STEP)
+
+        self.zoom_label.configure(text=f"Zoom: {round(self.current_scale * 100, 2)}%")
+        for shape in self.shapes:
+            shape.scale(self.current_scale)
 
     def resize(self, event):
         self.update_scrollregion()
@@ -758,7 +777,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.grid_visible = False
 
     def draw_grid(self):
-        grid_spacing = TwlApp.settings().grid_spacing.get()
+        grid_spacing = round(TwlApp.settings().grid_spacing.get() * self.current_scale)
         x_min, y_min, x_max, y_max = self.get_scrollregion()
         x_start = x_min - (x_min % grid_spacing) + grid_spacing
         y_start = y_min - (y_min % grid_spacing) + grid_spacing
@@ -869,7 +888,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         TwlApp.update_manager().resume()
         return force
 
-    def create_text_with_bg(self, *args, **kw):
+    def create_text_with_bg(self, *args, **kw) -> tuple[int, int]:
         """Creates a label with a specific bg color to ensure readability. Used for model component labels."""
         bg_tag = kw.pop("bg_tag", self.TEXT_BG_TAG)
         bg_color = kw.pop("bg_color", self["background"])
@@ -879,13 +898,13 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         text_id = super().create_text(*args, **kw)
         bounds = self.bbox(text_id)
     
-        self.create_rectangle(bounds[0], bounds[1], 
+        bg_id = self.create_rectangle(bounds[0], bounds[1], 
                                  bounds[2], bounds[3],
                                  width=0,
                                  fill=bg_color, 
                                  tags=bg_tag)
         self.tag_lower(bg_tag, kw["tags"])
-        return text_id
+        return text_id, bg_id
 
     def find_shape_at(self, x: int, y: int) -> Shape | None:
         """Check if there is a shape in the diagram at the specified coordinate."""

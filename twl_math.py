@@ -61,6 +61,10 @@ class Point:
     def distance_to_line_scaled(self, line: 'Line') -> float:
         return self.distance_to_line(line) * 0.01
 
+    def scale(self, factor):
+        self.x = self.x * factor
+        self.y = self.y * factor
+
     def in_bounds(self, point_1: 'Point', point_2: 'Point'):
         min_x = min(point_1.x, point_2.x)
         max_x = max(point_1.x, point_2.x)
@@ -164,6 +168,10 @@ class Line:
         else:
             return Direction.COLINEAR
 
+    def scale(self, factor):
+        self.start.scale(factor)
+        self.end.scale(factor)
+
 
 class Triangle:
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
@@ -173,6 +181,11 @@ class Triangle:
 
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.p1, self.p2, self.p3]]
+
+    def scale(self, factor):
+        self.p1.scale(factor)
+        self.p2.scale(factor)
+        self.p3.scale(factor)
 
     def barycentric_coordinates(self, point: Point) -> Tuple[float, float, float]:
         v0 = self.p2.subtract(self.p1)
@@ -205,3 +218,6 @@ class Polygon:
     @classmethod
     def from_list(cls, point_list: list[Point]) -> 'Polygon':
         return cls(*point_list)
+
+    def in_bounds(self, p1: Point, p2: Point) -> bool:
+        return all(point.in_bounds(p1, p2) for point in self.points)
