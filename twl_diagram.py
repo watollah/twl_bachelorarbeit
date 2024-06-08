@@ -362,18 +362,24 @@ class Tool:
         self.diagram.unbind("<Motion>")
         self.diagram.unbind("<Escape>")
         self.diagram.unbind("<Leave>")
+
+        self.diagram.bind("<Motion>", self.diagram.update_coords_label)
         self.reset()
 
     def reset(self):
         self.diagram.delete_with_tag(Shape.TEMP)
 
     def correct_event_pos(self, event):
-        """Correct the coordinates of the mouse pointer to account for the scrolling position of the diagram."""
+        """Correct the coordinates of the mouse pointer to account for scrolling of the diagram."""
         x_min, y_min, x_max, y_max = self.diagram.get_scrollregion()
         sr_width = abs(x_min) + abs(x_max)
         sr_height = abs(y_min) + abs(y_max)
         event.x = event.x + self.diagram.xview()[0] * sr_width - abs(x_min)
         event.y = event.y + self.diagram.yview()[0] * sr_height - abs(y_min)
+
+    def correct_scaling(self, event):
+        event.x = event.x * self.diagram.current_zoom.get() / 100
+        event.y = event.y * self.diagram.current_zoom.get() / 100
 
     def snap_event_to_grid(self, event):
         if TwlApp.settings().show_grid.get():
@@ -394,6 +400,8 @@ class Tool:
         self.correct_event_pos(event)
         self.snap_event_to_grid(event)
         self.preview(event)
+        self.correct_scaling(event)
+        self.diagram.update_coords_label(event)
 
     def preview(self, event):
         """Preview of the action when the user moves the mouse on the canvas while the tool is active"""
@@ -457,6 +465,7 @@ class SelectTool(Tool):
             return
         start_x, start_y, _, _ = self.diagram.coords(self.selection_rect)
         self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
+        self.diagram.update_coords_label(event)
 
     def end_rect_selection(self, event):
         self.correct_event_pos(event)
@@ -467,6 +476,8 @@ class SelectTool(Tool):
         print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
         p1 = Point(x1, y1)
         p2 = Point(x2, y2)
+        p1.scale(self.diagram.current_zoom.get() / 100)
+        p2.scale(self.diagram.current_zoom.get() / 100)
         selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
         self.process_selection(event, *selection)
 
@@ -706,6 +717,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.bottom_bar = self.create_bottom_bar()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
 
+        #coords label
+        self.coords_label = ttk.Label(self, foreground=GRAY)
+        self.bind("<Motion>", self.update_coords_label)
+        self.coords_label.place(x=self.winfo_width() - self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SE)
+
         #angle guide
         angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
         self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
@@ -734,6 +750,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         self.update_angle_guide_position()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
+        self.coords_label.place(x=self.winfo_width() - self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SE)
 
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
@@ -1024,3 +1041,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def set_entry_text(self, entry: ttk.Entry, text):
         entry.delete(0, tk.END)
         entry.insert(0, str(text))
+
+    def update_coords_label(self, event):
+        self.coords_label.config(text=f"x: {int(event.x)} y: {int(event.y)}")
