@@ -639,6 +639,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     MAX_ZOOM: float = 5
 
     SCROLL_EXTEND: int = 100
+    SCROLL_STEP: int = 1
 
     STAT_DETERM_LABEL_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
@@ -705,22 +706,22 @@ class TwlDiagram(tk.Canvas, TwlWidget):
                                              anchor=tk.NE, 
                                              tags=self.ANGLE_GUIDE_TAG)
 
-        #grid and angle guide refresh
-        self.bind("<Configure>", self.resize)
-        self.bind("<MouseWheel>", self.zoom)
-
+        self.bind("<Configure>", self.refresh)
+        self.bind("<Control-MouseWheel>", self.zoom)
+        self.bind("<Shift-MouseWheel>", lambda event: self.scroll(tk.HORIZONTAL, "scroll", self.SCROLL_STEP if event.delta < 0 else -self.SCROLL_STEP))
+        self.bind("<MouseWheel>", lambda event: self.scroll(tk.VERTICAL, "scroll", self.SCROLL_STEP if event.delta < 0 else -self.SCROLL_STEP))
         self.bind("<Button-2>", self.start_pan)
         self.bind("<B2-Motion>", self.pan)  
+        self.bind("<ButtonRelease-2>", self.end_pan)  
 
         self.update_scrollregion()
-        #set initial tool
         self.select_tool(SelectTool.ID)
 
     def create_scrollbars(self, master):
-        v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda *args: self.scroll(tk.VERTICAL, *args))
+        v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda scrolltype, amount: self.scroll(tk.VERTICAL, scrolltype, amount))
         v_scrollbar.grid(column=1, row=0, sticky=tk.NS)
 
-        h_scrollbar = tk.Scrollbar(master, orient=tk.HORIZONTAL, command=lambda *args: self.scroll(tk.HORIZONTAL, *args))
+        h_scrollbar = tk.Scrollbar(master, orient=tk.HORIZONTAL, command=lambda scrolltype, amount: self.scroll(tk.HORIZONTAL, scrolltype, amount))
         h_scrollbar.grid(column=0, row=1, sticky=tk.EW)
 
         corner = tk.Frame(master, background=LIGHT_GRAY)
@@ -728,28 +729,29 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         self.configure(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set)
 
-    def scroll(self, scroll_type, *args):
-        if scroll_type == tk.VERTICAL:
-            self.yview(*args)
-        elif scroll_type == tk.HORIZONTAL:
-            self.xview(*args)
-        self.delete_grid()
-        if TwlApp.settings().show_grid.get():
-            self.draw_grid()
-        self.update_angle_guide_position()
+    def scroll(self, orientation: str, scroll_type: str, amount):
+        if orientation == tk.HORIZONTAL:
+            if scroll_type == tk.MOVETO:
+                self.xview_moveto(amount)
+            elif scroll_type == tk.SCROLL:
+                self.xview_scroll(amount, tk.UNITS)
+        elif orientation == tk.VERTICAL:
+            if scroll_type == tk.MOVETO:
+                self.yview_moveto(amount)
+            elif scroll_type == tk.SCROLL:
+                self.yview_scroll(amount, tk.UNITS)
+        self.refresh()
 
     def update_scrollregion(self):
         shapes = [tk_id for shape in self.shapes for tk_id in shape.tk_shapes.keys()]
         if shapes:
-            bbox = self.bbox(*shapes) if shapes else (0, 0, 0, 0)
+            bbox = self.bbox(*shapes)
             self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
                                      min(0, bbox[1] - self.SCROLL_EXTEND), 
                                      max(self.winfo_width(), bbox[2] + self.SCROLL_EXTEND), 
                                      max(self.winfo_height(), bbox[3] + self.SCROLL_EXTEND)))
         else:
             self.configure(scrollregion=(0, 0, self.winfo_width(), self.winfo_height()))
-            self.scroll("horizontal", "moveto", 0)
-            self.scroll("vertical", "moveto", 0)
 
     def get_scrollregion(self) -> tuple[int, int, int, int]:
         sr_str = self.cget("scrollregion") or "0 0 0 0"
@@ -766,14 +768,13 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.zoom_label.configure(text=f"Zoom: {round(self.current_scale * 100, 2)}%")
         for shape in self.shapes:
             shape.scale(self.current_scale)
-        self.delete_grid()
-        if TwlApp.settings().show_grid.get():
-            self.draw_grid()
+        self.refresh()
 
     def start_pan(self, event):
         self.pan_pos = Point(event.x, event.y)
         self.pan_xview_start = self.xview()[0]
         self.pan_yview_start = self.yview()[0]
+        self.config(cursor="fleur")
 
     def pan(self, event):
         delta_x = event.x - self.pan_pos.x
@@ -785,12 +786,12 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         frac_y = delta_y / sr_height
         self.xview_moveto(self.pan_xview_start - frac_x)
         self.yview_moveto(self.pan_yview_start - frac_y)
-        self.delete_grid()
-        if TwlApp.settings().show_grid.get():
-            self.draw_grid()
-        self.update_angle_guide_position()
+        self.refresh()
 
-    def resize(self, event):
+    def end_pan(self, event):
+        self.config(cursor="arrow")
+
+    def refresh(self, event=None):
         self.update_scrollregion()
         self.delete_grid()
         if TwlApp.settings().show_grid.get():
@@ -866,9 +867,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         ttk.Style().configure("Diagram.TLabel", foreground=color)
 
         self.tag_lower(self.GRID_TAG)
-        self.tag_raise(self.ANGLE_GUIDE_TAG)
+        self.tag_raise(NodeShape.TAG)
         self.tag_raise(Shape.LABEL_BG_TAG)
         self.tag_raise(Shape.LABEL_TAG)
+        self.tag_raise(self.ANGLE_GUIDE_TAG)
 
         self.update_scrollregion()
 
