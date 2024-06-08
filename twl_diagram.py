@@ -634,14 +634,14 @@ class ForceTool(Tool):
 
 class TwlDiagram(tk.Canvas, TwlWidget):
 
-    ZOOM_STEP: float = 0.05
-    MIN_ZOOM: float = 0.1
-    MAX_ZOOM: float = 5
+    ZOOM_STEP: float = 5
+    MIN_ZOOM: float = 10
+    MAX_ZOOM: float = 300
 
     SCROLL_EXTEND: int = 100
     SCROLL_STEP: int = 1
 
-    STAT_DETERM_LABEL_PADDING: int = 10
+    UI_PADDING: int = 10
     TOOL_BUTTON_SIZE: int = 50
 
     TEXT_TAG = "text"
@@ -651,6 +651,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     GRID_TAG = "grid"
     GRID_COLOR = "lightgrey"
     GRID_SNAP_RADIUS = 5
+    MIN_GRID = 0.1
+    MAX_GRID = 500
 
     ANGLE_GUIDE_TAG = "angle_guide"
     ANGLE_GUIDE_IMG = "img/angle_guide.png"
@@ -663,7 +665,10 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
         self.scale_origin = Point(0, 0)
-        self.current_scale = 1.0
+        self.current_zoom = tk.DoubleVar(value=100.0)
+        self.current_zoom.trace_add("write", lambda *ignore: self.refresh())
+        self.grid_step = tk.DoubleVar(value=20.0)
+        self.grid_step.trace_add("write", lambda *ignore: self.refresh())
 
         self.pan_pos = Point(0, 0)
         self.pan_xview_start = 0
@@ -691,12 +696,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
         #statically determinate label
         self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
-        self.stat_determ_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=TwlDiagram.STAT_DETERM_LABEL_PADDING)
+        self.stat_determ_label.place(x=self.UI_PADDING, y=self.UI_PADDING)
 
-        #zoom label
-        self.zoom_label = ttk.Label(self, style="Diagram.TLabel", text="Zoom: 100%")
-        self.zoom_label.place(x=200, y=200, anchor=tk.SW)
-        #self.zoom_label.place(x=TwlDiagram.STAT_DETERM_LABEL_PADDING, y=self.winfo_height() - TwlDiagram.STAT_DETERM_LABEL_PADDING, anchor=tk.SW)
+        #bottom elements
+        self.bottom_bar = self.create_bottom_bar()
+        self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
 
         #angle guide
         angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
@@ -725,8 +729,13 @@ class TwlDiagram(tk.Canvas, TwlWidget):
             self.draw_grid()
 
         self.update_angle_guide_position()
+        self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
+
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
+
+        for shape in self.shapes:
+            shape.scale(self.current_zoom.get() / 100)
 
     def update(self) -> None:
         """Redraws the diagram completely from the model."""
@@ -756,6 +765,38 @@ class TwlDiagram(tk.Canvas, TwlWidget):
             if not tags.intersection(self.NO_UPDATE_TAGS):
                 self.delete(shape)
         self.shapes.clear()
+
+    def create_bottom_bar(self) -> tk.Frame:
+        bottom_bar = tk.Frame(self, background=WHITE)
+        zoom_label = ttk.Label(bottom_bar, text=f"Zoom ")
+        zoom_label.pack(side=tk.LEFT, padx=(0, 0))
+
+        zoom_entry = ttk.Entry(bottom_bar, width=5, justify=tk.RIGHT)
+        zoom_entry.bind("<Return>", lambda *ignore: self.process_entry(zoom_entry, self.MIN_ZOOM, self.MAX_ZOOM, self.current_zoom))
+        zoom_entry.bind("<FocusOut>", lambda *ignore: self.set_entry_text(zoom_entry, self.current_zoom.get()))
+        self.current_zoom.trace_add("write", lambda *ignore: self.set_entry_text(zoom_entry, self.current_zoom.get()))
+        self.set_entry_text(zoom_entry, self.current_zoom.get())
+        zoom_entry.pack(side=tk.LEFT, padx=(0, 0))
+
+        percent_label = ttk.Label(bottom_bar, text="%")
+        percent_label.pack(side=tk.LEFT, padx=(0, self.UI_PADDING))
+        show_grid_var = TwlApp.settings().show_grid
+        grid_check = ttk.Checkbutton(bottom_bar, text="Grid ", style="Custom.TCheckbutton", takefocus=False, variable=show_grid_var)
+        grid_check.pack(side=tk.LEFT, padx=(self.UI_PADDING, 0))
+
+        grid_entry = ttk.Entry(bottom_bar, width=5, justify=tk.RIGHT)
+        show_grid_var.trace_add("write", lambda *ignore: grid_entry.pack(side=tk.LEFT) if show_grid_var.get() else grid_entry.pack_forget())
+        grid_entry.bind("<Return>", lambda *ignore: self.process_entry(grid_entry, self.MIN_GRID, self.MAX_GRID, self.grid_step))
+        grid_entry.bind("<FocusOut>", lambda *ignore: self.set_entry_text(grid_entry, self.grid_step.get()))
+        self.grid_step.trace_add("write", lambda *ignore: self.set_entry_text(grid_entry, self.grid_step.get()))
+        self.set_entry_text(grid_entry, self.grid_step.get())
+        grid_entry.pack(side=tk.LEFT, padx=(0, 0))
+
+        m_label = ttk.Label(bottom_bar, text="m")
+        show_grid_var.trace_add("write", lambda *ignore: m_label.pack(side=tk.RIGHT) if show_grid_var.get() else m_label.pack_forget())
+        m_label.pack(side=tk.LEFT)
+
+        return bottom_bar
 
     def create_scrollbars(self, master):
         v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda scrolltype, amount: self.scroll(tk.VERTICAL, scrolltype, amount))
@@ -801,13 +842,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def zoom(self, event): #todo: scroll to previous position in drawing
         if event.delta < 0:
-            self.current_scale = max(self.MIN_ZOOM, self.current_scale - self.ZOOM_STEP)
+            self.current_zoom.set(max(self.MIN_ZOOM, self.current_zoom.get() - self.ZOOM_STEP))
         else:
-            self.current_scale = min(self.MAX_ZOOM, self.current_scale + self.ZOOM_STEP)
-
-        self.zoom_label.configure(text=f"Zoom: {round(self.current_scale * 100, 2)}%")
-        for shape in self.shapes:
-            shape.scale(self.current_scale)
+            self.current_zoom.set(min(self.MAX_ZOOM, self.current_zoom.get() + self.ZOOM_STEP))
         self.refresh()
 
     def start_pan(self, event):
@@ -843,7 +880,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.grid_visible = False
 
     def draw_grid(self):
-        grid_spacing = round(TwlApp.settings().grid_spacing.get() * self.current_scale)
+        grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
         x_min, y_min, x_max, y_max = self.get_scrollregion()
         x_start = x_min - (x_min % grid_spacing) + grid_spacing
         y_start = y_min - (y_min % grid_spacing) + grid_spacing
@@ -855,7 +892,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.grid_visible = True
 
     def grid_snap(self, x: int, y: int) -> tuple[int, int]:
-        grid_spacing = TwlApp.settings().grid_spacing.get()
+        grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
         nearest_x = round(x / grid_spacing) * grid_spacing
         nearest_y = round(y / grid_spacing) * grid_spacing
         distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))
@@ -970,3 +1007,16 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def delete_with_tag(self, tag: str):
         [self.delete(shape) for shape in self.find_withtag("temp")]
+
+    def process_entry(self, entry: ttk.Entry, min: float, max: float, variable: tk.DoubleVar):
+        try:
+            value = float(entry.get())
+        except ValueError:
+            self.set_entry_text(entry, variable.get())
+            return
+        if min <= value <= max:
+            variable.set(value)
+
+    def set_entry_text(self, entry: ttk.Entry, text):
+        entry.delete(0, tk.END)
+        entry.insert(0, str(text))

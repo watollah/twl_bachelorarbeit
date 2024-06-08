@@ -19,8 +19,6 @@ class Settings:
 
         self.show_grid = BooleanVar(value=True)
         self.show_grid.trace_add("write", lambda *ignore: self.update_manager.update())
-        self.grid_spacing = IntVar(value=20)
-        self.grid_spacing.trace_add("write", lambda *ignore: self.update_manager.update())
         self.grid_snap_radius = IntVar(value=7)
         self.grid_snap_radius.trace_add("write", lambda *ignore: self.update_manager.update())
 
