@@ -717,6 +717,46 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.update_scrollregion()
         self.select_tool(SelectTool.ID)
 
+    def refresh(self, event=None):
+        self.update_scrollregion()
+
+        self.delete_grid()
+        if TwlApp.settings().show_grid.get():
+            self.draw_grid()
+
+        self.update_angle_guide_position()
+        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
+        self.itemconfigure(self.angle_guide, state=angle_guide_state)
+
+    def update(self) -> None:
+        """Redraws the diagram completely from the model."""
+        self.clear()
+
+        for node in TwlApp.model().nodes: self.shapes.append(NodeShape(node, self))
+        for beam in TwlApp.model().beams: self.shapes.append(BeamShape(beam, self))
+        for support in TwlApp.model().supports: self.shapes.append(SupportShape(support, self))
+        for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
+
+        self.stat_determ_label.configure(text=self.stat_determ_text)
+        color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
+        ttk.Style().configure("Diagram.TLabel", foreground=color)
+
+        self.tag_lower(self.GRID_TAG)
+        self.tag_raise(NodeShape.TAG)
+        self.tag_raise(Shape.LABEL_BG_TAG)
+        self.tag_raise(Shape.LABEL_TAG)
+        self.tag_raise(self.ANGLE_GUIDE_TAG)
+
+        self.refresh()
+
+    def clear(self):
+        """Removes all shapes from the diagram."""
+        for shape in self.find_all():
+            tags = set(self.gettags(shape))
+            if not tags.intersection(self.NO_UPDATE_TAGS):
+                self.delete(shape)
+        self.shapes.clear()
+
     def create_scrollbars(self, master):
         v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda scrolltype, amount: self.scroll(tk.VERTICAL, scrolltype, amount))
         v_scrollbar.grid(column=1, row=0, sticky=tk.NS)
@@ -791,13 +831,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def end_pan(self, event):
         self.config(cursor="arrow")
 
-    def refresh(self, event=None):
-        self.update_scrollregion()
-        self.delete_grid()
-        if TwlApp.settings().show_grid.get():
-            self.draw_grid()
-        self.update_angle_guide_position()
-
     def update_angle_guide_position(self):
         x_min, y_min, x_max, y_max = self.get_scrollregion()
         sr_width = abs(x_min) + abs(x_max)
@@ -844,43 +877,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.selected_tool.deactivate()
         self.selected_tool = self.tools[self._selected_tool_id.get()]
         self.selected_tool.activate()
-
-    def clear(self):
-        """Removes all model shapes from the diagram."""
-        for shape in self.find_all():
-            tags = set(self.gettags(shape))
-            if not tags.intersection(self.NO_UPDATE_TAGS):
-                self.delete(shape)
-
-    def update(self) -> None:
-        """Redraws the diagram completely from the model."""
-        self.clear()
-        self.shapes.clear()
-
-        for node in TwlApp.model().nodes: self.shapes.append(NodeShape(node, self))
-        for beam in TwlApp.model().beams: self.shapes.append(BeamShape(beam, self))
-        for support in TwlApp.model().supports: self.shapes.append(SupportShape(support, self))
-        for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
-
-        self.stat_determ_label.configure(text=self.stat_determ_text)
-        color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
-        ttk.Style().configure("Diagram.TLabel", foreground=color)
-
-        self.tag_lower(self.GRID_TAG)
-        self.tag_raise(NodeShape.TAG)
-        self.tag_raise(Shape.LABEL_BG_TAG)
-        self.tag_raise(Shape.LABEL_TAG)
-        self.tag_raise(self.ANGLE_GUIDE_TAG)
-
-        self.update_scrollregion()
-
-        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
-        self.itemconfigure(self.angle_guide, state=angle_guide_state)
-
-        if not TwlApp.settings().show_grid.get() and self.grid_visible:
-            self.delete_grid()
-        elif TwlApp.settings().show_grid.get() and not self.grid_visible:
-            self.draw_grid()
 
     @property
     def stat_determ_text(self) -> str:
