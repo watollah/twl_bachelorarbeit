@@ -100,7 +100,6 @@ class Shape(Generic[C]):
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
 
-    @abstractmethod
     def scale(self, factor: float):
         for tk_id, polygon in self.tk_shapes.items():
             coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
@@ -155,6 +154,9 @@ class TempNodeShape(NodeShape):
     TAG: str = Shape.TEMP
     COLOR: str = Shape.TEMP_COLOR
 
+    def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
+        super().__init__(node, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
 
 class BeamShape(Shape[Beam]):
 
@@ -199,6 +201,9 @@ class TempBeamShape(BeamShape):
     TAG: str = Shape.TEMP
     COLOR: str = Shape.TEMP_COLOR
 
+    def __init__(self, beam: Beam, diagram: 'TwlDiagram') -> None:
+        super().__init__(beam, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
 
 class SupportShape(Shape[Support]):
 
@@ -281,6 +286,9 @@ class TempSupportShape(SupportShape):
     TAG: str = Shape.TEMP
     COLOR = Shape.TEMP_COLOR
 
+    def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
+        super().__init__(support, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
 
 class ForceShape(Shape[Force]):
 
@@ -340,6 +348,9 @@ class TempForceShape(ForceShape):
     TAG: str = Shape.TEMP
     COLOR = Shape.TEMP_COLOR
 
+    def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
+        super().__init__(force, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
 
 class Tool:
 
@@ -370,7 +381,11 @@ class Tool:
         self.diagram.delete_with_tag(Shape.TEMP)
 
     def correct_event_pos(self, event):
-        """Correct the coordinates of the mouse pointer to account for scrolling of the diagram."""
+        """Correct the coordinates of the mouse pointer to account for scrolling and scaling of the diagram."""
+        self.correct_scrolling(event)
+        self.correct_scaling(event)
+
+    def correct_scrolling(self, event):
         x_min, y_min, x_max, y_max = self.diagram.get_scrollregion()
         sr_width = abs(x_min) + abs(x_max)
         sr_height = abs(y_min) + abs(y_max)
@@ -378,8 +393,8 @@ class Tool:
         event.y = event.y + self.diagram.yview()[0] * sr_height - abs(y_min)
 
     def correct_scaling(self, event):
-        event.x = event.x * self.diagram.current_zoom.get() / 100
-        event.y = event.y * self.diagram.current_zoom.get() / 100
+        event.x = event.x * (1 / (self.diagram.current_zoom.get() / 100))
+        event.y = event.y * (1 / (self.diagram.current_zoom.get() / 100))
 
     def snap_event_to_grid(self, event):
         if TwlApp.settings().show_grid.get():
@@ -400,7 +415,6 @@ class Tool:
         self.correct_event_pos(event)
         self.snap_event_to_grid(event)
         self.preview(event)
-        self.correct_scaling(event)
         self.diagram.update_coords_label(event)
 
     def preview(self, event):
@@ -469,15 +483,12 @@ class SelectTool(Tool):
 
     def end_rect_selection(self, event):
         self.correct_event_pos(event)
-        selected: List[Shape] = []
         if not self.selection_rect:
             return
         x1, y1, x2, y2 = map(int, self.diagram.coords(self.selection_rect))
         print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
         p1 = Point(x1, y1)
         p2 = Point(x2, y2)
-        p1.scale(self.diagram.current_zoom.get() / 100)
-        p2.scale(self.diagram.current_zoom.get() / 100)
         selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
         self.process_selection(event, *selection)
 
@@ -497,7 +508,6 @@ class SelectTool(Tool):
                 shape.select()
 
     def delete_selected(self, event):
-        self.correct_event_pos(event)
         TwlApp.update_manager().pause()
         [shape.component.delete() for shape in self.diagram.selection]
         TwlApp.update_manager().resume()
