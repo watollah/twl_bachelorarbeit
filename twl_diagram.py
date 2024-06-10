@@ -924,7 +924,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.grid_visible = True
 
     def grid_snap(self, x: int, y: int) -> tuple[int, int]:
-        grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
+        grid_spacing = round(self.grid_step.get())
         nearest_x = round(x / grid_spacing) * grid_spacing
         nearest_y = round(y / grid_spacing) * grid_spacing
         distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))
