@@ -1,16 +1,17 @@
-from typing import List
-
 class TwlWidget:
     
     def update(self):
         pass
 
-class TwlUpdateManager:
+class UpdateManager:
 
     def __init__(self) -> None:
         self.paused: bool = False
-        self.design_widgets: List[TwlWidget] = []
-        self.result_widgets: List[TwlWidget] = []
+        self.design_widgets: list[TwlWidget] = []
+        self.result_widgets: list[TwlWidget] = []
+
+    def is_active(self) -> bool:
+        return True
 
     def pause(self):
         self.paused = True

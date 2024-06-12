@@ -1,24 +1,22 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import cast, final, TypeVar, Generic
+from typing import TypeVar, Generic, Type
+from abc import abstractmethod
 
-from twl_app import *
-from twl_update import *
-from twl_components import *
-from twl_help import *
-from twl_settings import *
-from twl_images import *
-from twl_style import *
-from twl_widgets import *
+from twl_update import TwlWidget
+from twl_widgets import CustomRadioButton
+from twl_style import Colors
+from twl_images import add_image_from_path
+from twl_components import Component
+from twl_math import Point, Polygon
 
 
 C = TypeVar('C', bound=Component)
 
-
 class Shape(Generic[C]):
     """Represents the shape of a component in the TwlDiagram."""
 
-    TAGS: List[str] = []
+    TAGS: list[str] = []
     TAG = "shape"
     TEMP = "temp"
 
@@ -53,7 +51,7 @@ class Shape(Generic[C]):
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
             if self.LABEL_TAG in tags:
-                self.diagram.itemconfig(tk_id, fill=DARK_SELECTED)
+                self.diagram.itemconfig(tk_id, fill=Colors.DARK_SELECTED)
             elif self.LABEL_BG_TAG not in tags:
                 self.diagram.itemconfig(tk_id, self.selected_style(*tags))
         self.diagram.selection.append(self)
@@ -63,7 +61,7 @@ class Shape(Generic[C]):
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
             if self.LABEL_TAG in tags:
-                self.diagram.itemconfig(tk_id, fill=BLACK)
+                self.diagram.itemconfig(tk_id, fill=Colors.BLACK)
             elif self.LABEL_BG_TAG not in tags:
                 self.diagram.itemconfig(tk_id, self.default_style(*tags))
         self.diagram.selection.remove(self)
@@ -106,252 +104,6 @@ class Shape(Generic[C]):
             self.diagram.coords(tk_id, coords)
 
 
-class NodeShape(Shape[Node]):
-
-    TAG: str = "node"
-
-    RADIUS: int = 6
-    BORDER: int = 2
-
-    LABEL_OFFSET = 15
-
-    def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
-        super().__init__(node, diagram)
-        p1, p2 = self.circle_coords()
-        tk_id = diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
-                            fill=self.BG_COLOR, 
-                            outline=self.COLOR, 
-                            width = self.BORDER, 
-                            tags=[*self.TAGS, str(node.id)])
-        self.tk_shapes[tk_id] = Polygon(p1, p2)
-
-    def circle_coords(self) -> tuple[Point, Point]:
-        return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
-
-    def is_at(self, x: int, y: int) -> bool:
-        return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
-
-    def default_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.BG_COLOR, "outline": self.COLOR}
-
-    def selected_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.BG_COLOR, "outline": self.COLOR}
-
-    @property
-    def label_position(self) -> Point:
-        return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_node_labels.get()
-
-    @property
-    def bounds(self) -> Polygon:
-        return Polygon(Point(self.component.x, self.component.y))
-
-
-class TempNodeShape(NodeShape):
-
-    TAG: str = Shape.TEMP
-    COLOR: str = Shape.TEMP_COLOR
-
-    def __init__(self, node: Node, diagram: 'TwlDiagram') -> None:
-        super().__init__(node, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-
-class BeamShape(Shape[Beam]):
-
-    TAG: str = "beam"
-    WIDTH: int = 4
-
-    def __init__(self, beam: Beam, diagram: 'TwlDiagram') -> None:
-        super().__init__(beam, diagram)
-        line = self.line_coords()
-        tk_id = diagram.create_line(line.start.x, line.start.y,
-                            line.end.x, line.end.y,
-                            fill=self.COLOR,
-                            width=self.WIDTH,
-                            tags=[*self.TAGS, str(beam.id)])
-        self.tk_shapes[tk_id] = Polygon(line.start, line.end)
-        diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
-        diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
-        diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
-
-    def line_coords(self) -> Line:
-        return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
-
-    def is_at(self, x: int, y: int) -> bool:
-        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
-
-    def default_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.COLOR}
-
-    def selected_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.SELECTED_COLOR}
-
-    @property
-    def label_position(self) -> Point:
-        return self.line_coords().midpoint()
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_beam_labels.get()
-
-
-class TempBeamShape(BeamShape):
-
-    TAG: str = Shape.TEMP
-    COLOR: str = Shape.TEMP_COLOR
-
-    def __init__(self, beam: Beam, diagram: 'TwlDiagram') -> None:
-        super().__init__(beam, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-
-class SupportShape(Shape[Support]):
-
-    TAG: str = "support"
-
-    HEIGHT: int = 24
-    WIDTH: int = 28
-    BORDER: int = 2
-
-    LINE_TAG: str = "support_line"
-    LINE_SPACING: int = 5
-
-    LABEL_OFFSET = 20
-
-    def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
-        super().__init__(support, diagram)
-        triangle = self.triangle_coords()
-        tk_id = diagram.create_polygon(triangle.p1.x, 
-                               triangle.p1.y, 
-                               triangle.p2.x, 
-                               triangle.p2.y, 
-                               triangle.p3.x, 
-                               triangle.p3.y, 
-                               fill=self.BG_COLOR, 
-                               outline=self.COLOR, 
-                               width=self.BORDER, 
-                               tags=[*self.TAGS, str(support.id)])
-        self.tk_shapes[tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
-        if support.constraints == 1:
-            line = self.line_coordinates
-            tk_id = diagram.create_line(line.start.x, 
-                                line.start.y, 
-                                line.end.x, 
-                                line.end.y, 
-                                fill=self.COLOR, 
-                                width=self.BORDER, 
-                                tags=[*self.TAGS, str(support.id), self.LINE_TAG])
-            self.tk_shapes[tk_id] = Polygon(line.start, line.end)
-        diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
-
-    def is_at(self, x: int, y: int) -> bool:
-        return self.triangle_coords().inside_triangle(Point(x, y))
-
-    def triangle_coords(self) -> Triangle:
-        n_point = Point(self.component.node.x, self.component.node.y)
-        l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)
-        r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT)
-        triangle = Triangle(n_point, l_point, r_point)
-        triangle.rotate(n_point, self.component.angle + 180)
-        return triangle
-
-    @property
-    def line_coordinates(self) -> Line:
-        n_point = Point(self.component.node.x, self.component.node.y)
-        l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
-        r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
-        line = Line(l_point, r_point)
-        line.rotate(n_point, self.component.angle + 180)
-        return line
-
-    def default_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.COLOR} if self.LINE_TAG in tags else {"fill": self.BG_COLOR, "outline": self.COLOR}
-
-    def selected_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.SELECTED_COLOR} if self.LINE_TAG in tags else {"fill": self.SELECTED_BG_COLOR, "outline": self.SELECTED_COLOR}
-
-    @property
-    def label_position(self) -> Point:
-        n_point = Point(self.component.node.x, self.component.node.y)
-        point = Point(self.component.node.x, self.component.node.y + self.HEIGHT + self.LABEL_OFFSET)
-        point.rotate(n_point, self.component.angle + 180)
-        return point
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_support_labels.get()
-
-
-class TempSupportShape(SupportShape):
-
-    TAG: str = Shape.TEMP
-    COLOR = Shape.TEMP_COLOR
-
-    def __init__(self, support: Support, diagram: 'TwlDiagram') -> None:
-        super().__init__(support, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-
-class ForceShape(Shape[Force]):
-
-    TAG: str = "force"
-
-    LENGTH = 40
-    WIDTH = 6
-    DISTANCE_FROM_NODE = 15
-    ARROW_SHAPE = (15,14,10)
-
-    LABEL_OFFSET = 20
-
-    def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
-        super().__init__(force, diagram)
-        arrow = self.arrow_coords()
-        tk_id = diagram.create_line(arrow.start.x, 
-                            arrow.start.y, 
-                            arrow.end.x, 
-                            arrow.end.y, 
-                            width=self.WIDTH, 
-                            arrow=tk.FIRST, 
-                            arrowshape=self.ARROW_SHAPE, 
-                            fill=self.COLOR, 
-                            tags=[*self.TAGS, str(force.id)])
-        self.tk_shapes[tk_id] = Polygon(arrow.start, arrow.end)
-
-    def is_at(self, x: int, y: int) -> bool:
-        return Point(x, y).distance_to_line(self.arrow_coords()) < self.WIDTH/2
-
-    def arrow_coords(self) -> Line:
-        n = Point(self.component.node.x, self.component.node.y)
-        a1 = Point(n.x, n.y - self.DISTANCE_FROM_NODE)
-        a2 = Point(a1.x, a1.y - self.LENGTH)
-        line = Line(a1, a2)
-        line.rotate(n, self.component.angle)
-        return line
-
-    def default_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.COLOR}
-
-    def selected_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.SELECTED_COLOR}
-
-    @property
-    def label_position(self) -> Point:
-        n_point = Point(self.component.node.x, self.component.node.y)
-        point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
-        point.rotate(n_point, self.component.angle)
-        return point
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_force_labels.get()
-
-
-class TempForceShape(ForceShape):
-
-    TAG: str = Shape.TEMP
-    COLOR = Shape.TEMP_COLOR
-
-    def __init__(self, force: Force, diagram: 'TwlDiagram') -> None:
-        super().__init__(force, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-
 class Tool:
 
     ID: int = -1
@@ -373,8 +125,6 @@ class Tool:
         self.diagram.unbind("<Motion>")
         self.diagram.unbind("<Escape>")
         self.diagram.unbind("<Leave>")
-
-        self.diagram.bind("<Motion>", self.diagram.update_coords_label)
         self.reset()
 
     def reset(self):
@@ -396,15 +146,8 @@ class Tool:
         event.x = event.x * (1 / (self.diagram.current_zoom.get() / 100))
         event.y = event.y * (1 / (self.diagram.current_zoom.get() / 100))
 
-    def snap_event_to_grid(self, event):
-        if TwlApp.settings().show_grid.get():
-            snap_point = self.diagram.grid_snap(event.x, event.y)
-            event.x = snap_point[0]
-            event.y = snap_point[1]
-
     def _action(self, event):
         self.correct_event_pos(event)
-        self.snap_event_to_grid(event)
         self.action(event)
 
     def action(self, event):
@@ -413,9 +156,7 @@ class Tool:
 
     def _preview(self, event):
         self.correct_event_pos(event)
-        self.snap_event_to_grid(event)
         self.preview(event)
-        self.diagram.update_coords_label(event)
 
     def preview(self, event):
         """Preview of the action when the user moves the mouse on the canvas while the tool is active"""
@@ -423,239 +164,6 @@ class Tool:
 
     def holding_shift_key(self, event) -> bool:
         return event.state & 0x1 #bitwise ANDing the event.state with the ShiftMask flag
-
-
-class SelectTool(Tool):
-
-    ID: int = 0
-    NAME: str = "Select"
-    DESCR: str = "Select objects in model."
-    ICON: str = "img/select_icon.png"
-
-    def __init__(self, diagram: 'TwlDiagram'):
-        super().__init__(diagram)
-        self.selection_rect: int | None = None
-
-    def activate(self):
-        self.diagram.bind("<Button-1>", self.action)
-        self.diagram.bind("<B1-Motion>", self.continue_rect_selection)
-        self.diagram.bind("<ButtonRelease-1>", self.end_rect_selection)
-        self.diagram.bind("<Escape>", lambda *ignore: self.reset())
-        self.diagram.bind("<Delete>", self.delete_selected)
-
-    def deactivate(self):
-        self.diagram.unbind("<Button-1>")
-        self.diagram.unbind("<B1-Motion>")
-        self.diagram.unbind("<ButtonRelease-1>")
-        self.diagram.unbind("<Escape>")
-        self.diagram.unbind("<Delete>")
-
-    def reset(self):
-        super().reset()
-        if self.selection_rect:
-            self.diagram.delete(self.selection_rect)
-            self.selection_rect = None
-        [shape.deselect() for shape in self.diagram.selection.copy()]
-
-    @property
-    def selectable_shapes(self) -> list[Shape]:
-        return list(filter(lambda s: isinstance(s.component, (Beam, Support, Force)), self.diagram.shapes))
-
-    def action(self, event):
-        self.correct_scrolling(event)
-        self.diagram.focus_set()
-        shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
-        if shape == None:
-            self.start_rect_selection(event)
-        else:
-            self.process_selection(event, shape)
-
-    def start_rect_selection(self, event):
-        self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=Shape.SELECTED_COLOR, width=2)
-
-    def continue_rect_selection(self, event):
-        self.correct_scrolling(event)
-        if not self.selection_rect:
-            return
-        start_x, start_y, _, _ = self.diagram.coords(self.selection_rect)
-        self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
-        self.diagram.update_coords_label(event)
-
-    def end_rect_selection(self, event):
-        if not self.selection_rect:
-            return
-        x1, y1, x2, y2 = map(int, self.diagram.coords(self.selection_rect))
-        print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
-        p1 = Point(x1, y1)
-        p2 = Point(x2, y2)
-        p1.scale(1 / (self.diagram.current_zoom.get() / 100))
-        p2.scale(1 / (self.diagram.current_zoom.get() / 100))
-        selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
-        self.process_selection(event, *selection)
-
-    def process_selection(self, event, *selection: Shape):
-        if self.holding_shift_key(event):
-            for shape in selection:
-                if shape in self.diagram.selection:
-                    shape.deselect()
-                else:
-                    shape.select()
-            if self.selection_rect:
-                self.diagram.delete(self.selection_rect)
-                self.selection_rect = None
-        else:
-            self.reset()
-            for shape in selection:
-                shape.select()
-
-    def delete_selected(self, event):
-        TwlApp.update_manager().pause()
-        [shape.component.delete() for shape in self.diagram.selection]
-        TwlApp.update_manager().resume()
-        self.reset()
-
-
-class BeamTool(Tool):
-
-    ID: int = 1
-    NAME: str = "Beam Tool"
-    DESCR: str = "Create beam between two nodes."
-    ICON: str = "img/beam_icon.png"
-
-    def __init__(self, editor):
-        super().__init__(editor)
-        self.start_node: Node | None = None
-
-    def reset(self):
-        super().reset()
-        self.start_node = None
-
-    def action(self, event):
-        self.diagram.focus_set()
-        clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-        if self.start_node is None:
-            self.start_node = clicked_node if clicked_node else self.create_temp_node(event.x, event.y)
-            return
-        if self.holding_shift_key(event):
-            self.shift_snap_line(event)    
-        if not self.start_node in TwlApp.model().nodes:
-            self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
-        end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
-        self.diagram.create_beam(self.start_node, end_node)
-        self.start_node = end_node
-
-    def create_temp_node(self, x, y) -> Node:
-        temp_node = Node(Model(TwlUpdateManager()), x, y)
-        TempNodeShape(temp_node, self.diagram)
-        return temp_node
-
-    def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
-        temp_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-        if not self.start_node:
-            if not temp_node:
-                temp_node = Node(Model(TwlUpdateManager()), event.x, event.y)
-                TempNodeShape(temp_node, self.diagram)
-            return
-        if not self.start_node in TwlApp.model().nodes:
-            TempNodeShape(self.start_node, self.diagram)
-        if self.holding_shift_key(event):
-            self.shift_snap_line(event)            
-        if not temp_node:
-            temp_node = Node(Model(TwlUpdateManager()), event.x, event.y)
-            TempNodeShape(temp_node, self.diagram)
-        temp_beam = Beam(Model(TwlUpdateManager()), self.start_node, temp_node)
-        TempBeamShape(temp_beam, self.diagram)
-        self.diagram.focus_set()
-
-    def shift_snap_line(self, event):
-        assert(self.start_node)
-        start_point = Point(self.start_node.x, self.start_node.y)
-        inital_line = Line(start_point, Point(event.x, event.y))
-        rounded_line = Line(start_point, Point(start_point.x, start_point.y + 10))
-        rounded_line.rotate(start_point, inital_line.angle_rounded())
-        new_point = rounded_line.closest_point_on_axis(Point(event.x, event.y))
-        event.x = new_point.x
-        event.y = new_point.y
-
-class SupportTool(Tool):
-
-    ID: int = 2
-    NAME: str = "Support Tool"
-    DESCR: str = "Create support on node."
-    ICON: str = "img/support_icon.png"
-
-    def __init__(self, editor):
-        super().__init__(editor)
-        self.node: Node | None = None
-
-    def reset(self):
-        super().reset()
-        self.node = None
-
-    def action(self, event):
-        self.diagram.focus_set()
-        if not self.node:
-            clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if clicked_node and not clicked_node.supports:
-                self.node = clicked_node
-        else:
-            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.diagram.create_support(self.node, angle)
-            self.reset()
-
-    def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
-        if not self.node:
-            hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if hovering_node and not hovering_node.supports:
-                TempSupportShape(Support(Model(TwlUpdateManager()), hovering_node), self.diagram)
-        else:
-            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempSupportShape(Support(Model(TwlUpdateManager()), self.node, angle), self.diagram)
-        self.diagram.focus_set()
-
-
-class ForceTool(Tool):
-
-    ID: int = 3
-    NAME: str = "Force Tool"
-    DESCR: str = "Create force on node."
-    ICON: str = "img/force_icon.png"
-
-    def __init__(self, editor):
-        super().__init__(editor)
-        self.node: Node | None = None
-
-    def reset(self):
-        super().reset()
-        self.node = None
-
-    def action(self, event):
-        self.diagram.focus_set()
-        if not self.node:
-            clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if clicked_node:
-                self.node = clicked_node
-        else:
-            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.diagram.create_force(self.node, angle)
-            self.reset()
-
-    def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
-        if not self.node:
-            hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if hovering_node:
-                TempForceShape(Force(Model(TwlUpdateManager()), hovering_node), self.diagram)
-        else:
-            line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempForceShape(Force(Model(TwlUpdateManager()), self.node, angle), self.diagram)
-        self.diagram.focus_set()
 
 
 class TwlDiagram(tk.Canvas, TwlWidget):
@@ -668,78 +176,42 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     SCROLL_STEP: int = 1
 
     UI_PADDING: int = 10
-    TOOL_BUTTON_SIZE: int = 50
 
     TEXT_TAG = "text"
-    TEXT_BG_TAG = "text"
+    TEXT_BG_TAG = "text_bg"
     TEXT_SIZE = 10
 
-    GRID_TAG = "grid"
-    GRID_COLOR = "lightgrey"
-    GRID_SNAP_RADIUS = 5
-    MIN_GRID = 0.1
-    MAX_GRID = 500
+    SHOW_TOOLBAR: bool = False
+    TOOL_BUTTON_SIZE: int = 50
 
-    ANGLE_GUIDE_TAG = "angle_guide"
-    ANGLE_GUIDE_IMG = "img/angle_guide.png"
-    ANGLE_GUIDE_SIZE = 120
-    ANGLE_GUIDE_PADDING = 10
+    NO_UPDATE_TAGS = []
 
-    NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
-
-    def __init__(self, master, toolbar):
+    def __init__(self, master):
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
-        self.scale_origin = Point(0, 0)
-        self.current_zoom = tk.DoubleVar(value=100.0)
-        self.current_zoom.trace_add("write", lambda *ignore: self.refresh())
-        self.grid_step = tk.DoubleVar(value=20.0)
-        self.grid_step.trace_add("write", lambda *ignore: self.refresh())
-
-        self.pan_pos = Point(0, 0)
-        self.pan_xview_start = 0
-        self.pan_yview_start = 0
-
         self.grid(column=0, row=0, sticky=tk.NSEW)
         master.grid_rowconfigure(0, weight=1)
         master.grid_columnconfigure(0, weight=1)
 
-        self.create_scrollbars(master)
-
         self.shapes: list[Shape] = []
         self.selection: list[Shape] = []
-        self.grid_visible: bool = False
-        self.angle_guide_visible: bool = False
 
-        #toolbar
-        self.tools: List[Tool] = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
-        self._selected_tool_id: tk.IntVar = IntVar(value=0)
-        self.selected_tool: Tool = self.tools[0]
-        for tool in self.tools: self.add_button(tool, toolbar)
-        outer = ttk.Frame(toolbar, style="Outer.Border.TFrame") #todo: create custom widget BorderFrame
-        outer.pack(fill="both", expand=True)
-        ttk.Frame(outer, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
+        self.current_zoom = tk.DoubleVar(value=100.0)
+        self.current_zoom.trace_add("write", lambda *ignore: self.refresh())
 
-        #statically determinate label
-        self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
-        self.stat_determ_label.place(x=self.UI_PADDING, y=self.UI_PADDING)
+        self.pan_start_pos = Point(0, 0)
+        self.pan_xview_start = 0
+        self.pan_yview_start = 0
+
+        self.create_scrollbars(master)
+
+        self.tools: list[Tool]
+        self._selected_tool_id: tk.IntVar = tk.IntVar(value=0)
+        self.selected_tool: Tool
 
         #bottom elements
         self.bottom_bar = self.create_bottom_bar()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
-
-        #coords label
-        self.coords_label = ttk.Label(self, foreground=GRAY)
-        self.bind("<Motion>", self.update_coords_label)
-        self.coords_label.place(x=self.winfo_width() - self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SE)
-
-        #angle guide
-        angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
-        self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
-                                             self.ANGLE_GUIDE_PADDING, 
-                                             image=angle_guide_img, 
-                                             anchor=tk.NE, 
-                                             tags=self.ANGLE_GUIDE_TAG)
 
         self.bind("<Configure>", self.refresh)
         self.bind("<Control-MouseWheel>", self.zoom)
@@ -750,45 +222,17 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.bind("<ButtonRelease-2>", self.end_pan)  
 
         self.update_scrollregion()
-        self.select_tool(SelectTool.ID)
 
     def refresh(self, event=None):
         self.update_scrollregion()
-
-        self.delete_grid()
-        if TwlApp.settings().show_grid.get():
-            self.draw_grid()
-
-        self.update_angle_guide_position()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
-        self.coords_label.place(x=self.winfo_width() - self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SE)
-
-        angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
-        self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
         for shape in self.shapes:
             shape.scale(self.current_zoom.get() / 100)
 
     def update(self) -> None:
         """Redraws the diagram completely from the model."""
-        self.clear()
-
-        for node in TwlApp.model().nodes: self.shapes.append(NodeShape(node, self))
-        for beam in TwlApp.model().beams: self.shapes.append(BeamShape(beam, self))
-        for support in TwlApp.model().supports: self.shapes.append(SupportShape(support, self))
-        for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
-
-        self.stat_determ_label.configure(text=self.stat_determ_text)
-        color = GREEN if self.stat_determ_text[:5] == "f = 0" else RED
-        ttk.Style().configure("Diagram.TLabel", foreground=color)
-
-        self.tag_lower(self.GRID_TAG)
-        self.tag_raise(NodeShape.TAG)
-        self.tag_raise(Shape.LABEL_BG_TAG)
-        self.tag_raise(Shape.LABEL_TAG)
-        self.tag_raise(self.ANGLE_GUIDE_TAG)
-
-        self.refresh()
+        pass
 
     def clear(self):
         """Removes all shapes from the diagram."""
@@ -799,35 +243,17 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.shapes.clear()
 
     def create_bottom_bar(self) -> tk.Frame:
-        bottom_bar = tk.Frame(self, background=WHITE)
+        bottom_bar = tk.Frame(self, background=Colors.WHITE)
         zoom_label = ttk.Label(bottom_bar, text=f"Zoom ")
         zoom_label.pack(side=tk.LEFT, padx=(0, 0))
-
         zoom_entry = ttk.Entry(bottom_bar, width=5, justify=tk.RIGHT)
         zoom_entry.bind("<Return>", lambda *ignore: self.process_entry(zoom_entry, self.MIN_ZOOM, self.MAX_ZOOM, self.current_zoom))
         zoom_entry.bind("<FocusOut>", lambda *ignore: self.set_entry_text(zoom_entry, self.current_zoom.get()))
         self.current_zoom.trace_add("write", lambda *ignore: self.set_entry_text(zoom_entry, self.current_zoom.get()))
         self.set_entry_text(zoom_entry, self.current_zoom.get())
         zoom_entry.pack(side=tk.LEFT, padx=(0, 0))
-
         percent_label = ttk.Label(bottom_bar, text="%")
         percent_label.pack(side=tk.LEFT, padx=(0, self.UI_PADDING))
-        show_grid_var = TwlApp.settings().show_grid
-        grid_check = ttk.Checkbutton(bottom_bar, text="Grid ", style="Custom.TCheckbutton", takefocus=False, variable=show_grid_var)
-        grid_check.pack(side=tk.LEFT, padx=(self.UI_PADDING, 0))
-
-        grid_entry = ttk.Entry(bottom_bar, width=5, justify=tk.RIGHT)
-        show_grid_var.trace_add("write", lambda *ignore: grid_entry.pack(side=tk.LEFT) if show_grid_var.get() else grid_entry.pack_forget())
-        grid_entry.bind("<Return>", lambda *ignore: self.process_entry(grid_entry, self.MIN_GRID, self.MAX_GRID, self.grid_step))
-        grid_entry.bind("<FocusOut>", lambda *ignore: self.set_entry_text(grid_entry, self.grid_step.get()))
-        self.grid_step.trace_add("write", lambda *ignore: self.set_entry_text(grid_entry, self.grid_step.get()))
-        self.set_entry_text(grid_entry, self.grid_step.get())
-        grid_entry.pack(side=tk.LEFT, padx=(0, 0))
-
-        m_label = ttk.Label(bottom_bar, text="m")
-        show_grid_var.trace_add("write", lambda *ignore: m_label.pack(side=tk.RIGHT) if show_grid_var.get() else m_label.pack_forget())
-        m_label.pack(side=tk.LEFT)
-
         return bottom_bar
 
     def create_scrollbars(self, master):
@@ -837,7 +263,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         h_scrollbar = tk.Scrollbar(master, orient=tk.HORIZONTAL, command=lambda scrolltype, amount: self.scroll(tk.HORIZONTAL, scrolltype, amount))
         h_scrollbar.grid(column=0, row=1, sticky=tk.EW)
 
-        corner = tk.Frame(master, background=LIGHT_GRAY)
+        corner = tk.Frame(master, background=Colors.LIGHT_GRAY)
         corner.grid(column=1, row=1, sticky=tk.NSEW)
 
         self.configure(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set)
@@ -872,7 +298,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         assert len(sr_int) == 4
         return sr_int
 
-    def zoom(self, event): #todo: scroll to previous position in drawing
+    def zoom(self, event): #todo: scroll to previous position in diagram
         if event.delta < 0:
             self.current_zoom.set(max(self.MIN_ZOOM, self.current_zoom.get() - self.ZOOM_STEP))
         else:
@@ -880,14 +306,14 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.refresh()
 
     def start_pan(self, event):
-        self.pan_pos = Point(event.x, event.y)
+        self.pan_start_pos = Point(event.x, event.y)
         self.pan_xview_start = self.xview()[0]
         self.pan_yview_start = self.yview()[0]
         self.config(cursor="fleur")
 
     def pan(self, event):
-        delta_x = event.x - self.pan_pos.x
-        delta_y = event.y - self.pan_pos.y
+        delta_x = event.x - self.pan_start_pos.x
+        delta_y = event.y - self.pan_start_pos.y
         x_min, y_min, x_max, y_max = self.get_scrollregion()
         sr_width = abs(x_min) + abs(x_max)
         sr_height = abs(y_min) + abs(y_max)
@@ -899,38 +325,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def end_pan(self, event):
         self.config(cursor="arrow")
-
-    def update_angle_guide_position(self):
-        x_min, y_min, x_max, y_max = self.get_scrollregion()
-        sr_width = abs(x_min) + abs(x_max)
-        sr_height = abs(y_min) + abs(y_max)
-        self.coords(self.angle_guide, self.winfo_width() + (self.xview()[0] * sr_width) - abs(x_min) - self.ANGLE_GUIDE_PADDING, 
-                    self.ANGLE_GUIDE_PADDING + (self.yview()[0] * sr_height) - abs(y_min))
-
-    def delete_grid(self):
-        self.delete(self.GRID_TAG)
-        self.grid_visible = False
-
-    def draw_grid(self):
-        grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
-        x_min, y_min, x_max, y_max = self.get_scrollregion()
-        x_start = x_min - (x_min % grid_spacing) + grid_spacing
-        y_start = y_min - (y_min % grid_spacing) + grid_spacing
-        for i in range(x_start, x_max, grid_spacing):
-            self.create_line((i, y_min), (i, y_max), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        for i in range(y_start, y_max, grid_spacing):
-            self.create_line((x_min, i), (x_max, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        self.tag_lower(self.GRID_TAG)
-        self.grid_visible = True
-
-    def grid_snap(self, x: int, y: int) -> tuple[int, int]:
-        grid_spacing = round(self.grid_step.get())
-        nearest_x = round(x / grid_spacing) * grid_spacing
-        nearest_y = round(y / grid_spacing) * grid_spacing
-        distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))
-        if distance < TwlApp.settings().grid_snap_radius.get():
-            return nearest_x, nearest_y
-        return x, y
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
         image = add_image_from_path(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
@@ -946,49 +340,6 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.selected_tool.deactivate()
         self.selected_tool = self.tools[self._selected_tool_id.get()]
         self.selected_tool.activate()
-
-    @property
-    def stat_determ_text(self) -> str:
-        """Get the explanation text about static determinacy."""
-        nodes = len(TwlApp.model().nodes)
-        equations = 2 * nodes
-        constraints = sum(support.constraints for support in TwlApp.model().supports)
-        beams = len(TwlApp.model().beams)
-        unknowns = constraints + beams
-        f = equations - unknowns
-        return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
-
-    def create_node(self, x: int, y: int) -> Node:
-        """Creates a new node in the model."""
-        TwlApp.update_manager().pause()
-        node = Node(TwlApp.model(), x, y)
-        TwlApp.model().nodes.append(node)
-        TwlApp.update_manager().resume()
-        return node
-
-    def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        """Creates a new beam in the model."""
-        TwlApp.update_manager().pause()
-        beam = Beam(TwlApp.model(), start_node, end_node)
-        TwlApp.model().beams.append(beam)
-        TwlApp.update_manager().resume()
-        return beam
-
-    def create_support(self, node: Node, angle: float=0):
-        """Creates a new support in the model."""
-        TwlApp.update_manager().pause()
-        support = Support(TwlApp.model(), node, angle)
-        TwlApp.model().supports.append(support)
-        TwlApp.update_manager().resume()
-        return support
-
-    def create_force(self, node: Node, angle: float=180):
-        """Creates a new force in the model."""
-        TwlApp.update_manager().pause()
-        force = Force(TwlApp.model(), node, angle)
-        TwlApp.model().forces.append(force)
-        TwlApp.update_manager().resume()
-        return force
 
     def create_text_with_bg(self, *args, **kw) -> tuple[int, int]:
         """Creates a label with a specific bg color to ensure readability. Used for model component labels."""
@@ -1052,6 +403,3 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def set_entry_text(self, entry: ttk.Entry, text):
         entry.delete(0, tk.END)
         entry.insert(0, str(text))
-
-    def update_coords_label(self, event):
-        self.coords_label.config(text=f"x: {int(event.x)} y: {int(event.y)}")

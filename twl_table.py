@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import final, TypeVar
+from typing import TypeVar
 
-from twl_components import *
-from twl_widgets import *
+from twl_components import Component, ComponentList, Attribute
+from twl_widgets import CustomEntry
+from twl_update import TwlWidget
+
 
 C = TypeVar('C', bound=Component)
-
 
 class TwlTableEntryPopUp(CustomEntry):
 
@@ -70,4 +71,3 @@ class TwlTable(ttk.Treeview, TwlWidget):
 
         self.entryPopup = TwlTableEntryPopUp(self, component, attribute)
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
-    

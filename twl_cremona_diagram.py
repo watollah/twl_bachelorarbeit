@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
+import math
 
-from twl_app import *
-from twl_update import *
-from twl_components import *
-from twl_settings import *
-from twl_solver import *
+from twl_app import TwlApp
+from twl_update import TwlWidget
+from twl_math import Point, Line
+from twl_components import Component, Node, Beam, Support, Force
+
 
 class CremonaDiagram(tk.Canvas, TwlWidget):
 
@@ -30,7 +31,7 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         self.support_forces: dict[Force, Support] = {}
         self.beam_forces: dict[Force, Beam] = {}
         self.forces_for_nodes: dict[Node, dict[Force, Component]] = {}
-        self.steps: List[tuple[int, Force, Component]] = []
+        self.steps: list[tuple[int, Force, Component]] = []
 
         self.force_spacing_check = ttk.Checkbutton(master, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
         self.force_spacing_check.place(x=self.winfo_width() - self.SPACING_CHECK_PADDING, 

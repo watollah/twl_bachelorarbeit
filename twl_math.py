@@ -1,17 +1,18 @@
 import math
 from enum import Enum
 
-from typing import Tuple
 
 class Orientation(Enum):
     HORIZONTAL = "h"
     VERTICAL = "v"
     DIAGONAL = "d"
 
+
 class Direction(Enum):
     CLOCKWISE = "clw"
     COUNTER_CLOCKWISE = "ccw"
     COLINEAR = "col"
+
 
 class Point:
     def __init__(self, x: int, y: int):
@@ -187,7 +188,7 @@ class Triangle:
         self.p2.scale(factor)
         self.p3.scale(factor)
 
-    def barycentric_coordinates(self, point: Point) -> Tuple[float, float, float]:
+    def barycentric_coordinates(self, point: Point) -> tuple[float, float, float]:
         v0 = self.p2.subtract(self.p1)
         v1 = self.p3.subtract(self.p1)
         v2 = point.subtract(self.p1)

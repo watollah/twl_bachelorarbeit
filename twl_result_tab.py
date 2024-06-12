@@ -3,11 +3,11 @@ from tkinter import ttk
 
 from twl_app import TwlApp
 from twl_widgets import ToggledFrame, BorderFrame
-from twl_definition_diagram import DefinitionDiagram
+from twl_result_diagram import ResultDiagram
 from twl_table import TwlTable
 
 
-class DefinitionTab(ttk.Frame):
+class ResultTab(ttk.Frame):
 
     def __init__(self, notebook: ttk.Notebook) -> None:
         ttk.Frame.__init__(self, notebook)
@@ -15,9 +15,9 @@ class DefinitionTab(ttk.Frame):
         horizontal_panes = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         horizontal_panes.pack(fill=tk.BOTH, expand=True)
 
-        definition_diagram_frame = ttk.Frame(horizontal_panes)
-        horizontal_panes.add(definition_diagram_frame, weight=2)
-        self.definition_diagram = self.create_diagram(definition_diagram_frame)
+        result_diagram_frame = ttk.Frame(horizontal_panes)
+        horizontal_panes.add(result_diagram_frame, weight=2)
+        self.result_diagram = self.create_diagram(result_diagram_frame)
 
         tables_frame = ttk.Frame(horizontal_panes)
         tables_frame.pack_propagate(False)
@@ -25,28 +25,18 @@ class DefinitionTab(ttk.Frame):
         self.tables = self.create_tables(tables_frame)
 
     def create_diagram(self, frame: ttk.Frame):
-        diagram = DefinitionDiagram(frame)
-        TwlApp.update_manager().design_widgets.append(diagram)
+        diagram = ResultDiagram(frame)
+        TwlApp.update_manager().result_widgets.append(diagram)
 
     def create_tables(self, frame: ttk.Frame):
-        nodes_entry = ToggledFrame(frame, "Nodes")
+        nodes_entry = ToggledFrame(frame, "Support Forces")
         nodes_entry.pack(fill="x")
         nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes)
         nodes_table.pack(fill="both")
 
-        beams_entry = ToggledFrame(frame, "Beams")
+        beams_entry = ToggledFrame(frame, "Beam Forces")
         beams_entry.pack(fill="x")
         beams_table = TwlTable(beams_entry.content, TwlApp.model().beams)
         beams_table.pack(fill="both")
-        
-        supports_entry = ToggledFrame(frame, "Supports")
-        supports_entry.pack(fill="x")
-        supports_table = TwlTable(supports_entry.content, TwlApp.model().supports)
-        supports_table.pack(fill="both")
-
-        forces_entry = ToggledFrame(frame, "Forces")
-        forces_entry.pack(fill="x")
-        forces_table = TwlTable(forces_entry.content, TwlApp.model().forces)
-        forces_table.pack(fill="both")
 
         BorderFrame(frame).pack(fill="both", expand=True)

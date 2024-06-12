@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar, List, Type, cast, Generic, Callable, Iterable
+from typing import TypeVar, Type, cast, Generic
 
-from twl_math import *
-from twl_update import *
-from twl_classproperty import *
-from twl_help import *
+from twl_math import Point, Line
+from twl_update import UpdateManager
+from twl_help import int_to_roman
 
 
 C = TypeVar("C", bound='Component')
@@ -234,13 +233,13 @@ class Component(ABC):
 
     def __init__(self, model: 'Model'):
         self.model: Model = model
-        self.attributes: List[Attribute] = []
+        self.attributes: list[Attribute] = []
         self._id: IdAttribute = IdAttribute(self)
 
     @classmethod
     def dummy(cls):
         """Creates a dummy instance of this Component to extract its attributes."""
-        return cls(Model(TwlUpdateManager()))
+        return cls(Model(UpdateManager()))
 
     @abstractmethod
     def delete(self):
@@ -265,7 +264,7 @@ class Node(Component):
 
     @classmethod
     def dummy(cls):
-        return cls(Model(TwlUpdateManager()), 0, 0)
+        return cls(Model(UpdateManager()), 0, 0)
 
     def delete(self):
         for support in self.supports: support.delete()
@@ -306,7 +305,7 @@ class Beam(Component):
 
     @classmethod
     def dummy(cls):
-        return cls(Model(TwlUpdateManager()), Node.dummy(), Node.dummy())
+        return cls(Model(UpdateManager()), Node.dummy(), Node.dummy())
 
     def delete(self):
         self.model.beams.remove(self)
@@ -343,7 +342,7 @@ class Support(Component):
 
     @classmethod
     def dummy(cls):
-        return cls(Model(TwlUpdateManager()), Node.dummy())
+        return cls(Model(UpdateManager()), Node.dummy())
 
     def delete(self):
         self.model.supports.remove(self)
@@ -369,7 +368,7 @@ class Force(Component):
     @classmethod
     def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=0, strength: float=1.0):
         node = Node.dummy() if node == None else node
-        dummy_force: Force = cls(Model(TwlUpdateManager()), node, angle, strength)
+        dummy_force: Force = cls(Model(UpdateManager()), node, angle, strength)
         dummy_force.id = id
         return dummy_force
 
@@ -381,13 +380,13 @@ class Force(Component):
 
 
 class Model:
-    def __init__(self, update_manager: TwlUpdateManager):
+    def __init__(self, update_manager: UpdateManager):
         self.nodes: ComponentList[Node] = ComponentList(Node, update_manager)
         self.beams: ComponentList[Beam] = ComponentList(Beam, update_manager)
         self.supports: ComponentList[Support] = ComponentList(Support, update_manager)
         self.forces: ComponentList[Force] = ComponentList(Force, update_manager)
 
-        self.update_manager: TwlUpdateManager = update_manager
+        self.update_manager: UpdateManager = update_manager
 
     def clear(self):
         if not self.is_empty():
@@ -413,12 +412,12 @@ class Model:
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 
 
-class ComponentList(List[C]):
+class ComponentList(list[C]):
 
-    def __init__(self, component_class: Type[C], update_manager: TwlUpdateManager, *args, **kwargs):
+    def __init__(self, component_class: Type[C], update_manager: UpdateManager, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.component_class: Type[C] = component_class #Class of the entries in this list, to make it accessible even when the list is empty
-        self.update_manager: TwlUpdateManager = update_manager
+        self.update_manager: UpdateManager = update_manager
 
     def append(self, *components: C) -> None:
         """Add item to the list and notify connected widgets to update."""

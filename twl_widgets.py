@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_style import *
+from twl_style import Colors
+from twl_images import add_image_from_path
 
 
 class ToolTip(object):
@@ -58,7 +59,7 @@ class CustomButton(ttk.Button):
 
     def __init__(self, master=None, **kw):
         outlinewidth = kw.pop("outlinewidth", None)
-        outlinecolor = kw.pop("outlinecolor", BLACK)
+        outlinecolor = kw.pop("outlinecolor", Colors.BLACK)
         kw.setdefault("takefocus", False)
         if outlinewidth:
             outline = tk.LabelFrame(master, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
@@ -138,6 +139,13 @@ class CustomRadioButton(CustomToggleButton):
             self.state.set(False)
 
 
+class BorderFrame(ttk.Frame):
+
+    def __init__(self, master=None, **kw):
+        kw["style"] = "Outer.Border.TFrame"
+        super().__init__(master, **kw)
+        ttk.Frame(self, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
+
 class ToggledFrame(tk.Frame):
 
     HEADER_SIZE = 50
@@ -178,7 +186,7 @@ class CustomMenuButton(ttk.OptionMenu):
 
     def __init__(self, parent, *args, **options):
         outlinewidth = options.pop("outlinewidth", None)
-        outlinecolor = options.pop("outlinecolor", BLACK)
+        outlinecolor = options.pop("outlinecolor", Colors.BLACK)
         if outlinewidth:
             outline = tk.LabelFrame(parent, bd=outlinewidth, bg=outlinecolor, relief=tk.FLAT)
             outline.pack(fill="both", expand=True)

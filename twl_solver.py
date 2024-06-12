@@ -1,16 +1,17 @@
 import numpy as np
-from typing import Tuple, List, Dict
+import math
 
-from twl_components import *
+from twl_math import Orientation, Point, Line
+from twl_components import Model, Component, Node, Beam, Force
 
 
-class TwlSolver:
+class Solver:
 
     def __init__(self, model: Model) -> None:
         self.model = model
 
-        self.factor_matrix: List[List[float]] = []
-        self.result_vector: List[float] = []
+        self.factor_matrix: list[list[float]] = []
+        self.result_vector: list[float] = []
         self.solution: dict[Force, Component] = {}
 
     def solve(self):
@@ -49,8 +50,8 @@ class TwlSolver:
             unknown_forces[Force.dummy(beam.id, angle=beam.angle)] = beam
         return unknown_forces
 
-    def get_node_factors(self, node: Node, orientation: Orientation) -> List[float]:
-        factors: List[float] = []
+    def get_node_factors(self, node: Node, orientation: Orientation) -> list[float]:
+        factors: list[float] = []
         for support in self.model.supports:
             support_factors = self.generate_factors((support.angle + 180) % 360)
             factors.extend(support_factors[(support in node.supports, support.constraints, orientation)])
@@ -60,13 +61,13 @@ class TwlSolver:
         return factors
 
     def get_node_forces(self, node: Node, orientation: Orientation) -> float:
-        forces: List[float] = []
+        forces: list[float] = []
         for force in self.model.forces:
             force_factors = self.generate_factors((force.angle + 180) % 360)
             forces.append(force_factors[(force in node.forces, 1, orientation)][0] * force.strength)
         return -sum(forces)
 
-    def generate_factors(self, angle: float) -> Dict[Tuple[bool, int, Orientation], List[float]]:
+    def generate_factors(self, angle: float) -> dict[tuple[bool, int, Orientation], list[float]]:
         return {
             #(exists on node, no of constraints, orientation): factors
             (True, 1, Orientation.HORIZONTAL): [math.sin(math.radians(angle))],

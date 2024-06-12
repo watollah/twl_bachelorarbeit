@@ -1,8 +1,12 @@
-from twl_components import *
-from twl_settings import *
-from twl_solver import *
+from twl_update import UpdateManager
+from twl_components import Model
+from twl_settings import Settings
+from twl_solver import Solver
+
 
 class TwlApp:
+
+    active_tab: int = 0
 
     _update_manager = None
     _settings = None
@@ -12,7 +16,7 @@ class TwlApp:
     @staticmethod
     def update_manager():
         if TwlApp._update_manager is None:
-            TwlApp._update_manager = TwlUpdateManager()
+            TwlApp._update_manager = UpdateManager()
         return TwlApp._update_manager
 
     @staticmethod
@@ -30,5 +34,5 @@ class TwlApp:
     @staticmethod
     def solver():
         if TwlApp._solver is None:
-            TwlApp._solver = TwlSolver(TwlApp.model())
+            TwlApp._solver = Solver(TwlApp.model())
         return TwlApp._solver

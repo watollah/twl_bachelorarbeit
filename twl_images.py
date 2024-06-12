@@ -1,9 +1,9 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-from typing import cast, List
+from typing import cast
 
 
-image_references: List[tk.PhotoImage] = []
+image_references: list[tk.PhotoImage] = []
 
 def add_image(pil_image: Image.Image, width: int|None=None, height: int|None=None) -> tk.PhotoImage:
     if width and height:

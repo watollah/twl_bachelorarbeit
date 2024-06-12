@@ -2,15 +2,14 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 
-from twl_app import *
-from twl_style import *
-from twl_diagram import *
-from twl_table import *
-from twl_definition_tab import *
-from twl_cremona_tab import *
-from twl_io import *
-from twl_settings import *
-from twl_solver import *
+import twl_io as io
+from twl_update import TwlWidget
+from twl_style import init_style
+from twl_app import TwlApp
+from twl_definition_tab import DefinitionTab
+from twl_cremona_tab import CremonaTab
+from twl_result_tab import ResultTab
+
 
 class TwlTool(tk.Tk, TwlWidget):
 
@@ -32,18 +31,17 @@ class TwlTool(tk.Tk, TwlWidget):
         notebook = ttk.Notebook(self)
         notebook.add(DefinitionTab(notebook), text="Definition")
         notebook.add(CremonaTab(notebook), text="Cremona")
-        notebook.add(ttk.Frame(notebook), text="Result")
-        notebook.add(ttk.Frame(notebook), text="Profiles", state="disabled")
+        notebook.add(ResultTab(notebook), text="Result")
         notebook.pack(fill=tk.BOTH, expand=True)
         notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
 
-        self.bind("<Control-n>", lambda *ignore: clear_project(self.is_saved))
-        self.bind("<Control-o>", lambda *ignore: open_project(self.is_saved))
-        self.bind("<Control-s>", lambda *ignore: save_project(self.is_saved))
-        self.bind("<Control-S>", lambda *ignore: save_project_as(self.is_saved))
+        self.bind("<Control-n>", lambda *ignore: io.clear_project(self.is_saved))
+        self.bind("<Control-o>", lambda *ignore: io.open_project(self.is_saved))
+        self.bind("<Control-s>", lambda *ignore: io.save_project(self.is_saved))
+        self.bind("<Control-S>", lambda *ignore: io.save_project_as(self.is_saved))
 
     def update_window_title(self):
-        project_name = get_project_name()
+        project_name = io.get_project_name()
         self.title(f"{"" if self.is_saved.get() else "*"}{self.TITLE}{" - " + project_name if project_name else ""}")
 
     def update(self):
@@ -54,7 +52,8 @@ class TwlTool(tk.Tk, TwlWidget):
 
     def tab_changed(self, event):
         selected_tab = event.widget.select()
-        tab_index = event.widget.index(selected_tab)
+        tab_index: int = event.widget.index(selected_tab)
+        TwlApp.active_tab = tab_index
         print(f"Tab changed! Selected: {tab_index}")
         if tab_index == 1 or tab_index == 2:
             TwlApp.solver().solve()
@@ -64,12 +63,12 @@ class TwlTool(tk.Tk, TwlWidget):
         menubar = tk.Menu(self)
 
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=lambda *ignore: clear_project(self.is_saved), accelerator="Ctrl+N")
+        file_menu.add_command(label="New Project", command=lambda *ignore: io.clear_project(self.is_saved), accelerator="Ctrl+N")
         file_menu.add_separator()
-        file_menu.add_command(label="Open", command=lambda *ignore: open_project(self.is_saved), accelerator="Ctrl+O")
+        file_menu.add_command(label="Open", command=lambda *ignore: io.open_project(self.is_saved), accelerator="Ctrl+O")
         file_menu.add_separator()
-        file_menu.add_command(label="Save", command=lambda *ignore: save_project(self.is_saved), accelerator="Ctrl+S")
-        file_menu.add_command(label="Save As...", command=lambda *ignore: save_project_as(self.is_saved), accelerator="Ctrl+Shift+S")
+        file_menu.add_command(label="Save", command=lambda *ignore: io.save_project(self.is_saved), accelerator="Ctrl+S")
+        file_menu.add_command(label="Save As...", command=lambda *ignore: io.save_project_as(self.is_saved), accelerator="Ctrl+Shift+S")
         menubar.add_cascade(label="File", menu=file_menu)
 
         settings_menu = tk.Menu(menubar, tearoff=0)
@@ -87,6 +86,7 @@ class TwlTool(tk.Tk, TwlWidget):
         menubar.add_command(label="Help", command=lambda: webbrowser.open("https://example.com"))
 
         return menubar
+
 
 if __name__ == "__main__":
     twl_tool = TwlTool()

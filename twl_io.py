@@ -2,8 +2,9 @@ from tkinter import filedialog, messagebox, BooleanVar
 import json
 import os
 
-from twl_app import *
-from twl_components import *
+from twl_app import TwlApp
+from twl_components import Node, Beam, Support, Force
+
 
 FILENAME: str | None = None
 
