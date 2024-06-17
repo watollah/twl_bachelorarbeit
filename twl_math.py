@@ -222,3 +222,8 @@ class Polygon:
 
     def in_bounds(self, p1: Point, p2: Point) -> bool:
         return all(point.in_bounds(p1, p2) for point in self.points)
+
+    def move(self, x: int, y: int):
+        for point in self.points: 
+            point.x += x
+            point.y += y

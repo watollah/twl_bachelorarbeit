@@ -1,9 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 
+from twl_app import TwlApp
+from twl_cremona_algorithm import CremonaAlgorithm
 from twl_update import TwlWidget
 from twl_style import Colors
-from twl_components import Node, Support, Force
+from twl_math import Point, Line
+from twl_components import Component, Node, Beam, Support, Force
 from twl_widgets import CustomMenuButton, CustomToggleButton
 from twl_cremona_model_diagram import CremonaModelDiagram
 from twl_cremona_diagram import CremonaDiagram, ResultShape, BaseLineShape
@@ -18,6 +21,8 @@ class ControlPanel(ttk.Frame, TwlWidget):
         super().__init__(master, style="ControlPanel.TFrame")
         self.model_diagram: CremonaModelDiagram = model_diagram
         self.cremona_diagram: CremonaDiagram = cremona_diagram
+
+        self.steps: list[tuple[Node | None, Force, Component]] = []
 
         self.label_text = tk.StringVar()
         self.play_state = tk.BooleanVar()
@@ -51,7 +56,9 @@ class ControlPanel(ttk.Frame, TwlWidget):
         scale_frame.grid(row=1, column=1, padx=ControlPanel.PADDING, pady=ControlPanel.PADDING)
         scale = ttk.Scale(scale_frame, from_=1, to=100, variable=self.selected_step, orient="horizontal", takefocus=False, style="TScale")
         scale.pack(fill=tk.BOTH, expand=True)
-        self.selected_step.trace_add("write", lambda *ignore: self.display_selected_step())
+        self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))
+        self.selected_step.trace_add("write", lambda *ignore: self.cremona_diagram.display_step(self.selected_step.get()))
+        self.selected_step.trace_add("write", lambda *ignore: self.model_diagram.display_step(self.selected_step.get()))
         self.selected_step.set(0)
         return scale
 
@@ -64,52 +71,27 @@ class ControlPanel(ttk.Frame, TwlWidget):
         speed_selection.pack(fill=tk.BOTH, expand=True)
         return speed_selection
 
-    def display_selected_step(self):
-        steps = self.cremona_diagram.steps
-        visible: list[ResultShape] = []
-        for i in range(len(steps)):
-            line_visibility = tk.HIDDEN
-            if i <= self.selected_step.get() - 1:
-                visible.append(steps[i][0])
-            if steps[i][0] in visible:
-                line_visibility = tk.NORMAL
-            if round(steps[i][0].component.strength, 2) == 0:
-                line_visibility = tk.HIDDEN
-            for tk_id in steps[i][0].tk_shapes.keys():
-                self.cremona_diagram.itemconfig(tk_id, state=line_visibility)
-
-        if self.selected_step.get() == 0:
+    def display_step(self, selected_step: int):
+        if selected_step == 0:
             self.label_text.set("")
-        elif self.selected_step.get() == len(steps) + 1:
-            for shape in self.cremona_diagram.selection:
-                shape.deselect()
+        elif selected_step == len(self.cremona_diagram.steps) + 1:
             self.label_text.set("Cremona diagram complete!")
         else:
-            current_shape, component = steps[self.selected_step.get() - 1]
-            for shape in self.cremona_diagram.selection:
-                shape.deselect()
-            for shape in self.shapes_for_node(current_shape.component.node):
-                shape.select()
-            current_shape.highlight()
-            #self.cremona_diagram.itemconfig(line, fill=Colors.DARK_SELECTED)
-            current_descr = current_shape.component.id if (type(component) == Support or type(component) == Force) and visible.count(current_shape) == 1 else f"Node {current_shape.component.node.id}, {current_shape.component.id}"
-            self.label_text.set(f"Step {self.selected_step.get()}: {current_descr}")
-
-    def shapes_for_node(self, node: Node) -> list[ResultShape]:
-        return [shape for shape, component in self.cremona_diagram.steps if shape.component.node == node]
+            node, force, component = self.steps[selected_step - 1]
+            self.label_text.set(f"Step {selected_step}: {f"Node {node.id}, {force.id}" if node else force.id}")
 
     def run_animation(self):
         if not self.play_state.get():
             return
-        steps = len(self.cremona_diagram.steps)
-        if steps == 0:
+        no_steps = len(self.steps)
+        if no_steps == 0:
             return
-        self.selected_step.set((self.selected_step.get() + 1) % (steps + 2))
+        self.selected_step.set((self.selected_step.get() + 1) % (no_steps + 2))
         speed = self.SPEED_OPTIONS.get(self.selected_speed.get())
         assert(speed)
         self.after(speed, self.run_animation)
 
     def update(self) -> None:
-        steps = len(self.cremona_diagram.steps) + 1
-        self._scale.config(from_=0, to=steps)
-        self.selected_step.set(steps)
+        self.steps = CremonaAlgorithm.get_steps()
+        self._scale.config(from_=0, to=len(self.steps) + 1)
+        self.selected_step.set(len(self.steps) + 1)

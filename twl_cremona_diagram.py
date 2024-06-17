@@ -6,6 +6,7 @@ from twl_app import TwlApp
 from twl_style import Colors
 from twl_diagram import TwlDiagram, Shape, ComponentShape
 from twl_math import Point, Line, Polygon
+from twl_cremona_algorithm import CremonaAlgorithm
 from twl_components import Component, Node, Beam, Support, Force
 
 
@@ -89,10 +90,7 @@ class CremonaDiagram(TwlDiagram):
 
     def __init__(self, master):
         super().__init__(master)
-        self.support_forces: dict[Force, Support] = {}
-        self.beam_forces: dict[Force, Beam] = {}
-        self.forces_for_nodes: dict[Node, dict[Force, Component]] = {}
-        self.steps: list[tuple[ResultShape, Component]] = []
+        self.steps = []
 
     def create_bottom_bar(self) -> tk.Frame:
         bottom_bar = super().create_bottom_bar()
@@ -101,74 +99,55 @@ class CremonaDiagram(TwlDiagram):
         return bottom_bar
 
     def update(self) -> None:
-        self.delete("all")
+        self.clear()
+        self.steps = CremonaAlgorithm.get_steps()
         pos = self.START_POINT
-        self.support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
-        self.beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
-        self.forces_for_nodes = {node: self.get_forces_for_node(node) for node in TwlApp.model().nodes}
-        self.steps = []
-        if TwlApp.settings().force_spacing.get():
-            self.shapes.append(BaseLineShape(pos, self))
-        for force in TwlApp.model().forces:
-            pos = self.draw_line(pos, force, force)
-        if TwlApp.settings().force_spacing.get():
-            self.shapes.append(BaseLineShape(pos, self))
-            pos = Point(pos.x + BaseLineShape.SPACING, pos.y)
-        for force, support in self.support_forces.items():
-            pos = self.draw_line(pos, force, support)
-        if TwlApp.settings().force_spacing.get():
-            pos = Point(pos.x - 2 * BaseLineShape.SPACING, pos.y)
-        node = self.find_next_node()
-        while node:
-            start_angle = self.get_start_angle(self.forces_for_nodes[node])
-            sorted_forces = dict(sorted(self.forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360))
-            start_coords = self.coords(self.find_withtag(list(sorted_forces.keys())[0].id)[0])
-            pos = Point(round(start_coords[2]), round(start_coords[3]))
-            for force, component in sorted_forces.items():
-                if type(component) == Support or type(component) == Force:
-                    existing_shape = self.shape_for(force)
-                    assert(isinstance(existing_shape, ResultShape))
-                    self.steps.append((existing_shape, component))
-                    pos = existing_shape.end
-                    if TwlApp.settings().force_spacing.get():
-                        pos = Point(pos.x - (pos.x - self.START_POINT.x) - BaseLineShape.SPACING, pos.y)
-                else:
-                    pos = self.draw_line(pos, force, component)
-            self.forces_for_nodes.pop(node)
-            node = self.find_next_node()
-            self.update_scrollregion()
+        for node, force, component in self.steps:
+            if node and self.find_withtag(force.id):
+                coords = self.coords(self.find_withtag(force.id)[0])
+                pos = Point(round(coords[2]), round(coords[3]))
+                if isinstance(component, Support) or isinstance(component, Force):
+                    continue
+            pos = self.draw_force(pos, force, component)
+        if self.steps and TwlApp.settings().force_spacing.get():
+            self.force_spacing()
+        self.update_scrollregion()
 
-    def find_next_node(self):
-        return next((node for node in self.forces_for_nodes.keys() if self.count_unknown_on_node(node) <= 2), None)
-
-    def count_unknown_on_node(self, node) -> int:
-        return sum(len(self.find_withtag(force.id)) == 0 for force in self.forces_for_nodes[node])
-
-    def get_start_angle(self, forces: dict[Force, Component]):
-        return next((force.angle for force in forces.keys() if len(self.find_withtag(force.id)) > 0 and force.strength > 0.001), 0)
-
-    def get_forces_for_node(self, node: Node) -> dict[Force, Component]:
-        forces: dict[Force, Component] = {force: force for force in node.forces}
-        forces.update({force: support for force, support in self.support_forces.items() if force.node == node})
-        forces.update(self.get_beam_forces_on_node(node))
-        return forces
-
-    def get_beam_forces_on_node(self, node: Node) -> dict[Force, Beam]:
-        forces: dict[Force, Beam] = {}
-        for beam in node.beams:
-            other_node = beam.start_node if beam.start_node != node else beam.end_node
-            angle = Line(Point(node.x, node.y), Point(other_node.x, other_node.y)).angle()
-            strength = next((force.strength for force in TwlApp.solver().solution.keys() if force.id == beam.id))
-            forces[Force.dummy(beam.id, node, angle, strength)] = beam
-        return forces
-
-    def find_start_node(self):
-        return next(node for node in TwlApp.model().nodes if len(node.beams) <= 2)
-
-    def draw_line(self, start: Point, force: Force, component: Component) -> Point:
+    def draw_force(self, start: Point, force: Force, component: Component) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)
+        start = Point(start.x, start.y)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
-        shape = ResultShape(start, end, force, self)
-        self.shapes.append(shape)
-        self.steps.append((shape, component))
+        self.shapes.append(ResultShape(start, end, force, self))
         return end
+
+    def force_spacing(self):
+        force_forces = [force for node, force, component in self.steps if not node and isinstance(component, Force)]
+        [self.shape_for(force).move(BaseLineShape.SPACING, 0) for force in force_forces]
+        support_forces = [force for node, force, component in self.steps if not node and isinstance(component, Support)]
+        [self.shape_for(force).move(2 * BaseLineShape.SPACING, 0) for force in support_forces]
+        self.shapes.append(BaseLineShape(Point(self.START_POINT.x + BaseLineShape.SPACING, self.START_POINT.y), self))
+        coords = self.coords(self.find_withtag(force_forces[len(force_forces) - 1].id)[0])
+        self.shapes.append(BaseLineShape(Point(round(coords[2]), round(coords[3])), self))
+
+    def display_step(self, selected_step: int):
+        visible: set[Shape] = set()
+        for i, step in enumerate(self.steps):
+            shape = self.shape_for(step[1])
+            if i <= selected_step - 1 and not round(step[1].strength, 2) == 0:
+                visible.add(shape)
+            shape.set_visible(shape in visible)
+
+        for shape in self.selection.copy():
+            shape.deselect()
+        if 0 < selected_step < len(self.steps) + 1:
+            node, force, component = self.steps[selected_step - 1]
+            if node:
+                for shape in self.shapes_for_node(force.node):
+                    shape.select()
+            current_shape = self.shape_for(force)
+            assert(isinstance(current_shape, ResultShape))
+            current_shape.select()
+            current_shape.highlight()
+
+    def shapes_for_node(self, node: Node) -> list[ComponentShape]:
+        return [self.shape_for(step[1]) for step in self.steps if step[0] == node]

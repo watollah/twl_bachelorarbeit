@@ -29,6 +29,16 @@ class Shape():
             coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
             self.diagram.coords(tk_id, coords)
 
+    def move(self, x: int, y: int):
+        for tk_id, polygon in self.tk_shapes.items():
+            self.diagram.move(tk_id, x, y)
+            polygon.move(x, y)
+
+    def set_visible(self, visible: bool):
+        state = tk.NORMAL if visible else tk.HIDDEN
+        for tk_id in self.tk_shapes.keys():
+            self.diagram.itemconfig(tk_id, state=state)
+
     @abstractmethod
     def is_at(self, x: int, y: int) -> bool:
         return False
