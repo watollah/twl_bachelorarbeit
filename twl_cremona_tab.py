@@ -23,7 +23,7 @@ class CremonaTab(ttk.Frame):
         self.model_diagram = self.create_model_diagram(model_diagram_frame)
 
         cremona_diagram_frame = ttk.Frame(horizontal_panes)
-        cremona_diagram_frame.pack_propagate(False)
+        cremona_diagram_frame.grid_propagate(False)
         horizontal_panes.add(cremona_diagram_frame, weight = 1)
         self.cremona_diagram = self.create_cremona_diagram(cremona_diagram_frame)
 
@@ -31,7 +31,7 @@ class CremonaTab(ttk.Frame):
         vertical_panes.add(control_panel_frame, weight=1)
         self.control_panel = self.create_control_panel(control_panel_frame)
 
-    def create_model_diagram(self, frame: ttk.Frame) -> tk.Canvas:
+    def create_model_diagram(self, frame: ttk.Frame) -> CremonaModelDiagram:
         model_diagram = CremonaModelDiagram(frame)
         TwlApp.update_manager().result_widgets.append(model_diagram)
 
@@ -42,7 +42,6 @@ class CremonaTab(ttk.Frame):
 
     def create_cremona_diagram(self, frame: ttk.Frame) -> CremonaDiagram:
         cremona_diagram = CremonaDiagram(frame)
-        cremona_diagram.pack(fill=tk.BOTH, expand=True)
         TwlApp.update_manager().result_widgets.append(cremona_diagram)
 
         title_label = ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12))
@@ -54,7 +53,7 @@ class CremonaTab(ttk.Frame):
         background_frame = ttk.Frame(frame, style="ControlPanel.TFrame") #todo: find a way to directly change panedwindow background color
         background_frame.pack(fill=tk.BOTH, expand=True)
 
-        control_panel = ControlPanel(background_frame, self.cremona_diagram)
+        control_panel = ControlPanel(background_frame, self.model_diagram, self.cremona_diagram)
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         TwlApp.update_manager().result_widgets.append(control_panel)
 

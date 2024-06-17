@@ -8,14 +8,14 @@ from twl_widgets import BorderFrame
 from twl_update import UpdateManager
 from twl_math import Point, Line
 from twl_components import Model, Node, Beam, Support, Force
-from twl_diagram import Tool
-from twl_model_diagram import ModelDiagram, Shape, NodeShape, BeamShape, SupportShape, ForceShape
+from twl_diagram import Tool, Shape
+from twl_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
 
 
 class TempNodeShape(NodeShape):
 
-    TAG: str = Shape.TEMP
-    COLOR: str = Shape.TEMP_COLOR
+    TAG: str = ComponentShape.TEMP
+    COLOR: str = ComponentShape.TEMP_COLOR
 
     def __init__(self, node: Node, diagram: 'DefinitionDiagram') -> None:
         super().__init__(node, diagram)
@@ -24,8 +24,8 @@ class TempNodeShape(NodeShape):
 
 class TempBeamShape(BeamShape):
 
-    TAG: str = Shape.TEMP
-    COLOR: str = Shape.TEMP_COLOR
+    TAG: str = ComponentShape.TEMP
+    COLOR: str = ComponentShape.TEMP_COLOR
 
     def __init__(self, beam: Beam, diagram: 'DefinitionDiagram') -> None:
         super().__init__(beam, diagram)
@@ -34,8 +34,8 @@ class TempBeamShape(BeamShape):
 
 class TempSupportShape(SupportShape):
 
-    TAG: str = Shape.TEMP
-    COLOR = Shape.TEMP_COLOR
+    TAG: str = ComponentShape.TEMP
+    COLOR = ComponentShape.TEMP_COLOR
 
     def __init__(self, support: Support, diagram: 'DefinitionDiagram') -> None:
         super().__init__(support, diagram)
@@ -44,8 +44,8 @@ class TempSupportShape(SupportShape):
 
 class TempForceShape(ForceShape):
 
-    TAG: str = Shape.TEMP
-    COLOR = Shape.TEMP_COLOR
+    TAG: str = ComponentShape.TEMP
+    COLOR = ComponentShape.TEMP_COLOR
 
     def __init__(self, force: Force, diagram: 'DefinitionDiagram') -> None:
         super().__init__(force, diagram)
@@ -112,8 +112,8 @@ class SelectTool(ComponentTool):
         [shape.deselect() for shape in self.diagram.selection.copy()]
 
     @property
-    def selectable_shapes(self) -> list[Shape]:
-        return list(filter(lambda s: isinstance(s.component, (Beam, Support, Force)), self.diagram.shapes))
+    def selectable_shapes(self) -> list[ComponentShape]:
+        return list(filter(lambda shape: isinstance(shape.component, (Beam, Support, Force)), self.diagram.get_component_shapes()))
 
     def action(self, event):
         self.correct_scrolling(event)
@@ -125,7 +125,7 @@ class SelectTool(ComponentTool):
             self.process_selection(event, shape)
 
     def start_rect_selection(self, event):
-        self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=Shape.SELECTED_COLOR, width=2)
+        self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=ComponentShape.SELECTED_COLOR, width=2)
 
     def continue_rect_selection(self, event):
         self.correct_scrolling(event)
@@ -147,7 +147,7 @@ class SelectTool(ComponentTool):
         selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
         self.process_selection(event, *selection)
 
-    def process_selection(self, event, *selection: Shape):
+    def process_selection(self, event, *selection: ComponentShape):
         if self.holding_shift_key(event):
             for shape in selection:
                 if shape in self.diagram.selection:
@@ -204,7 +204,7 @@ class BeamTool(ComponentTool):
         return temp_node
 
     def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
         temp_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if not self.start_node:
             if not temp_node:
@@ -261,7 +261,7 @@ class SupportTool(ComponentTool):
             self.reset()
 
     def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node and not hovering_node.supports:
@@ -301,7 +301,7 @@ class ForceTool(ComponentTool):
             self.reset()
 
     def preview(self, event):
-        self.diagram.delete_with_tag(Shape.TEMP)
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node:

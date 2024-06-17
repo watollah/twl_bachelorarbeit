@@ -5,7 +5,8 @@ from twl_update import TwlWidget
 from twl_style import Colors
 from twl_components import Node, Support, Force
 from twl_widgets import CustomMenuButton, CustomToggleButton
-from twl_cremona_diagram import CremonaDiagram
+from twl_cremona_model_diagram import CremonaModelDiagram
+from twl_cremona_diagram import CremonaDiagram, ResultShape, BaseLineShape
 
 
 class ControlPanel(ttk.Frame, TwlWidget):
@@ -13,8 +14,9 @@ class ControlPanel(ttk.Frame, TwlWidget):
     PADDING: int = 5
     SPEED_OPTIONS = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
 
-    def __init__(self, master, cremona_diagram: CremonaDiagram):
+    def __init__(self, master, model_diagram: CremonaModelDiagram, cremona_diagram: CremonaDiagram):
         super().__init__(master, style="ControlPanel.TFrame")
+        self.model_diagram: CremonaModelDiagram = model_diagram
         self.cremona_diagram: CremonaDiagram = cremona_diagram
 
         self.label_text = tk.StringVar()
@@ -64,33 +66,37 @@ class ControlPanel(ttk.Frame, TwlWidget):
 
     def display_selected_step(self):
         steps = self.cremona_diagram.steps
-        visible = []
+        visible: list[ResultShape] = []
         for i in range(len(steps)):
             line_visibility = tk.HIDDEN
             if i <= self.selected_step.get() - 1:
                 visible.append(steps[i][0])
             if steps[i][0] in visible:
                 line_visibility = tk.NORMAL
-            self.cremona_diagram.itemconfig(steps[i][0], state=line_visibility)
+            if round(steps[i][0].component.strength, 2) == 0:
+                line_visibility = tk.HIDDEN
+            for tk_id in steps[i][0].tk_shapes.keys():
+                self.cremona_diagram.itemconfig(tk_id, state=line_visibility)
+
         if self.selected_step.get() == 0:
-            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
             self.label_text.set("")
         elif self.selected_step.get() == len(steps) + 1:
-            self.cremona_diagram.itemconfig(tk.ALL, fill=Colors.BLACK, width=CremonaDiagram.LINE_WIDTH)
-            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
+            for shape in self.cremona_diagram.selection:
+                shape.deselect()
             self.label_text.set("Cremona diagram complete!")
         else:
-            line, force, component = steps[self.selected_step.get() - 1]
-            self.cremona_diagram.itemconfig(tk.ALL, fill=Colors.BLACK, width=CremonaDiagram.LINE_WIDTH)
-            for l in self.lines_for_node(force.node):
-                self.cremona_diagram.itemconfig(l, fill=Colors.SELECTED, width=CremonaDiagram.SELECTED_LINE_WIDTH) 
-            self.cremona_diagram.itemconfig(line, fill=Colors.DARK_SELECTED)
-            self.cremona_diagram.itemconfig(CremonaDiagram.BASE_LINE_TAG, width=CremonaDiagram.BASE_LINE_WIDTH)
-            current_descr = force.id if (type(component) == Support or type(component) == Force) and visible.count(line) == 1 else f"Node {force.node.id}, {force.id}"
+            current_shape, component = steps[self.selected_step.get() - 1]
+            for shape in self.cremona_diagram.selection:
+                shape.deselect()
+            for shape in self.shapes_for_node(current_shape.component.node):
+                shape.select()
+            current_shape.highlight()
+            #self.cremona_diagram.itemconfig(line, fill=Colors.DARK_SELECTED)
+            current_descr = current_shape.component.id if (type(component) == Support or type(component) == Force) and visible.count(current_shape) == 1 else f"Node {current_shape.component.node.id}, {current_shape.component.id}"
             self.label_text.set(f"Step {self.selected_step.get()}: {current_descr}")
 
-    def lines_for_node(self, node: Node) -> list[int]:
-        return [line for line, force, component in self.cremona_diagram.steps if force.node == node]
+    def shapes_for_node(self, node: Node) -> list[ResultShape]:
+        return [shape for shape, component in self.cremona_diagram.steps if shape.component.node == node]
 
     def run_animation(self):
         if not self.play_state.get():

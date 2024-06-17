@@ -11,20 +11,39 @@ from twl_components import Component
 from twl_math import Point, Polygon
 
 
-C = TypeVar('C', bound=Component)
-
-class Shape(Generic[C]):
-    """Represents the shape of a component in the TwlDiagram."""
+class Shape():
+    """Represents a generic Shape in the diagram."""
 
     TAGS: list[str] = []
     TAG = "shape"
-    TEMP = "temp"
 
     COLOR = "black"
-    TEMP_COLOR = "lightgrey"
     BG_COLOR = "white"
-    SELECTED_COLOR = "#0078D7"
-    SELECTED_BG_COLOR = "#cce8ff"
+
+    def __init__(self, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
+        self.diagram: 'TwlDiagram' = diagram
+        self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
+
+    def scale(self, factor: float):
+        for tk_id, polygon in self.tk_shapes.items():
+            coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
+            self.diagram.coords(tk_id, coords)
+
+    @abstractmethod
+    def is_at(self, x: int, y: int) -> bool:
+        return False
+
+
+C = TypeVar('C', bound=Component)
+
+class ComponentShape(Generic[C], Shape):
+    """Represents the shape of a component in the diagram."""
+
+    TEMP = "temp"
+    TEMP_COLOR = "lightgrey"
+
+    SELECTED_COLOR = Colors.DARK_SELECTED
+    SELECTED_BG_COLOR = Colors.LIGHT_SELECTED
 
     LABEL_TAG = "label"
     LABEL_BG_TAG = "label_background"
@@ -37,21 +56,20 @@ class Shape(Generic[C]):
         cls.TAGS.append(cls.TAG)
 
     def __init__(self, component: C, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
+        super().__init__(diagram)
         self.component: C = component
-        self.diagram: 'TwlDiagram' = diagram
-        self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
-        if (not self.TAG == Shape.TEMP) and self.label_visible(): 
-            label_tk_id, label_bg_tk_id = self.draw_label()
-            self.tk_shapes[label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(label_tk_id)
-            self.tk_shapes[label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+        if (not self.TAG == ComponentShape.TEMP) and self.label_visible(): 
+            self.label_tk_id, self.label_bg_tk_id = self.draw_label()
+            self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+            x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
+            self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
     def select(self):
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
             if self.LABEL_TAG in tags:
-                self.diagram.itemconfig(tk_id, fill=Colors.DARK_SELECTED)
+                self.diagram.itemconfig(tk_id, fill=self.SELECTED_COLOR)
             elif self.LABEL_BG_TAG not in tags:
                 self.diagram.itemconfig(tk_id, self.selected_style(*tags))
         self.diagram.selection.append(self)
@@ -68,10 +86,6 @@ class Shape(Generic[C]):
         print(f"deselected: {self.component.id}")
 
     @abstractmethod
-    def is_at(self, x: int, y: int) -> bool:
-        return False
-
-    @abstractmethod
     def default_style(self, *tags: str) -> dict[str, str]:
         """Style attributes when the shape is not selected."""
         pass
@@ -80,6 +94,12 @@ class Shape(Generic[C]):
     def selected_style(self, *tags: str) -> dict[str, str]:
         """Style attributes when the shape is selected."""
         pass
+
+    def scale(self, factor: float):
+        """Scale the label."""
+        super().scale(factor)
+        if (not self.TAG == ComponentShape.TEMP) and self.label_visible(): 
+            self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
     @property
     @abstractmethod
@@ -98,11 +118,6 @@ class Shape(Generic[C]):
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
 
-    def scale(self, factor: float):
-        for tk_id, polygon in self.tk_shapes.items():
-            coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
-            self.diagram.coords(tk_id, coords)
-
 
 class Tool:
 
@@ -118,7 +133,7 @@ class Tool:
         self.diagram.bind("<Button-1>", self._action)
         self.diagram.bind("<Motion>", self._preview)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
-        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(Shape.TEMP))
+        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(ComponentShape.TEMP))
 
     def deactivate(self):
         self.diagram.unbind("<Button-1>")
@@ -128,7 +143,7 @@ class Tool:
         self.reset()
 
     def reset(self):
-        self.diagram.delete_with_tag(Shape.TEMP)
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
 
     def correct_event_pos(self, event):
         """Correct the coordinates of the mouse pointer to account for scrolling and scaling of the diagram."""
@@ -194,7 +209,7 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         master.grid_columnconfigure(0, weight=1)
 
         self.shapes: list[Shape] = []
-        self.selection: list[Shape] = []
+        self.selection: list[ComponentShape] = []
 
         self.current_zoom = tk.DoubleVar(value=100.0)
         self.current_zoom.trace_add("write", lambda *ignore: self.refresh())
@@ -356,27 +371,31 @@ class TwlDiagram(tk.Canvas, TwlWidget):
                                  width=0,
                                  fill=bg_color, 
                                  tags=bg_tag)
-        self.tag_lower(bg_tag, kw["tags"])
+        self.tag_raise(bg_id)
+        self.tag_raise(text_id)
         return text_id, bg_id
+
+    def get_component_shapes(self):
+        return [shape for shape in self.shapes if isinstance(shape, ComponentShape)]
 
     def find_shape_at(self, x: int, y: int) -> Shape | None:
         """Check if there is a shape in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), self.shapes), None)
 
-    def find_shape_of_list_at(self, shapes: list[Shape], x: int, y: int) -> Shape | None:
+    def find_shape_of_list_at(self, shapes: list[ComponentShape], x: int, y: int) -> ComponentShape | None:
         """Check if there is a shape that is included in the list in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), shapes), None)
 
-    def find_shape_of_type_at(self, component_type: Type[C], x: int, y: int) -> Shape[C] | None:
-        """Check if there is a shape in the diagram at the specified coordinate."""
-        return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.shapes), None)
+    def find_shape_of_type_at(self, component_type: Type[C], x: int, y: int) -> ComponentShape[C] | None:
+        """Check if there is a component shape in the diagram at the specified coordinate."""
+        return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.get_component_shapes()), None)
 
     def find_component_of_type_at(self, component_type: Type[C], x: int, y: int) -> C | None:
         shape = self.find_shape_of_type_at(component_type, x, y)
         return shape.component if shape else None
 
-    def shape_for(self, component: C) -> Shape[C]:
-        return next(filter(lambda shape: shape.component == component, self.shapes))
+    def shape_for(self, component: C) -> ComponentShape[C]:
+        return next(filter(lambda shape: shape.component == component, self.get_component_shapes()))
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
         return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))

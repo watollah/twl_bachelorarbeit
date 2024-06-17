@@ -3,10 +3,10 @@ import tkinter as tk
 from twl_app import TwlApp
 from twl_math import Point, Line, Triangle, Polygon
 from twl_components import Node, Beam, Support, Force
-from twl_diagram import Shape, TwlDiagram
+from twl_diagram import ComponentShape, TwlDiagram
 
 
-class NodeShape(Shape[Node]):
+class NodeShape(ComponentShape[Node]):
 
     TAG: str = "node"
 
@@ -18,12 +18,12 @@ class NodeShape(Shape[Node]):
     def __init__(self, node: Node, diagram: 'ModelDiagram') -> None:
         super().__init__(node, diagram)
         p1, p2 = self.circle_coords()
-        tk_id = diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
+        self.oval_id = diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
                             fill=self.BG_COLOR, 
                             outline=self.COLOR, 
                             width = self.BORDER, 
                             tags=[*self.TAGS, str(node.id)])
-        self.tk_shapes[tk_id] = Polygon(p1, p2)
+        self.tk_shapes[self.oval_id] = Polygon(p1, p2)
 
     def circle_coords(self) -> tuple[Point, Point]:
         return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
@@ -48,8 +48,11 @@ class NodeShape(Shape[Node]):
     def bounds(self) -> Polygon:
         return Polygon(Point(self.component.x, self.component.y))
 
+    def scale(self, factor: float):
+        super().scale(factor)
+        self.diagram.itemconfig(self.oval_id, width=self.BORDER * factor)
 
-class BeamShape(Shape[Beam]):
+class BeamShape(ComponentShape[Beam]):
 
     TAG: str = "beam"
     WIDTH: int = 4
@@ -57,12 +60,12 @@ class BeamShape(Shape[Beam]):
     def __init__(self, beam: Beam, diagram: 'ModelDiagram') -> None:
         super().__init__(beam, diagram)
         line = self.line_coords()
-        tk_id = diagram.create_line(line.start.x, line.start.y,
+        self.line_id = diagram.create_line(line.start.x, line.start.y,
                             line.end.x, line.end.y,
                             fill=self.COLOR,
                             width=self.WIDTH,
                             tags=[*self.TAGS, str(beam.id)])
-        self.tk_shapes[tk_id] = Polygon(line.start, line.end)
+        self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
@@ -86,8 +89,12 @@ class BeamShape(Shape[Beam]):
     def label_visible(self) -> bool:
         return TwlApp.settings().show_beam_labels.get()
 
+    def scale(self, factor: float):
+        super().scale(factor)
+        self.diagram.itemconfig(self.line_id, width=self.WIDTH * factor)
 
-class SupportShape(Shape[Support]):
+
+class SupportShape(ComponentShape[Support]):
 
     TAG: str = "support"
 
@@ -103,7 +110,7 @@ class SupportShape(Shape[Support]):
     def __init__(self, support: Support, diagram: 'ModelDiagram') -> None:
         super().__init__(support, diagram)
         triangle = self.triangle_coords()
-        tk_id = diagram.create_polygon(triangle.p1.x, 
+        self.triangle_id = diagram.create_polygon(triangle.p1.x, 
                                triangle.p1.y, 
                                triangle.p2.x, 
                                triangle.p2.y, 
@@ -113,17 +120,17 @@ class SupportShape(Shape[Support]):
                                outline=self.COLOR, 
                                width=self.BORDER, 
                                tags=[*self.TAGS, str(support.id)])
-        self.tk_shapes[tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
+        self.tk_shapes[self.triangle_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
         if support.constraints == 1:
             line = self.line_coordinates
-            tk_id = diagram.create_line(line.start.x, 
+            self.line_id = diagram.create_line(line.start.x, 
                                 line.start.y, 
                                 line.end.x, 
                                 line.end.y, 
                                 fill=self.COLOR, 
                                 width=self.BORDER, 
                                 tags=[*self.TAGS, str(support.id), self.LINE_TAG])
-            self.tk_shapes[tk_id] = Polygon(line.start, line.end)
+            self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
@@ -162,8 +169,14 @@ class SupportShape(Shape[Support]):
     def label_visible(self) -> bool:
         return TwlApp.settings().show_support_labels.get()
 
+    def scale(self, factor: float):
+        super().scale(factor)
+        self.diagram.itemconfig(self.triangle_id, width=self.BORDER * factor)
+        if self.component.constraints == 1:
+            self.diagram.itemconfig(self.line_id, width=self.BORDER * factor)
 
-class ForceShape(Shape[Force]):
+
+class ForceShape(ComponentShape[Force]):
 
     TAG: str = "force"
 
@@ -177,7 +190,7 @@ class ForceShape(Shape[Force]):
     def __init__(self, force: Force, diagram: 'ModelDiagram') -> None:
         super().__init__(force, diagram)
         arrow = self.arrow_coords()
-        tk_id = diagram.create_line(arrow.start.x, 
+        self.arrow_id = diagram.create_line(arrow.start.x, 
                             arrow.start.y, 
                             arrow.end.x, 
                             arrow.end.y, 
@@ -186,7 +199,7 @@ class ForceShape(Shape[Force]):
                             arrowshape=self.ARROW_SHAPE, 
                             fill=self.COLOR, 
                             tags=[*self.TAGS, str(force.id)])
-        self.tk_shapes[tk_id] = Polygon(arrow.start, arrow.end)
+        self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.arrow_coords()) < self.WIDTH/2
@@ -215,6 +228,11 @@ class ForceShape(Shape[Force]):
     def label_visible(self) -> bool:
         return TwlApp.settings().show_force_labels.get()
 
+    def scale(self, factor: float):
+        super().scale(factor)
+        scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
+        self.diagram.itemconfig(self.arrow_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
+
 
 class ModelDiagram(TwlDiagram):
 
@@ -231,8 +249,8 @@ class ModelDiagram(TwlDiagram):
         for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
 
         self.tag_raise(NodeShape.TAG)
-        self.tag_raise(Shape.LABEL_BG_TAG)
-        self.tag_raise(Shape.LABEL_TAG)
+        self.tag_raise(ComponentShape.LABEL_BG_TAG)
+        self.tag_raise(ComponentShape.LABEL_TAG)
 
         self.refresh()
 

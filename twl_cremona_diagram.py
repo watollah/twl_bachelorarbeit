@@ -3,46 +3,102 @@ from tkinter import ttk
 import math
 
 from twl_app import TwlApp
-from twl_update import TwlWidget
-from twl_math import Point, Line
+from twl_style import Colors
+from twl_diagram import TwlDiagram, Shape, ComponentShape
+from twl_math import Point, Line, Polygon
 from twl_components import Component, Node, Beam, Support, Force
 
 
-class CremonaDiagram(tk.Canvas, TwlWidget):
+class BaseLineShape(Shape):
+
+    TAG = "baseline"
+    LENGTH = 20
+    SPACING = 20
+    DASH = (2, 1, 1, 1)
+    WIDTH = 1
+
+    def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
+        super().__init__(diagram)
+        line = self.get_line_coords(pos)
+        tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAG)
+        self.tk_shapes[tk_id] = Polygon(line.start, line.end)
+
+    def get_line_coords(self, pos: Point) -> Line:
+        return Line(Point(pos.x - self.LENGTH - self.SPACING, pos.y), Point(pos.x + self.LENGTH + self.SPACING, pos.y))
+
+
+class ResultShape(ComponentShape[Force]):
+
+    TAG: str = "result"
+    WIDTH: int = 2
+    SELECTED_WIDTH = 3
+    ARROW_SHAPE = (12,12,4)
+
+    SELECTED_COLOR = Colors.SELECTED
+    HIGHLIGHT_COLOR = Colors.DARK_SELECTED
+
+    def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
+        self.start = start
+        self.end = end
+        self.line_id = diagram.create_line(start.x, start.y,
+                            end.x, end.y,
+                            width=self.WIDTH,
+                            arrow=tk.LAST, 
+                            arrowshape=self.ARROW_SHAPE, 
+                            tags=force.id)
+        super().__init__(force, diagram)
+        self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
+
+    def line_coords(self):
+        return Line(self.start, self.end)
+
+    def is_at(self, x: int, y: int) -> bool:
+        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
+
+    def default_style(self, *tags: str) -> dict[str, str]:
+        return {"fill": self.COLOR, "width": str(self.WIDTH)}
+
+    def selected_style(self, *tags: str) -> dict[str, str]:
+        return {"fill": self.SELECTED_COLOR, "width": str(self.SELECTED_WIDTH)}
+
+    def highlight(self):
+        for tk_id in self.tk_shapes.keys():
+            tags = self.diagram.gettags(tk_id)
+            if self.LABEL_TAG in tags:
+                self.diagram.itemconfig(tk_id, fill=self.HIGHLIGHT_COLOR)
+            elif self.LABEL_BG_TAG not in tags:
+                self.diagram.itemconfig(tk_id, fill=self.HIGHLIGHT_COLOR)
+
+    @property
+    def label_position(self) -> Point:
+        return self.line_coords().midpoint()
+
+    def label_visible(self) -> bool:
+        return True
+
+    def scale(self, factor: float):
+        super().scale(factor)
+        scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
+        self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
+
+
+class CremonaDiagram(TwlDiagram):
 
     START_POINT = Point(800, 50)
     SCALE = 6
 
-    BASE_LINE_TAG = "baseline"
-    BASE_LINE_LENGTH = 20
-    BASE_LINE_SPACING = 20
-    BASE_LINE_DASH = (2, 1, 1, 1)
-    BASE_LINE_WIDTH = 1
-
-    LINE_WIDTH = 2
-    SELECTED_LINE_WIDTH = 3
-    ARROW_SHAPE = (12,12,4)
-
-    SPACING_CHECK_PADDING = 5
-
     def __init__(self, master):
-        tk.Canvas.__init__(self, master)
-        self.configure(background="white", highlightthickness=0)
+        super().__init__(master)
         self.support_forces: dict[Force, Support] = {}
         self.beam_forces: dict[Force, Beam] = {}
         self.forces_for_nodes: dict[Node, dict[Force, Component]] = {}
-        self.steps: list[tuple[int, Force, Component]] = []
+        self.steps: list[tuple[ResultShape, Component]] = []
 
-        self.force_spacing_check = ttk.Checkbutton(master, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
-        self.force_spacing_check.place(x=self.winfo_width() - self.SPACING_CHECK_PADDING, 
-                                       y=self.winfo_height() - self.SPACING_CHECK_PADDING, 
-                                       anchor=tk.SE)
-        self.bind("<Configure>", self.on_resize)
-    
-    def on_resize(self, event):
-        self.force_spacing_check.place(x=self.winfo_width() - self.SPACING_CHECK_PADDING, 
-                                       y=self.winfo_height() - self.SPACING_CHECK_PADDING, 
-                                       anchor=tk.SE)
+    def create_bottom_bar(self) -> tk.Frame:
+        bottom_bar = super().create_bottom_bar()
+        force_spacing_check = ttk.Checkbutton(bottom_bar, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
+        force_spacing_check.pack(padx=self.UI_PADDING)
+        return bottom_bar
 
     def update(self) -> None:
         self.delete("all")
@@ -52,16 +108,16 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
         self.forces_for_nodes = {node: self.get_forces_for_node(node) for node in TwlApp.model().nodes}
         self.steps = []
         if TwlApp.settings().force_spacing.get():
-            self.draw_baseline(pos)
+            self.shapes.append(BaseLineShape(pos, self))
         for force in TwlApp.model().forces:
             pos = self.draw_line(pos, force, force)
         if TwlApp.settings().force_spacing.get():
-            self.draw_baseline(pos)
-            pos = Point(pos.x + self.BASE_LINE_SPACING, pos.y)
+            self.shapes.append(BaseLineShape(pos, self))
+            pos = Point(pos.x + BaseLineShape.SPACING, pos.y)
         for force, support in self.support_forces.items():
             pos = self.draw_line(pos, force, support)
         if TwlApp.settings().force_spacing.get():
-            pos = Point(pos.x - 2 * self.BASE_LINE_SPACING, pos.y)
+            pos = Point(pos.x - 2 * BaseLineShape.SPACING, pos.y)
         node = self.find_next_node()
         while node:
             start_angle = self.get_start_angle(self.forces_for_nodes[node])
@@ -70,16 +126,17 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
             pos = Point(round(start_coords[2]), round(start_coords[3]))
             for force, component in sorted_forces.items():
                 if type(component) == Support or type(component) == Force:
-                    line_id = self.find_withtag(force.id)[0]
-                    self.steps.append((line_id, force, component))
-                    coords = self.coords(line_id)
+                    existing_shape = self.shape_for(force)
+                    assert(isinstance(existing_shape, ResultShape))
+                    self.steps.append((existing_shape, component))
+                    pos = existing_shape.end
                     if TwlApp.settings().force_spacing.get():
-                        coords[2] = round(coords[2] - (coords[2] - self.START_POINT.x) - self.BASE_LINE_SPACING)
-                    pos = Point(round(coords[2]), round(coords[3]))
+                        pos = Point(pos.x - (pos.x - self.START_POINT.x) - BaseLineShape.SPACING, pos.y)
                 else:
                     pos = self.draw_line(pos, force, component)
             self.forces_for_nodes.pop(node)
             node = self.find_next_node()
+            self.update_scrollregion()
 
     def find_next_node(self):
         return next((node for node in self.forces_for_nodes.keys() if self.count_unknown_on_node(node) <= 2), None)
@@ -108,14 +165,10 @@ class CremonaDiagram(tk.Canvas, TwlWidget):
     def find_start_node(self):
         return next(node for node in TwlApp.model().nodes if len(node.beams) <= 2)
 
-    def draw_baseline(self, pos: Point):
-        self.create_line(pos.x - self.BASE_LINE_LENGTH - self.BASE_LINE_SPACING, pos.y, pos.x + self.BASE_LINE_LENGTH + self.BASE_LINE_SPACING, pos.y, dash=self.BASE_LINE_DASH, tags=self.BASE_LINE_TAG)
-
     def draw_line(self, start: Point, force: Force, component: Component) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
-        self.steps.append((self.create_line(start.x, start.y, end.x, end.y, width=self.LINE_WIDTH, arrow=tk.LAST, arrowshape=self.ARROW_SHAPE, tags=force.id), force, component))
+        shape = ResultShape(start, end, force, self)
+        self.shapes.append(shape)
+        self.steps.append((shape, component))
         return end
-
-    def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
-        return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))
