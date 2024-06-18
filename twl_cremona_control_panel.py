@@ -34,6 +34,9 @@ class ControlPanel(ttk.Frame, TwlWidget):
         self._scale = self.create_scale()
         self._speed_selection = self.create_speed_selection()
 
+        self.bind("<space>", lambda *ignore: self.play_state.set(not self.play_state.get()))
+        self.play_state.trace_add("write", lambda *ignore: self.focus_set())
+
     def create_label(self):
         label_frame = ttk.Frame(self, width=400, height=30, style="ControlPanel.TFrame")
         label_frame.pack_propagate(False)

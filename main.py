@@ -51,13 +51,12 @@ class TwlTool(tk.Tk, TwlWidget):
             self.is_saved.set(False)
 
     def tab_changed(self, event):
-        selected_tab = event.widget.select()
-        tab_index: int = event.widget.index(selected_tab)
-        TwlApp.active_tab = tab_index
-        print(f"Tab changed! Selected: {tab_index}")
-        if tab_index == 1 or tab_index == 2:
+        selected_tab = event.widget.nametowidget(event.widget.select())
+        if isinstance(selected_tab, CremonaTab) or isinstance(selected_tab, ResultTab):
             TwlApp.solver().solve()
             TwlApp.update_manager().update_results()
+        if isinstance(selected_tab, CremonaTab):
+            selected_tab.control_panel.focus_set()
 
     def create_menu_bar(self):
         menubar = tk.Menu(self)

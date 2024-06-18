@@ -6,8 +6,6 @@ from twl_solver import Solver
 
 class TwlApp:
 
-    active_tab: int = 0
-
     _update_manager = None
     _settings = None
     _model = None
