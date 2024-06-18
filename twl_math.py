@@ -227,3 +227,8 @@ class Polygon:
         for point in self.points: 
             point.x += x
             point.y += y
+
+    def midpoint(self):
+        x = sum(point.x for point in self.points) / len(self.points)
+        y = sum(point.y for point in self.points) / len(self.points)
+        return Point(round(x), round(y))

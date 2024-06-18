@@ -1,5 +1,5 @@
 from twl_app import TwlApp
-from twl_math import Point, Line
+from twl_math import Point, Line, Polygon
 from twl_components import Component, Node, Beam, Support, Force
 
 
@@ -13,6 +13,7 @@ class CremonaAlgorithm:
 
         steps: list[tuple[Node | None, Force, Component]] = [(None, force, force) for force in TwlApp.model().forces]
         steps.extend([(None, force, support) for force, support in support_forces.items()])
+        CremonaAlgorithm._sort_outside_forces(steps)
         node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
         while node:
             start_angle = CremonaAlgorithm._get_start_angle(forces_for_nodes[node], steps)
@@ -24,6 +25,14 @@ class CremonaAlgorithm:
             node = step[0].id if step[0] else "None"
             print(f"Step {i}: {node}, {step[1].id}, {step[2].id}")
         return steps
+
+    @staticmethod
+    def _sort_outside_forces(steps: list[tuple[Node | None, Force, Component]]):
+        points = {force: Point(force.node.x, force.node.y) for node, force, component in steps}
+        midpoint = Polygon(*points.values()).midpoint()
+        angles = {force: Line(midpoint, points[force]).angle() for force in points.keys()}
+        start_angle = angles[TwlApp.model().forces[0]]
+        steps.sort(key=lambda step: (angles[step[1]] - start_angle) % 360)
 
     @staticmethod
     def _get_forces_for_node(node: Node, support_forces: dict[Force, Support], beam_forces: dict[Force, Beam]) -> dict[Force, Component]:
