@@ -7,6 +7,9 @@ class CremonaAlgorithm:
 
     @staticmethod
     def get_steps() -> list[tuple[Node | None, Force, Component]]:
+        if TwlApp.model().is_empty() or not TwlApp.model().statically_determined():
+            return []
+
         support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         forces_for_nodes = {node: CremonaAlgorithm._get_forces_for_node(node, support_forces, beam_forces) for node in TwlApp.model().nodes}
