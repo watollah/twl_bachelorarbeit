@@ -9,7 +9,7 @@ class CremonaModelDiagram(ModelDiagram):
 
     def __init__(self, master):
         super().__init__(master)
-        self.steps: list[tuple[Node | None, Force, Component]] = []
+        self.steps: list[tuple[Node | None, Force, Component, bool]] = []
 
     def update(self) -> None:
         super().update()
@@ -19,7 +19,7 @@ class CremonaModelDiagram(ModelDiagram):
         for shape in self.get_component_shapes():
             self.highlight(shape, Colors.BLACK, Colors.WHITE)
         if 0 < selected_step < len(self.steps) + 1:
-            node, force, component = self.steps[selected_step - 1]
+            node, force, component, bool = self.steps[selected_step - 1]
             if node:
                 self.highlight(self.shape_for(node), Colors.DARK_SELECTED, Colors.SELECTED)
                 for shape in self.shapes_for_node(force.node):

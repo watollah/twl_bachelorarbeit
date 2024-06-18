@@ -6,7 +6,7 @@ from twl_components import Component, Node, Beam, Support, Force
 class CremonaAlgorithm:
 
     @staticmethod
-    def get_steps() -> list[tuple[Node | None, Force, Component]]:
+    def get_steps() -> list[tuple[Node | None, Force, Component, bool]]:
         if TwlApp.model().is_empty() or not TwlApp.model().statically_determined():
             return []
 
@@ -14,24 +14,33 @@ class CremonaAlgorithm:
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         forces_for_nodes = {node: CremonaAlgorithm._get_forces_for_node(node, support_forces, beam_forces) for node in TwlApp.model().nodes}
 
-        steps: list[tuple[Node | None, Force, Component]] = [(None, force, force) for force in TwlApp.model().forces]
-        steps.extend([(None, force, support) for force, support in support_forces.items()])
+        steps: list[tuple[Node | None, Force, Component, bool]] = [(None, force, force, False) for force in TwlApp.model().forces]
+        steps.extend([(None, force, support, False) for force, support in support_forces.items()])
         CremonaAlgorithm._sort_outside_forces(steps)
         node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
         while node:
             start_angle = CremonaAlgorithm._get_start_angle(forces_for_nodes[node], steps)
             sorted_forces = dict(sorted(forces_for_nodes[node].items(), key=lambda item: (item[0].angle - start_angle) % 360))
-            steps.extend([(node, force, component) for force, component in sorted_forces.items()])
+            to_be_added = []
+            for force, component in sorted_forces.items():
+                if any(step[1].id == force.id for step in steps):
+                    steps.extend(to_be_added)
+                    to_be_added.clear()
+                    steps.append((node, force, component, False))
+                else:
+                    steps.append((node, force, component, True))
+                    to_be_added.append((node, force, component, False))
+            steps.extend(to_be_added)
             forces_for_nodes.pop(node)
             node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
         for i, step in enumerate(steps):
             node = step[0].id if step[0] else "None"
-            print(f"Step {i}: {node}, {step[1].id}, {step[2].id}")
+            print(f"Step {i}: {node}, {step[1].id}, {step[2].id}, {step[3]}")
         return steps
 
     @staticmethod
-    def _sort_outside_forces(steps: list[tuple[Node | None, Force, Component]]):
-        points = {force: Point(force.node.x, force.node.y) for node, force, component in steps}
+    def _sort_outside_forces(steps: list[tuple[Node | None, Force, Component, bool]]):
+        points = {force: Point(force.node.x, force.node.y) for node, force, component, sketch in steps}
         midpoint = Polygon(*points.values()).midpoint()
         angles = {force: Line(midpoint, points[force]).angle() for force in points.keys()}
         start_angle = angles[TwlApp.model().forces[0]]
@@ -55,17 +64,17 @@ class CremonaAlgorithm:
         return forces
 
     @staticmethod
-    def _find_next_node(forces_for_nodes: dict[Node, dict[Force, Component]], steps: list[tuple[Node | None, Force, Component]]):
+    def _find_next_node(forces_for_nodes: dict[Node, dict[Force, Component]], steps: list[tuple[Node | None, Force, Component, bool]]):
         return next((node for node in forces_for_nodes.keys() if CremonaAlgorithm._count_unknown_on_node(node, list(forces_for_nodes[node].keys()), steps) <= 2), None)
 
     @staticmethod
-    def _count_occurences(force: Force, steps: list[tuple[Node | None, Force, Component]]):
+    def _count_occurences(force: Force, steps: list[tuple[Node | None, Force, Component, bool]]):
         return [step[1].id for step in steps].count(force.id)
 
     @staticmethod
-    def _count_unknown_on_node(node: Node, forces_for_node: list[Force], steps: list[tuple[Node | None, Force, Component]]) -> int:
+    def _count_unknown_on_node(node: Node, forces_for_node: list[Force], steps: list[tuple[Node | None, Force, Component, bool]]) -> int:
         return sum(CremonaAlgorithm._count_occurences(force, steps) == 0 for force in forces_for_node)
 
     @staticmethod
-    def _get_start_angle(forces: dict[Force, Component], steps: list[tuple[Node | None, Force, Component]]):
+    def _get_start_angle(forces: dict[Force, Component], steps: list[tuple[Node | None, Force, Component, bool]]):
         return next((force.angle for force in forces.keys() if CremonaAlgorithm._count_occurences(force, steps) > 0 and force.strength > 0.001), 0)

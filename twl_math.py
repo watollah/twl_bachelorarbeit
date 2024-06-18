@@ -113,10 +113,11 @@ class Line:
 
     def extend(self, amount):
         length = self.length()
-        dx = (self.end.x - self.start.x) / length
-        dy = (self.end.y - self.start.y) / length
-        self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
-        self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
+        if length > 0:
+            dx = (self.end.x - self.start.x) / length
+            dy = (self.end.y - self.start.y) / length
+            self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
+            self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
 
     def slope(self) -> float | None:
         if self.end.x - self.start.x == 0:

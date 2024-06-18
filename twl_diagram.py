@@ -410,6 +410,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
         return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))
 
+    def find_withtags(self, *tags: str) -> int | None:
+        return next((id for id in self.find_all() if set(tags).issubset(set(self.gettags(id)))), None)
+
     def find_except_withtags(self, *tagOrIds: str | int) -> tuple[int, ...]:
         return tuple([id for id in self.find_all() if all(id != tagOrId and tagOrId not in self.gettags(id) for tagOrId in tagOrIds)])
 

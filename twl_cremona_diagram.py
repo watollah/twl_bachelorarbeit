@@ -21,7 +21,7 @@ class BaseLineShape(Shape):
     def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
         super().__init__(diagram)
         line = self.get_line_coords(pos)
-        tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAG)
+        tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAGS)
         self.tk_shapes[tk_id] = Polygon(line.start, line.end)
 
     def get_line_coords(self, pos: Point) -> Line:
@@ -46,7 +46,7 @@ class ResultShape(ComponentShape[Force]):
                             width=self.WIDTH,
                             arrow=tk.LAST, 
                             arrowshape=self.ARROW_SHAPE, 
-                            tags=force.id)
+                            tags=[*self.TAGS, str(force.id)])
         super().__init__(force, diagram)
         self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
 
@@ -55,12 +55,6 @@ class ResultShape(ComponentShape[Force]):
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
-
-    def default_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.COLOR, "width": str(self.WIDTH)}
-
-    def selected_style(self, *tags: str) -> dict[str, str]:
-        return {"fill": self.SELECTED_COLOR, "width": str(self.SELECTED_WIDTH)}
 
     def highlight(self):
         for tk_id in self.tk_shapes.keys():
@@ -83,6 +77,36 @@ class ResultShape(ComponentShape[Force]):
         self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
 
 
+class SketchShape(ComponentShape[Force]):
+
+    TAG: str = "sketch"
+    DASH = (2, 2)
+    WIDTH: int = 1
+    EXTEND = 40
+
+    def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
+        line = Line(start, end)
+        line.extend(self.EXTEND)
+        self.start = line.start
+        self.end = line.end
+        self.line_id = diagram.create_line(self.start.x, self.start.y,
+                            self.end.x, self.end.y,
+                            width=self.WIDTH,
+                            dash=self.DASH,
+                            tags=[*self.TAGS, str(force.id)])
+        super().__init__(force, diagram)
+        self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
+
+    def line_coords(self):
+        return Line(self.start, self.end)
+
+    def is_at(self, x: int, y: int) -> bool:
+        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
+
+    def label_visible(self) -> bool:
+        return False
+
+
 class CremonaDiagram(TwlDiagram):
 
     START_POINT = Point(800, 50)
@@ -102,28 +126,40 @@ class CremonaDiagram(TwlDiagram):
         self.clear()
         self.steps = CremonaAlgorithm.get_steps()
         pos = self.START_POINT
-        for node, force, component in self.steps:
-            if node and self.find_withtag(force.id):
-                coords = self.coords(self.find_withtag(force.id)[0])
+        pre_sketch_pos = None
+        for node, force, component, sketch in self.steps:
+            existing_force_shape = self.find_withtags(ResultShape.TAG, force.id)
+            if node and existing_force_shape:
+                coords = self.coords(existing_force_shape)
                 pos = Point(round(coords[2]), round(coords[3]))
                 if isinstance(component, Support) or isinstance(component, Force):
                     continue
-            pos = self.draw_force(pos, force, component)
+            if sketch:
+                if not pre_sketch_pos:
+                    pre_sketch_pos = Point(pos.x, pos.y)
+            else:
+                if pre_sketch_pos:
+                    pos = Point(pre_sketch_pos.x, pre_sketch_pos.y)
+                    pre_sketch_pos = None
+            pos = self.draw_force(pos, force, component, sketch)
         if self.steps and TwlApp.settings().force_spacing.get():
             self.force_spacing()
         self.update_scrollregion()
 
-    def draw_force(self, start: Point, force: Force, component: Component) -> Point:
+    def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)
         start = Point(start.x, start.y)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
-        self.shapes.append(ResultShape(start, end, force, self))
-        return end
+        if sketch:
+            self.shapes.append(SketchShape(Point(start.x, start.y), Point(end.x, end.y), force, self))
+        else:
+            self.shapes.append(ResultShape(Point(start.x, start.y), Point(end.x, end.y), force, self))
+        return Point(end.x, end.y)
 
     def force_spacing(self):
-        force_forces = [force for node, force, component in self.steps if not node and isinstance(component, Force)]
+        force_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Force)]
         [self.shape_for(force).move(BaseLineShape.SPACING, 0) for force in force_forces]
-        support_forces = [force for node, force, component in self.steps if not node and isinstance(component, Support)]
+        support_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Support)]
         [self.shape_for(force).move(2 * BaseLineShape.SPACING, 0) for force in support_forces]
         self.shapes.append(BaseLineShape(Point(self.START_POINT.x + BaseLineShape.SPACING, self.START_POINT.y), self))
         coords = self.coords(self.find_withtag(force_forces[len(force_forces) - 1].id)[0])
@@ -140,7 +176,7 @@ class CremonaDiagram(TwlDiagram):
         for shape in self.selection.copy():
             shape.deselect()
         if 0 < selected_step < len(self.steps) + 1:
-            node, force, component = self.steps[selected_step - 1]
+            node, force, component, bool = self.steps[selected_step - 1]
             if node:
                 for shape in self.shapes_for_node(force.node):
                     shape.select()
