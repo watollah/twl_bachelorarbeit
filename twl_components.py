@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar, Type, cast, Generic
+from enum import Enum
 
 from twl_math import Point, Line
 from twl_update import UpdateManager
@@ -221,8 +222,38 @@ class StrengthAttribute(Attribute['Force', float]):
         try:
             value = float(value)
         except ValueError:
-            return False, "Force must be a number."
+            return False, "Strength must be a number."
         return True, ""
+
+
+class ResultAttribute(Attribute['Result', float]):
+
+    ID = "result"
+    NAME = "Result"
+    UNIT = "kN"
+    EDITABLE: bool = False
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Result must be a number."
+        return True, ""
+
+
+class ForceType(Enum):
+
+    COMPRESSIVE = "D"
+    ZERO = "O"
+    TENSILE = "Z"
+
+
+class ForceTypeAttribute(Attribute['Result', ForceType]):
+
+    ID = "strength"
+    NAME = "Strength"
+    UNIT = ""
+    EDITABLE: bool = False
 
 
 class Component(ABC):
@@ -377,6 +408,25 @@ class Force(Component):
 
     def gen_id(self, i: int) -> str:
         return f"F{i}"
+
+
+class Result(Component):
+
+    TAG: str = "result"
+
+    force_type: AttributeDescriptor[ForceType] = AttributeDescriptor("_force_type")
+    result: AttributeDescriptor[float] = AttributeDescriptor("_result")
+
+    def __init__(self, model: 'Model', force_type: ForceType, result: float=1.0):
+        super().__init__(model)
+        self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, force_type)
+        self._result: ResultAttribute = ResultAttribute(self, result)
+
+    @classmethod
+    def dummy(cls, id: str="dummy_result", force_type: ForceType=ForceType.ZERO, result: float=1.0):
+        dummy_result: Result = cls(Model(UpdateManager()), force_type, result)
+        dummy_result.id = id
+        return dummy_result
 
 
 class Model:

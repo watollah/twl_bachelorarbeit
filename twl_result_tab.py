@@ -29,12 +29,17 @@ class ResultTab(ttk.Frame):
         TwlApp.update_manager().result_widgets.append(diagram)
 
     def create_tables(self, frame: ttk.Frame):
-        nodes_entry = ToggledFrame(frame, "Support Forces")
+        beams_entry = ToggledFrame(frame, "Beams")
+        beams_entry.pack(fill="x")
+        beams_table = TwlTable(beams_entry.content, TwlApp.model().beams)
+        beams_table.pack(fill="both")
+
+        nodes_entry = ToggledFrame(frame, "Supports")
         nodes_entry.pack(fill="x")
         nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes)
         nodes_table.pack(fill="both")
 
-        beams_entry = ToggledFrame(frame, "Beam Forces")
+        beams_entry = ToggledFrame(frame, "Forces")
         beams_entry.pack(fill="x")
         beams_table = TwlTable(beams_entry.content, TwlApp.model().beams)
         beams_table.pack(fill="both")
