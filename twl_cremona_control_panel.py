@@ -80,8 +80,8 @@ class ControlPanel(ttk.Frame, TwlWidget):
         elif selected_step == len(self.cremona_diagram.steps) + 1:
             self.label_text.set("Cremona diagram complete!")
         else:
-            node, force, component, bool = self.steps[selected_step - 1]
-            self.label_text.set(f"Step {selected_step}: {f"Node {node.id}, {force.id}" if node else force.id}")
+            node, force, component, sketch = self.steps[selected_step - 1]
+            self.label_text.set(f"Step {selected_step}: {"Sketch " if sketch else ""}{f"Node {node.id}, {force.id}" if node else force.id}")
 
     def run_animation(self):
         if not self.play_state.get():

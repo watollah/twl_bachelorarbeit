@@ -166,24 +166,37 @@ class CremonaDiagram(TwlDiagram):
         self.shapes.append(BaseLineShape(Point(round(coords[2]), round(coords[3])), self))
 
     def display_step(self, selected_step: int):
+        self.step_visibility(selected_step)
+        self.step_highlighting(selected_step)
+
+    def step_visibility(self, selected_step: int):
         visible: set[Shape] = set()
         for i, step in enumerate(self.steps):
-            shape = self.shape_for(step[1])
+            shape_type = SketchShape if step[3] else ResultShape
+            shape = self.shape_of_type_for(shape_type, step[1])
             if i <= selected_step - 1 and not round(step[1].strength, 2) == 0:
                 visible.add(shape)
             shape.set_visible(shape in visible)
 
-        for shape in self.selection.copy():
-            shape.deselect()
+    def step_highlighting(self, selected_step: int):
+        for shape in self.get_component_shapes():
+            self.highlight(shape, Colors.BLACK)
         if 0 < selected_step < len(self.steps) + 1:
-            node, force, component, bool = self.steps[selected_step - 1]
+            node, force, component, sketch = self.steps[selected_step - 1]
             if node:
-                for shape in self.shapes_for_node(force.node):
-                    shape.select()
-            current_shape = self.shape_for(force)
-            assert(isinstance(current_shape, ResultShape))
-            current_shape.select()
-            current_shape.highlight()
+                print(20 * "-" + node.id + 20 * "-")
+                [print(f"{type(shape)}" + " " + shape.component.id) for shape in self.shapes_for_node(node)]
+                [self.highlight(shape, Colors.SELECTED) for shape in self.shapes_for_node(node)]
+            shape_type = SketchShape if sketch else ResultShape
+            self.highlight(self.shape_of_type_for(shape_type, force), Colors.DARK_SELECTED)
+
+    def highlight(self, shape: ComponentShape, color: str):
+        for tk_id in shape.tk_shapes.keys():
+            tags = self.gettags(tk_id)
+            if shape.LABEL_TAG in tags:
+                self.itemconfig(tk_id, fill=color)
+            elif shape.LABEL_BG_TAG not in tags:
+                self.itemconfig(tk_id, fill=color)
 
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
-        return [self.shape_for(step[1]) for step in self.steps if step[0] == node]
+        return [self.shape_of_type_for(SketchShape if step[3] else ResultShape, step[1]) for step in self.steps if step[0] == node]
