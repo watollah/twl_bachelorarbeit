@@ -404,11 +404,11 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         shape = self.find_shape_of_type_at(component_type, x, y)
         return shape.component if shape else None
 
-    def shape_for(self, component: C) -> ComponentShape[C]:
-        return next(filter(lambda shape: shape.component == component, self.get_component_shapes()))
+    def shapes_for(self, component: C) -> list[ComponentShape[C]]:
+        return [shape for shape in self.get_component_shapes() if shape.component == component]
 
-    def shape_of_type_for(self, shape_type: Type, component: C) -> ComponentShape[C]:
-        return next(filter(lambda shape: isinstance(shape, shape_type) and shape.component == component, self.get_component_shapes()))
+    def shapes_of_type_for(self, shape_type: Type, component: C) -> list[ComponentShape[C]]:
+        return [shape for shape in self.shapes_for(component) if isinstance(shape, shape_type)]
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
         return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))

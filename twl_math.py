@@ -111,13 +111,18 @@ class Line:
         mid_y = (self.start.y + self.end.y) // 2
         return Point(mid_x, mid_y)
 
-    def extend(self, amount):
+    def resize(self, amount):
         length = self.length()
         if length > 0:
-            dx = (self.end.x - self.start.x) / length
-            dy = (self.end.y - self.start.y) / length
-            self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
-            self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
+            if length + 2 * amount > 0:
+                dx = (self.end.x - self.start.x) / length
+                dy = (self.end.y - self.start.y) / length
+                self.start = Point(self.start.x - amount * dx, self.start.y - amount * dy)
+                self.end = Point(self.end.x + amount * dx, self.end.y + amount * dy)
+            else:
+                midpoint = self.midpoint()
+                self.start = midpoint
+                self.end = midpoint
 
     def slope(self) -> float | None:
         if self.end.x - self.start.x == 0:

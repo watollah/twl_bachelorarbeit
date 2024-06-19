@@ -79,7 +79,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
             self.label_text.set("")
         elif selected_step == len(self.cremona_diagram.steps) + 1:
             self.label_text.set("Cremona diagram complete!")
-        else:
+        else: #todo: add text if force is 0
             node, force, component, sketch = self.steps[selected_step - 1]
             self.label_text.set(f"Step {selected_step}: {"Sketch " if sketch else ""}{f"Node {node.id}, {force.id}" if node else force.id}")
 

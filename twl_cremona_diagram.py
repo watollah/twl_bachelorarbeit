@@ -20,23 +20,21 @@ class BaseLineShape(Shape):
 
     def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
         super().__init__(diagram)
-        line = self.get_line_coords(pos)
+        line = self.line_coords(pos)
         tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAGS)
         self.tk_shapes[tk_id] = Polygon(line.start, line.end)
 
-    def get_line_coords(self, pos: Point) -> Line:
+    def line_coords(self, pos: Point) -> Line:
         return Line(Point(pos.x - self.LENGTH - self.SPACING, pos.y), Point(pos.x + self.LENGTH + self.SPACING, pos.y))
 
 
 class ResultShape(ComponentShape[Force]):
 
     TAG: str = "result"
+
     WIDTH: int = 2
     SELECTED_WIDTH = 3
     ARROW_SHAPE = (12,12,4)
-
-    SELECTED_COLOR = Colors.SELECTED
-    HIGHLIGHT_COLOR = Colors.DARK_SELECTED
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         self.start = start
@@ -56,14 +54,6 @@ class ResultShape(ComponentShape[Force]):
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
-    def highlight(self):
-        for tk_id in self.tk_shapes.keys():
-            tags = self.diagram.gettags(tk_id)
-            if self.LABEL_TAG in tags:
-                self.diagram.itemconfig(tk_id, fill=self.HIGHLIGHT_COLOR)
-            elif self.LABEL_BG_TAG not in tags:
-                self.diagram.itemconfig(tk_id, fill=self.HIGHLIGHT_COLOR)
-
     @property
     def label_position(self) -> Point:
         return self.line_coords().midpoint()
@@ -80,13 +70,14 @@ class ResultShape(ComponentShape[Force]):
 class SketchShape(ComponentShape[Force]):
 
     TAG: str = "sketch"
+
     DASH = (2, 2)
     WIDTH: int = 1
     EXTEND = 40
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         line = Line(start, end)
-        line.extend(self.EXTEND)
+        line.resize(self.EXTEND)
         self.start = line.start
         self.end = line.end
         self.line_id = diagram.create_line(self.start.x, self.start.y,
@@ -102,9 +93,6 @@ class SketchShape(ComponentShape[Force]):
 
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
-
-    def label_visible(self) -> bool:
-        return False
 
 
 class CremonaDiagram(TwlDiagram):
@@ -158,9 +146,9 @@ class CremonaDiagram(TwlDiagram):
 
     def force_spacing(self):
         force_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Force)]
-        [self.shape_for(force).move(BaseLineShape.SPACING, 0) for force in force_forces]
+        [self.shapes_for(force)[0].move(BaseLineShape.SPACING, 0) for force in force_forces]
         support_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Support)]
-        [self.shape_for(force).move(2 * BaseLineShape.SPACING, 0) for force in support_forces]
+        [self.shapes_for(force)[0].move(2 * BaseLineShape.SPACING, 0) for force in support_forces]
         self.shapes.append(BaseLineShape(Point(self.START_POINT.x + BaseLineShape.SPACING, self.START_POINT.y), self))
         coords = self.coords(self.find_withtag(force_forces[len(force_forces) - 1].id)[0])
         self.shapes.append(BaseLineShape(Point(round(coords[2]), round(coords[3])), self))
@@ -173,7 +161,7 @@ class CremonaDiagram(TwlDiagram):
         visible: set[Shape] = set()
         for i, step in enumerate(self.steps):
             shape_type = SketchShape if step[3] else ResultShape
-            shape = self.shape_of_type_for(shape_type, step[1])
+            shape = self.shapes_of_type_for(shape_type, step[1])[0]
             if i <= selected_step - 1 and not round(step[1].strength, 2) == 0:
                 visible.add(shape)
             shape.set_visible(shape in visible)
@@ -184,11 +172,9 @@ class CremonaDiagram(TwlDiagram):
         if 0 < selected_step < len(self.steps) + 1:
             node, force, component, sketch = self.steps[selected_step - 1]
             if node:
-                print(20 * "-" + node.id + 20 * "-")
-                [print(f"{type(shape)}" + " " + shape.component.id) for shape in self.shapes_for_node(node)]
                 [self.highlight(shape, Colors.SELECTED) for shape in self.shapes_for_node(node)]
-            shape_type = SketchShape if sketch else ResultShape
-            self.highlight(self.shape_of_type_for(shape_type, force), Colors.DARK_SELECTED)
+            shape = self.shapes_of_type_for(SketchShape if sketch else ResultShape, force)[0]
+            self.highlight(shape, Colors.DARK_SELECTED)
 
     def highlight(self, shape: ComponentShape, color: str):
         for tk_id in shape.tk_shapes.keys():
@@ -199,4 +185,4 @@ class CremonaDiagram(TwlDiagram):
                 self.itemconfig(tk_id, fill=color)
 
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
-        return [self.shape_of_type_for(SketchShape if step[3] else ResultShape, step[1]) for step in self.steps if step[0] == node]
+        return [self.shapes_of_type_for(SketchShape if step[3] else ResultShape, step[1])[0] for step in self.steps if step[0] == node]

@@ -12,7 +12,7 @@ class ResultDiagram(ModelDiagram):
         for force, component in TwlApp.solver().solution.items():
             if isinstance(component, Beam):
                 strength = round(force.strength, 2)
-                shape = self.shape_for(component)
+                shape = self.shapes_for(component)[0]
                 if strength < 0:
                     color = Colors.RED
                     symbol = "D"
