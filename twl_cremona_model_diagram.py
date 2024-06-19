@@ -13,7 +13,7 @@ class BeamForceShape(ComponentShape[Beam]):
 
     TAG: str = "beam_force"
 
-    END_OFFSET = -30
+    END_OFFSET = -40
     WIDTH = 1
     D_ARROW = (12,1,10)
     Z_ARROW = (12,12,10)
@@ -69,6 +69,8 @@ class CremonaModelDiagram(ModelDiagram):
             for i in range(1, selected_step + 1):
                 shapes = [shape for shape in self.shapes_of_type_for(BeamForceShape, self.steps[i - 1][2]) if not self.steps[i - 1][3]]
                 [shape.set_visible(True) for shape in shapes]
+        if selected_step == len(self.steps) + 1:
+            [shape.set_visible(True) for shape in self.shapes if isinstance(shape, BeamForceShape)]
 
     def step_highlighting(self, selected_step: int):
         for shape in self.get_component_shapes():

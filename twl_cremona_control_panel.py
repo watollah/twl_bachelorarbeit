@@ -76,12 +76,13 @@ class ControlPanel(ttk.Frame, TwlWidget):
 
     def display_step(self, selected_step: int):
         if selected_step == 0:
-            self.label_text.set("")
+            self.label_text.set("Before starting: Calculate reaction forces!")
         elif selected_step == len(self.cremona_diagram.steps) + 1:
             self.label_text.set("Cremona diagram complete!")
-        else: #todo: add text if force is 0
+        else:
             node, force, component, sketch = self.steps[selected_step - 1]
-            self.label_text.set(f"Step {selected_step}: {"Sketch " if sketch else ""}{f"Node {node.id}, {force.id}" if node else force.id}")
+            zero_force_hint = " \u2192 Zero Force!" if round(force.strength, 2) == 0 else ""
+            self.label_text.set(f"Step {selected_step}: {"(" if sketch else ""}{f"Node {node.id}, {force.id}" if node else force.id}{")" if sketch else ""}{zero_force_hint}")
 
     def run_animation(self):
         if not self.play_state.get():

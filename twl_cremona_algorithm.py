@@ -29,7 +29,8 @@ class CremonaAlgorithm:
                     steps.append((node, force, component, False))
                 else:
                     steps.append((node, force, component, True))
-                    to_be_added.append((node, force, component, False))
+                    if not round(force.strength, 2) == 0:
+                        to_be_added.append((node, force, component, False))
             steps.extend(to_be_added)
             forces_for_nodes.pop(node)
             node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
