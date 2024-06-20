@@ -3,7 +3,7 @@ from twl_diagram import ComponentShape
 from twl_components import Component, Node, Force
 from twl_cremona_algorithm import CremonaAlgorithm
 from twl_result_model_diagram import ResultModelDiagram, BeamForceShape
-from twl_model_diagram import NodeShape, SupportShape
+from twl_model_diagram import NodeShape, SupportShape, ForceShape
 
 
 class CremonaModelDiagram(ResultModelDiagram):
@@ -38,7 +38,9 @@ class CremonaModelDiagram(ResultModelDiagram):
                 self.highlight(self.shapes_for(node)[0], Colors.DARK_SELECTED, Colors.SELECTED)
                 for shape in self.shapes_for_node(force.node):
                     self.highlight(shape, Colors.SELECTED, Colors.WHITE)
-            for shape in self.shapes_for(component):
+            current_shapes = set(self.shapes_for(component))
+            current_shapes.update(self.shapes_for(force))
+            for shape in current_shapes:
                 self.highlight(shape, Colors.DARK_SELECTED, Colors.SELECTED)
 
     def highlight(self, shape: ComponentShape, color: str, bg_color: str):
@@ -53,4 +55,6 @@ class CremonaModelDiagram(ResultModelDiagram):
                     self.itemconfig(tk_id, fill=color)
 
     def shapes_for_node(self, node: Node)-> list[ComponentShape]:
-        return [shape for step in self.steps if step[0] == node for shape in self.shapes_for(step[2])]
+        shapes: set[ComponentShape] = {shape for step in self.steps if step[0] == node for shape in self.shapes_for(step[2])}
+        shapes.update({shape for shape in self.shapes if isinstance(shape, ForceShape) and shape.component.node == node})
+        return list(shapes)
