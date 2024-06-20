@@ -179,7 +179,7 @@ class CremonaDiagram(TwlDiagram):
 
     def step_highlighting(self, selected_step: int):
         line_style: dict[tuple[type, bool], dict[str, Any]] = {
-            #(shape type, active): (width, dash)
+            #(shape type, active): line style
             (BaseLineShape, False): {"width": BaseLineShape.WIDTH, "dash": BaseLineShape.DASH},
             (ResultShape, False): {"width": ResultShape.WIDTH},
             (ResultShape, True): {"width": ResultShape.SELECTED_WIDTH},

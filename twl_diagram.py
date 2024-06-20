@@ -407,7 +407,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def shapes_for(self, component: C) -> list[ComponentShape[C]]:
         return [shape for shape in self.get_component_shapes() if shape.component == component]
 
-    def shapes_of_type_for(self, shape_type: Type, component: C) -> list[ComponentShape[C]]:
+    S = TypeVar('S', bound=Shape)
+    def shapes_of_type_for(self, shape_type: Type[S], component: Component) -> list[S]:
         return [shape for shape in self.shapes_for(component) if isinstance(shape, shape_type)]
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:

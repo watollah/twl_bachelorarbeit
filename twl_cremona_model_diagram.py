@@ -55,7 +55,9 @@ class CremonaModelDiagram(ModelDiagram):
 
         support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
         for force, support in support_forces.items():
-            self.shapes.append(ForceShape(force, self))
+            shape = ForceShape(force, self)
+            self.shapes.append(shape)
+            self.offset_support_force(shape, support)
 
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
@@ -63,6 +65,15 @@ class CremonaModelDiagram(ModelDiagram):
                 self.shapes.append(BeamForceShape(beam, force, self))
         self.tag_lower(BeamForceShape.TAG)
         self.refresh()
+
+    def offset_support_force(self, shape: ForceShape, support: Support):
+        force = shape.component
+        if support.angle - 50 <= force.angle <= support.angle + 50:
+            p1 = shape.arrow_coords().start
+            line = Line(Point(force.node.x, force.node.y), Point(p1.x, p1.y))
+            line.resize(SupportShape.HEIGHT)
+            p2 = line.end
+            shape.move(p2.x - p1.x, p2.y - p1.y)
 
     def display_step(self, selected_step: int):
         self.step_visibility(selected_step)
