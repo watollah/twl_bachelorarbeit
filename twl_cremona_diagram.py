@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from typing import Any
 import math
 
 from twl_app import TwlApp
@@ -13,10 +14,12 @@ from twl_components import Component, Node, Beam, Support, Force
 class BaseLineShape(Shape):
 
     TAG = "baseline"
+
     LENGTH = 20
     SPACING = 20
-    DASH = (2, 1, 1, 1)
+
     WIDTH = 1
+    DASH = (2, 1, 1, 1)
 
     def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
         super().__init__(diagram)
@@ -32,9 +35,10 @@ class ResultShape(ComponentShape[Force]):
 
     TAG: str = "result"
 
+    ARROW = (12,12,4)
+
     WIDTH: int = 2
     SELECTED_WIDTH = 3
-    ARROW_SHAPE = (12,12,4)
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         self.start = start
@@ -43,7 +47,7 @@ class ResultShape(ComponentShape[Force]):
                             end.x, end.y,
                             width=self.WIDTH,
                             arrow=tk.LAST, 
-                            arrowshape=self.ARROW_SHAPE, 
+                            arrowshape=self.ARROW, 
                             tags=[*self.TAGS, str(force.id)])
         super().__init__(force, diagram)
         self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
@@ -63,7 +67,7 @@ class ResultShape(ComponentShape[Force]):
 
     def scale(self, factor: float):
         super().scale(factor)
-        scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
+        scaled_arrow = tuple(value * factor for value in self.ARROW)
         self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
 
 
@@ -71,10 +75,13 @@ class SketchShape(ComponentShape[Force]):
 
     TAG: str = "sketch"
 
-    DASH = (2, 2)
-    WIDTH: int = 1
-    EXTEND = 40
     MIN_LENGTH = 6
+    EXTEND = 40
+
+    WIDTH = 1
+    DASH = 1
+    SELECTED_WIDTH = 2
+    SELECTED_DASH = 10
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         line = Line(start, end)
@@ -171,22 +178,31 @@ class CremonaDiagram(TwlDiagram):
             shape.set_visible(shape in visible)
 
     def step_highlighting(self, selected_step: int):
+        line_style: dict[tuple[type, bool], dict[str, Any]] = {
+            #(shape type, active): (width, dash)
+            (BaseLineShape, False): {"width": BaseLineShape.WIDTH, "dash": BaseLineShape.DASH},
+            (ResultShape, False): {"width": ResultShape.WIDTH},
+            (ResultShape, True): {"width": ResultShape.SELECTED_WIDTH},
+            (SketchShape, False): {"width": SketchShape.WIDTH, "dash": SketchShape.DASH},
+            (SketchShape, True): {"width": SketchShape.SELECTED_WIDTH, "dash": SketchShape.SELECTED_DASH}
+        }
         for shape in self.get_component_shapes():
-            self.highlight(shape, Colors.BLACK)
+            self.highlight(shape, Colors.BLACK, line_style[(type(shape), False)])
         if 0 < selected_step < len(self.steps) + 1:
             node, force, component, sketch = self.steps[selected_step - 1]
             if node:
-                [self.highlight(shape, Colors.SELECTED) for shape in self.shapes_for_node(node)]
+                for shape in self.shapes_for_node(node):
+                    self.highlight(shape, Colors.SELECTED, line_style[(type(shape), True)])
             shape = self.shapes_of_type_for(SketchShape if sketch else ResultShape, force)[0]
-            self.highlight(shape, Colors.DARK_SELECTED)
+            self.highlight(shape, Colors.DARK_SELECTED, line_style[type(shape), True])
 
-    def highlight(self, shape: ComponentShape, color: str):
+    def highlight(self, shape: ComponentShape, color: str, line_style: dict[str, Any]):
         for tk_id in shape.tk_shapes.keys():
             tags = self.gettags(tk_id)
             if shape.LABEL_TAG in tags:
                 self.itemconfig(tk_id, fill=color)
             elif shape.LABEL_BG_TAG not in tags:
-                self.itemconfig(tk_id, fill=color)
+                self.itemconfig(tk_id, line_style, fill=color)
 
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
         return [self.shapes_of_type_for(SketchShape if step[3] else ResultShape, step[1])[0] for step in self.steps if step[0] == node]
