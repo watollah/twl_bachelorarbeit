@@ -27,3 +27,6 @@ class Settings:
 
         self.force_spacing = tk.BooleanVar(value=True)
         self.force_spacing.trace_add("write", lambda *ignore: self.update_manager.update_results())
+
+        self.show_cremona_labels = tk.BooleanVar(value=True)
+        self.show_cremona_labels.trace_add("write", lambda *ignore: self.update_manager.update_results())

@@ -62,9 +62,6 @@ class ResultShape(ComponentShape[Force]):
     def label_position(self) -> Point:
         return self.line_coords().midpoint()
 
-    def label_visible(self) -> bool:
-        return True
-
     def scale(self, factor: float):
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW)
@@ -206,3 +203,6 @@ class CremonaDiagram(TwlDiagram):
 
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
         return [self.shapes_of_type_for(SketchShape if step[3] else ResultShape, step[1])[0] for step in self.steps if step[0] == node]
+
+    def label_visible(self, shape_type: type[Shape]) -> bool:
+        return shape_type == ResultShape and TwlApp.settings().show_cremona_labels.get()

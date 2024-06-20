@@ -3,7 +3,7 @@ import tkinter as tk
 from twl_app import TwlApp
 from twl_math import Point, Line, Triangle, Polygon
 from twl_components import Node, Beam, Support, Force
-from twl_diagram import ComponentShape, TwlDiagram
+from twl_diagram import Shape, ComponentShape, TwlDiagram
 
 
 class NodeShape(ComponentShape[Node]):
@@ -40,9 +40,6 @@ class NodeShape(ComponentShape[Node]):
     @property
     def label_position(self) -> Point:
         return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_node_labels.get()
 
     @property
     def bounds(self) -> Polygon:
@@ -85,9 +82,6 @@ class BeamShape(ComponentShape[Beam]):
     @property
     def label_position(self) -> Point:
         return self.line_coords().midpoint()
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_beam_labels.get()
 
     def scale(self, factor: float):
         super().scale(factor)
@@ -166,9 +160,6 @@ class SupportShape(ComponentShape[Support]):
         point.rotate(n_point, self.component.angle + 180)
         return point
 
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_support_labels.get()
-
     def scale(self, factor: float):
         super().scale(factor)
         self.diagram.itemconfig(self.triangle_id, width=self.BORDER * factor)
@@ -224,9 +215,6 @@ class ForceShape(ComponentShape[Force]):
         point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
         point.rotate(n_point, self.component.angle)
         return point
-
-    def label_visible(self) -> bool:
-        return TwlApp.settings().show_force_labels.get()
 
     def scale(self, factor: float):
         super().scale(factor)
@@ -285,3 +273,12 @@ class ModelDiagram(TwlDiagram):
         TwlApp.model().forces.append(force)
         TwlApp.update_manager().resume()
         return force
+
+    def label_visible(self, shape_type: type[Shape]) -> bool:
+        visible: dict[type[Shape], bool] = {
+            NodeShape: TwlApp.settings().show_node_labels.get(),
+            BeamShape: TwlApp.settings().show_beam_labels.get(),
+            SupportShape: TwlApp.settings().show_support_labels.get(),
+            ForceShape: TwlApp.settings().show_force_labels.get()
+        }
+        return visible.get(shape_type, True)

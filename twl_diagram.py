@@ -69,7 +69,7 @@ class ComponentShape(Generic[C], Shape):
         super().__init__(diagram)
         self.component: C = component
 
-        if (not self.TAG == ComponentShape.TEMP) and self.label_visible(): 
+        if (not self.TAG == ComponentShape.TEMP) and self.diagram.label_visible(type(self)): 
             self.label_tk_id, self.label_bg_tk_id = self.draw_label()
             self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
             x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
@@ -108,17 +108,13 @@ class ComponentShape(Generic[C], Shape):
     def scale(self, factor: float):
         """Scale the label."""
         super().scale(factor)
-        if (not self.TAG == ComponentShape.TEMP) and self.label_visible(): 
+        if (not self.TAG == ComponentShape.TEMP) and self.diagram.label_visible(type(self)): 
             self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
     @property
     @abstractmethod
     def label_position(self) -> Point:
         pass
-
-    @abstractmethod
-    def label_visible(self) -> bool:
-        return False
 
     def draw_label(self) -> tuple[int, int]:
         return self.diagram.create_text_with_bg(self.label_position.x, 
@@ -384,6 +380,9 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         self.tag_raise(bg_id)
         self.tag_raise(text_id)
         return text_id, bg_id
+
+    def label_visible(self, shape_type: type[Shape]) -> bool:
+        return False
 
     def get_component_shapes(self):
         return [shape for shape in self.shapes if isinstance(shape, ComponentShape)]
