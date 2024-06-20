@@ -41,11 +41,10 @@ class Solver:
         unknown_forces: dict[Force, Component] = {}
         for support in self.model.supports:
             if support.constraints == 2:
-                unknown_forces[Force.dummy(f"{support.id}_h", support.node, 90)] = support
-                unknown_forces[Force.dummy(f"{support.id}_v", support.node, 0)] = support
+                unknown_forces[Force.dummy(f"{support.id}_h", support.node, 270)] = support
+                unknown_forces[Force.dummy(f"{support.id}_v", support.node, 180)] = support
             if support.constraints == 1:
-                angle = (support.angle + 180) % 360
-                unknown_forces[Force.dummy(support.id, support.node, angle)] = support
+                unknown_forces[Force.dummy(support.id, support.node, support.angle)] = support
         for beam in self.model.beams:
             unknown_forces[Force.dummy(beam.id, angle=beam.angle)] = beam
         return unknown_forces

@@ -4,9 +4,9 @@ from twl_app import TwlApp
 from twl_style import Colors
 from twl_math import Point, Line, Polygon
 from twl_diagram import ComponentShape
-from twl_components import Component, Node, Beam, Force
+from twl_components import Component, Node, Beam, Support, Force
 from twl_cremona_algorithm import CremonaAlgorithm
-from twl_model_diagram import ModelDiagram, NodeShape, BeamShape, SupportShape
+from twl_model_diagram import ModelDiagram, NodeShape, BeamShape, SupportShape, ForceShape
 
 
 class BeamForceShape(ComponentShape[Beam]):
@@ -53,11 +53,16 @@ class CremonaModelDiagram(ModelDiagram):
         super().update()
         self.steps = CremonaAlgorithm.get_steps()
 
+        support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
+        for force, support in support_forces.items():
+            self.shapes.append(ForceShape(force, self))
+
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             if not round(force.strength, 2) == 0:
                 self.shapes.append(BeamForceShape(beam, force, self))
         self.tag_lower(BeamForceShape.TAG)
+        self.refresh()
 
     def display_step(self, selected_step: int):
         self.step_visibility(selected_step)

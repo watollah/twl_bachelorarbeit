@@ -74,9 +74,13 @@ class SketchShape(ComponentShape[Force]):
     DASH = (2, 2)
     WIDTH: int = 1
     EXTEND = 40
+    MIN_LENGTH = 6
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         line = Line(start, end)
+        if line.length() < self.MIN_LENGTH:
+            line = Line(Point(start.x, round(start.y - self.MIN_LENGTH / 2)), Point(end.x, round(end.y + self.MIN_LENGTH / 2)))
+            line.rotate(start, force.angle)
         line.resize(self.EXTEND)
         self.start = line.start
         self.end = line.end
@@ -120,7 +124,7 @@ class CremonaDiagram(TwlDiagram):
             if node and existing_force_shape:
                 coords = self.coords(existing_force_shape)
                 pos = Point(round(coords[2]), round(coords[3]))
-                if isinstance(component, Support) or isinstance(component, Force):
+                if type(component) in (Support, Force):
                     continue
             if sketch:
                 if not pre_sketch_pos:
@@ -135,7 +139,7 @@ class CremonaDiagram(TwlDiagram):
         self.update_scrollregion()
 
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
-        angle = math.radians((force.angle + 180) % 360) if type(component) == Force else math.radians(force.angle)
+        angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)
         start = Point(start.x, start.y)
         end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
         if sketch:
@@ -162,7 +166,7 @@ class CremonaDiagram(TwlDiagram):
         for i, step in enumerate(self.steps):
             shape_type = SketchShape if step[3] else ResultShape
             shape = self.shapes_of_type_for(shape_type, step[1])[0]
-            if i <= selected_step - 1 and not round(step[1].strength, 2) == 0:
+            if i <= selected_step - 1 and not (not step[3] and round(step[1].strength, 2) == 0):
                 visible.add(shape)
             shape.set_visible(shape in visible)
 

@@ -5,6 +5,8 @@ from twl_components import Component, Node, Beam, Support, Force
 
 class CremonaAlgorithm:
 
+    FORCE_REF_DISTANCE = 10
+
     @staticmethod
     def get_steps() -> list[tuple[Node | None, Force, Component, bool]]:
         if TwlApp.model().is_empty() or not TwlApp.model().statically_determined():
@@ -29,8 +31,7 @@ class CremonaAlgorithm:
                     steps.append((node, force, component, False))
                 else:
                     steps.append((node, force, component, True))
-                    if not round(force.strength, 2) == 0:
-                        to_be_added.append((node, force, component, False))
+                    to_be_added.append((node, force, component, False))
             steps.extend(to_be_added)
             forces_for_nodes.pop(node)
             node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
@@ -41,11 +42,19 @@ class CremonaAlgorithm:
 
     @staticmethod
     def _sort_outside_forces(steps: list[tuple[Node | None, Force, Component, bool]]):
-        points = {force: Point(force.node.x, force.node.y) for node, force, component, sketch in steps}
+        points = {force: CremonaAlgorithm._ref_point_for_force(force) for node, force, component, sketch in steps}
         midpoint = Polygon(*points.values()).midpoint()
         angles = {force: Line(midpoint, points[force]).angle() for force in points.keys()}
         start_angle = angles[TwlApp.model().forces[0]]
         steps.sort(key=lambda step: (angles[step[1]] - start_angle) % 360)
+
+    @staticmethod
+    def _ref_point_for_force(force: Force) -> Point:
+        start = Point(force.node.x, force.node.y)
+        end = Point(force.node.x, force.node.y - CremonaAlgorithm.FORCE_REF_DISTANCE)
+        line = Line(start, end)
+        line.rotate(start, force.angle)
+        return line.end
 
     @staticmethod
     def _get_forces_for_node(node: Node, support_forces: dict[Force, Support], beam_forces: dict[Force, Beam]) -> dict[Force, Component]:
