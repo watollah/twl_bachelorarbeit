@@ -13,7 +13,7 @@ from twl_result_tab import ResultTab
 
 class TwlTool(tk.Tk, TwlWidget):
 
-    TITLE: str = "Twl Tool"
+    TITLE: str = "C2D"
 
     def __init__(self):
         super().__init__()
