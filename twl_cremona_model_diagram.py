@@ -1,9 +1,11 @@
+import tkinter as tk
+
 from twl_style import Colors
 from twl_diagram import ComponentShape
 from twl_components import Component, Node, Force
 from twl_cremona_algorithm import CremonaAlgorithm
 from twl_result_model_diagram import ResultModelDiagram, BeamForceShape
-from twl_model_diagram import NodeShape, SupportShape, ForceShape
+from twl_model_diagram import NodeShape, BeamShape, SupportShape, ForceShape
 
 
 class CremonaModelDiagram(ResultModelDiagram):
@@ -19,6 +21,8 @@ class CremonaModelDiagram(ResultModelDiagram):
     def display_step(self, selected_step: int):
         self.step_visibility(selected_step)
         self.step_highlighting(selected_step)
+        self.adjust_label_positions()
+        self.refresh()
 
     def step_visibility(self, selected_step: int):
         [shape.set_visible(False) for shape in self.shapes if isinstance(shape, BeamForceShape)]
@@ -43,6 +47,23 @@ class CremonaModelDiagram(ResultModelDiagram):
             for shape in current_shapes:
                 self.highlight(shape, Colors.DARK_SELECTED, Colors.SELECTED)
 
+    def adjust_label_positions(self):
+        zero_beam_force_shapes = [shape for shape in self.shapes if isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0]
+        for beam_force_shape in zero_beam_force_shapes:
+            beam_shape = self.shapes_of_type_for(BeamShape, beam_force_shape.component)[0]
+            self.reset_label_position(beam_shape)
+            if self.itemcget(beam_force_shape.oval_id, "state") == tk.NORMAL:
+                beam_shape.tk_shapes[beam_shape.label_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
+                beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
+
+    def reset_label_position(self, beam_shape: BeamShape):
+        label_pos = beam_shape.label_position
+        current_pos = beam_shape.tk_shapes[beam_shape.label_tk_id].points[0]
+        delta_x = label_pos.x - current_pos.x
+        delta_y = label_pos.y - current_pos.y
+        beam_shape.tk_shapes[beam_shape.label_tk_id].move(delta_x, delta_y)
+        beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(delta_x, delta_y)
+
     def highlight(self, shape: ComponentShape, color: str, bg_color: str):
         for tk_id in shape.tk_shapes.keys():
             tags = self.gettags(tk_id)
@@ -51,6 +72,8 @@ class CremonaModelDiagram(ResultModelDiagram):
             elif shape.LABEL_BG_TAG not in tags:
                 if any(tag in tags for tag in (NodeShape.TAG, SupportShape.TAG)) and not SupportShape.LINE_TAG in tags:
                     self.itemconfig(tk_id, outline=color, fill=bg_color)
+                elif isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0:
+                    self.itemconfig(tk_id, outline=color, fill=Colors.WHITE)
                 else:
                     self.itemconfig(tk_id, fill=color)
 
