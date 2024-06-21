@@ -20,7 +20,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         super().__init__(beam, diagram)
         self.force = force
         rect = self.rect_coords()
-        bd_color, bg_color = (Colors.RED, Colors.LIGHT_RED) if force.strength < 0 else (Colors.DARK_SELECTED, Colors.LIGHT_SELECTED)
+        bd_color, bg_color = (Colors.DARK_SELECTED, Colors.LIGHT_SELECTED) if force.strength < 0 else (Colors.RED, Colors.LIGHT_RED)
         self.rect_id = self.diagram.create_polygon(rect[0].x, rect[0].y, rect[1].x, rect[1].y,
                             rect[2].x, rect[2].y, rect[3].x, rect[3].y,
                             width=self.BORDER,
@@ -57,7 +57,7 @@ class ResultDiagram(ResultModelDiagram):
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)
             if not strength == 0:
-                color = Colors.RED if strength < 0 else Colors.DARK_SELECTED
+                color = Colors.DARK_SELECTED if strength < 0 else Colors.RED
                 for shape in self.shapes_for(beam):
                     self.highlight(shape, color)
                 self.shapes.append(BeamForcePlotShape(beam, force, self))
