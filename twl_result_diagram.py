@@ -3,7 +3,7 @@ from twl_math import Point, Polygon
 from twl_style import Colors
 from twl_components import Beam
 from twl_model_diagram import ComponentShape, BeamShape
-from twl_result_model_diagram import ResultModelDiagram
+from twl_result_model_diagram import ResultModelDiagram, BeamForceShape
 
 
 class ResultDiagram(ResultModelDiagram):
@@ -13,22 +13,11 @@ class ResultDiagram(ResultModelDiagram):
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, component in beam_forces.items():
             strength = round(force.strength, 2)
-            shapes = self.shapes_for(component)
-            if strength < 0:
-                color = Colors.RED
-                symbol = "D"
-            elif strength == 0:
-                color = Colors.BLACK
-                symbol = "O"
-            else:
-                color = Colors.DARK_SELECTED
-                symbol = "Z"
-            for shape in shapes:
-                if isinstance(shape, BeamShape):
-                    self.itemconfig(shape.label_tk_id, text=f"{component.id} - {symbol}")
-                    x1, x2, y1, y2 = self.bbox(shape.label_tk_id)
-                    shape.tk_shapes[shape.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
-                self.highlight(shape, color)
+            if not strength == 0:
+                color = Colors.RED if strength < 0 else Colors.DARK_SELECTED
+                for shape in self.shapes_for(component):
+                    self.highlight(shape, color)
+        self.adjust_label_positions()
         self.refresh()
 
     def highlight(self, shape: ComponentShape, color: str):

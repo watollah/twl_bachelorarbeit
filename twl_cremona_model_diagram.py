@@ -47,23 +47,6 @@ class CremonaModelDiagram(ResultModelDiagram):
             for shape in current_shapes:
                 self.highlight(shape, Colors.DARK_SELECTED, Colors.SELECTED)
 
-    def adjust_label_positions(self):
-        zero_beam_force_shapes = [shape for shape in self.shapes if isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0]
-        for beam_force_shape in zero_beam_force_shapes:
-            beam_shape = self.shapes_of_type_for(BeamShape, beam_force_shape.component)[0]
-            self.reset_label_position(beam_shape)
-            if self.itemcget(beam_force_shape.oval_id, "state") == tk.NORMAL:
-                beam_shape.tk_shapes[beam_shape.label_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
-                beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
-
-    def reset_label_position(self, beam_shape: BeamShape):
-        label_pos = beam_shape.label_position
-        current_pos = beam_shape.tk_shapes[beam_shape.label_tk_id].points[0]
-        delta_x = label_pos.x - current_pos.x
-        delta_y = label_pos.y - current_pos.y
-        beam_shape.tk_shapes[beam_shape.label_tk_id].move(delta_x, delta_y)
-        beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(delta_x, delta_y)
-
     def highlight(self, shape: ComponentShape, color: str, bg_color: str):
         for tk_id in shape.tk_shapes.keys():
             tags = self.gettags(tk_id)

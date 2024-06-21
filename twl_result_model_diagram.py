@@ -3,7 +3,7 @@ import tkinter as tk
 from twl_app import TwlApp
 from twl_math import Point, Line, Polygon
 from twl_diagram import ComponentShape, Shape
-from twl_model_diagram import ModelDiagram, SupportShape, ForceShape
+from twl_model_diagram import ModelDiagram, BeamShape, SupportShape, ForceShape
 from twl_components import Beam, Support, Force
 
 
@@ -95,6 +95,23 @@ class ResultModelDiagram(ModelDiagram):
             line.resize(SupportShape.HEIGHT)
             p2 = line.end
             shape.move(p2.x - p1.x, p2.y - p1.y)
+
+    def adjust_label_positions(self):
+        zero_beam_force_shapes = [shape for shape in self.shapes if isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0]
+        for beam_force_shape in zero_beam_force_shapes:
+            beam_shape = self.shapes_of_type_for(BeamShape, beam_force_shape.component)[0]
+            self.reset_label_position(beam_shape)
+            if self.itemcget(beam_force_shape.oval_id, "state") in ("", tk.NORMAL):
+                beam_shape.tk_shapes[beam_shape.label_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
+                beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
+
+    def reset_label_position(self, beam_shape: BeamShape):
+        label_pos = beam_shape.label_position
+        current_pos = beam_shape.tk_shapes[beam_shape.label_tk_id].points[0]
+        delta_x = label_pos.x - current_pos.x
+        delta_y = label_pos.y - current_pos.y
+        beam_shape.tk_shapes[beam_shape.label_tk_id].move(delta_x, delta_y)
+        beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(delta_x, delta_y)
 
     def label_visible(self, shape_type: type[Shape]) -> bool:
         return shape_type not in (SupportShape, BeamForceShape) and super().label_visible(shape_type)
