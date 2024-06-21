@@ -4,7 +4,7 @@ from tkinter import ttk
 from twl_app import TwlApp
 from twl_update import TwlWidget, UpdateManager
 from twl_widgets import ToggledFrame, BorderFrame
-from twl_components import ForceTypeAttribute, Model, Beam, Support, Force, Result
+from twl_components import AngleAttribute, ForceTypeAttribute, Model, Beam, NodeAttribute, Support, Force, Result
 from twl_result_diagram import ResultDiagram
 from twl_table import TwlTable
 
@@ -49,12 +49,13 @@ class ResultTab(ttk.Frame, TwlWidget):
         supports_entry.pack(fill="x")
         self.supports_table = TwlTable(supports_entry.content, self.get_support_forces(), Result)
         self.supports_table.pack(fill="both")
-        self.supports_table.hide_column(ForceTypeAttribute.ID)
+        self.supports_table.hide_columns(ForceTypeAttribute.ID)
 
         force_entry = ToggledFrame(frame, "Forces")
         force_entry.pack(fill="x")
         self.force_table = TwlTable(force_entry.content, TwlApp.model().forces, Force)
         self.force_table.pack(fill="both")
+        self.force_table.hide_columns(NodeAttribute.ID, AngleAttribute.ID)
 
         BorderFrame(frame).pack(fill="both", expand=True)
 

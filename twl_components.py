@@ -229,7 +229,7 @@ class StrengthAttribute(Attribute['Force', float]):
 class ResultAttribute(Attribute['Result', float]):
 
     ID = "result"
-    NAME = "Result"
+    NAME = "Strength"
     UNIT = "kN"
     EDITABLE: bool = False
 
@@ -239,6 +239,9 @@ class ResultAttribute(Attribute['Result', float]):
         except ValueError:
             return False, "Result must be a number."
         return True, ""
+
+    def get_display_value(self) -> str:
+        return str(0.0 if self.get_value() == 0 else self.get_value())
 
 
 class ForceType(Enum):

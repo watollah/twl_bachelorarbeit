@@ -69,8 +69,8 @@ class TwlTable(ttk.Treeview, TwlWidget, Generic[C]):
         self.entryPopup = TwlTableEntryPopUp(self, component, attribute)
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
 
-    def hide_column(self, column_id: str):
+    def hide_columns(self, *column_ids: str):
         columns = list(self["columns"])
-        if column_id in columns:
+        for column_id in column_ids:
             columns.remove(column_id)
         self["displaycolumns"] = columns
