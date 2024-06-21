@@ -35,6 +35,10 @@ class Point:
         self.x = rotated_x + center_of_rotation.x
         self.y = rotated_y + center_of_rotation.y
 
+    def move(self, x: int, y: int):
+        self.x += x
+        self.y += y
+
     def subtract(self, other) -> 'Point':
         return Point(self.x - other.x, self.y - other.y)
 
@@ -105,6 +109,10 @@ class Line:
 
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]
+
+    def move(self, x: int, y: int):
+        self.start.move(x, y)
+        self.end.move(x, y)
 
     def midpoint(self) -> Point:
         mid_x = (self.start.x + self.end.x) // 2
@@ -231,8 +239,7 @@ class Polygon:
 
     def move(self, x: int, y: int):
         for point in self.points: 
-            point.x += x
-            point.y += y
+            point.move(x, y)
 
     def midpoint(self):
         x = sum(point.x for point in self.points) / len(self.points)

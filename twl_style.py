@@ -43,6 +43,7 @@ class Colors:
 
     GREEN = "#008000"
     RED = "#ff0000"
+    LIGHT_RED = "#ffcccc"
 
 
 def init_style():
