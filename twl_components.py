@@ -243,18 +243,29 @@ class ResultAttribute(Attribute['Result', float]):
 
 class ForceType(Enum):
 
-    COMPRESSIVE = "D"
-    ZERO = "O"
-    TENSILE = "Z"
+    COMPRESSIVE = "C"
+    ZERO = "0"
+    TENSILE = "T"
+
+    @classmethod
+    def from_value(cls, value: float):
+        if value < 0:
+            return cls.COMPRESSIVE
+        elif value == 0:
+            return cls.ZERO
+        else:
+            return cls.TENSILE
 
 
 class ForceTypeAttribute(Attribute['Result', ForceType]):
 
-    ID = "strength"
-    NAME = "Strength"
+    ID = "force_type"
+    NAME = "Type"
     UNIT = ""
     EDITABLE: bool = False
 
+    def get_display_value(self) -> str:
+        return self.get_value().value
 
 class Component(ABC):
 
@@ -417,17 +428,21 @@ class Result(Component):
     force_type: AttributeDescriptor[ForceType] = AttributeDescriptor("_force_type")
     result: AttributeDescriptor[float] = AttributeDescriptor("_result")
 
-    def __init__(self, model: 'Model', force_type: ForceType, result: float=1.0):
+    def __init__(self, model: 'Model', force: Force):
         super().__init__(model)
-        self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, force_type)
-        self._result: ResultAttribute = ResultAttribute(self, result)
+        self.id = force.id
+        self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, ForceType.from_value(round(force.strength, 2)))
+        self._result: ResultAttribute = ResultAttribute(self, round(force.strength, 2))
 
     @classmethod
-    def dummy(cls, id: str="dummy_result", force_type: ForceType=ForceType.ZERO, result: float=1.0):
-        dummy_result: Result = cls(Model(UpdateManager()), force_type, result)
+    def dummy(cls, id: str="dummy_result", force: Force | None=None):
+        force = force if force else Force.dummy()
+        dummy_result: Result = cls(Model(UpdateManager()), force)
         dummy_result.id = id
         return dummy_result
 
+    def delete(self):
+        pass
 
 class Model:
     def __init__(self, update_manager: UpdateManager):

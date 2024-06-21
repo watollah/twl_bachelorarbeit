@@ -3,6 +3,7 @@ from tkinter import ttk
 
 from twl_app import TwlApp
 from twl_widgets import ToggledFrame, BorderFrame
+from twl_components import Node, Beam, Support, Force
 from twl_definition_diagram import DefinitionDiagram
 from twl_table import TwlTable
 
@@ -31,22 +32,26 @@ class DefinitionTab(ttk.Frame):
     def create_tables(self, frame: ttk.Frame):
         nodes_entry = ToggledFrame(frame, "Nodes")
         nodes_entry.pack(fill="x")
-        nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes)
+        nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes, Node)
         nodes_table.pack(fill="both")
+        TwlApp.update_manager().design_widgets.append(nodes_table)
 
         beams_entry = ToggledFrame(frame, "Beams")
         beams_entry.pack(fill="x")
-        beams_table = TwlTable(beams_entry.content, TwlApp.model().beams)
+        beams_table = TwlTable(beams_entry.content, TwlApp.model().beams, Beam)
         beams_table.pack(fill="both")
+        TwlApp.update_manager().design_widgets.append(beams_table)
         
         supports_entry = ToggledFrame(frame, "Supports")
         supports_entry.pack(fill="x")
-        supports_table = TwlTable(supports_entry.content, TwlApp.model().supports)
+        supports_table = TwlTable(supports_entry.content, TwlApp.model().supports, Support)
         supports_table.pack(fill="both")
+        TwlApp.update_manager().design_widgets.append(supports_table)
 
         forces_entry = ToggledFrame(frame, "Forces")
         forces_entry.pack(fill="x")
-        forces_table = TwlTable(forces_entry.content, TwlApp.model().forces)
+        forces_table = TwlTable(forces_entry.content, TwlApp.model().forces, Force)
         forces_table.pack(fill="both")
+        TwlApp.update_manager().design_widgets.append(forces_table)
 
         BorderFrame(frame).pack(fill="both", expand=True)

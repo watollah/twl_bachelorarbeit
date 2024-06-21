@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import TypeVar
+from typing import TypeVar, Generic
 
 from twl_components import Component, ComponentList, Attribute
 from twl_widgets import CustomEntry
@@ -30,14 +30,13 @@ class TwlTableEntryPopUp(CustomEntry):
             self.destroy()
 
 
-class TwlTable(ttk.Treeview, TwlWidget):
+class TwlTable(ttk.Treeview, TwlWidget, Generic[C]):
 
-    def __init__(self, master, component_list: ComponentList[C]):
+    def __init__(self, master, component_list: list[C], component_type: type[C]):
         ttk.Treeview.__init__(self, master, show="headings")
-        self.component_list: ComponentList[C] = component_list
-        component_list.update_manager.design_widgets.append(self)
+        self.component_list: list[C] = component_list
 
-        dummy = component_list.component_class.dummy()
+        dummy = component_type.dummy()
         self.configure(columns=[attr.ID for attr in dummy.attributes])
         for attr in dummy.attributes: self.heading(attr.ID, text=attr.description)
         for attr in dummy.attributes: self.column(attr.ID, width=0, anchor=tk.CENTER)
@@ -57,9 +56,7 @@ class TwlTable(ttk.Treeview, TwlWidget):
         if not itemid:
             return #return if the user double clicked on an empty cell
 
-        component = self.component_list.get_component(itemid)
-        assert(component)
-
+        component = next(component for component in self.component_list if component.id == itemid)
         attr_index = int(columnid[1:]) - 1 #remove the "#" from column id and convert to int
         attribute = component.attributes[attr_index]
 
