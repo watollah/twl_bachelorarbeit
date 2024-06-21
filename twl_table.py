@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import TypeVar, Generic
 
-from twl_components import Component, ComponentList, Attribute
+from twl_components import Component, Attribute
 from twl_widgets import CustomEntry
 from twl_update import TwlWidget
 
@@ -68,3 +68,9 @@ class TwlTable(ttk.Treeview, TwlWidget, Generic[C]):
 
         self.entryPopup = TwlTableEntryPopUp(self, component, attribute)
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
+
+    def hide_column(self, column_id: str):
+        columns = list(self["columns"])
+        if column_id in columns:
+            columns.remove(column_id)
+        self["displaycolumns"] = columns
