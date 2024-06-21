@@ -35,7 +35,11 @@ class ControlPanel(ttk.Frame, TwlWidget):
         self._speed_selection = self.create_speed_selection()
 
         self.bind("<space>", lambda *ignore: self.play_state.set(not self.play_state.get()))
-        self.play_state.trace_add("write", lambda *ignore: self.focus_set())
+        self.bind("<Left>", lambda *ignore: self.selected_step.set((self.selected_step.get() - 1) % (len(self.steps) + 2)))
+        self.bind("<Right>", lambda *ignore: self.selected_step.set((self.selected_step.get() + 1) % (len(self.steps) + 2)))
+
+        focus_widgets = [self.nametowidget(self.winfo_parent()), self, self._label, self._play_button, self._scale, self._speed_selection]
+        [widget.bind("<ButtonRelease-1>", lambda event: self.focus_set()) for widget in focus_widgets]
 
     def create_label(self):
         label_frame = ttk.Frame(self, width=400, height=30, style="ControlPanel.TFrame")
