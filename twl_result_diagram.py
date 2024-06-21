@@ -34,7 +34,10 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         line = Line(Point(p1.x, p1.y), Point(p2.x, p2.y))
         height = (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
-        angle = math.radians((self.component.angle + 90) % 360)
+        angle = (self.component.angle + 90) % 360
+        if 0 <= angle <= 90 or 270 < angle <= 360:
+            angle = (angle + 180) % 360
+        angle = math.radians(angle)
         line.move(int(math.sin(angle) * height), -1 * int(math.cos(angle) * height))
         return p1, p2, line.end, line.start
 
