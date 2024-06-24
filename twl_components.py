@@ -167,10 +167,19 @@ class BeamAngleAttribute(Attribute['Beam', float]):
     ID = "angle"
     NAME = "Angle"
     UNIT = "°"
-    EDITABLE: bool = False
+    EDITABLE: bool = True
 
     def __init__(self, component: 'Beam') -> None:
         super().__init__(component, 0)
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Angle must be a number."
+        if not 0 <= value <= 360:
+            return False, "Angle must be between 0 and 360."
+        return True, ""
 
     def get_value(self) -> float:
         return self._component.calc_angle()
@@ -178,22 +187,56 @@ class BeamAngleAttribute(Attribute['Beam', float]):
     def get_display_value(self) -> str:
         return str(round(self.get_value(), 2))
 
+    def set_value(self, value) -> tuple[bool, str]:
+        filter_result = self.filter(value)
+        if filter_result[0]:
+            start = Point(self._component.start_node.x, self._component.start_node.y)
+            end = Point(self._component.end_node.x, self._component.end_node.y)
+            line = Line(start, end)
+            rotate_by = (type(self._value)(value) - self.get_value()) % 360
+            line.rotate(start, rotate_by)
+            self._component.end_node.x = line.end.x
+            self._component.end_node.y = line.end.y
+            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+        return filter_result
+
 
 class BeamLengthAttribute(Attribute['Beam', float]):
 
     ID = "length"
     NAME = "Length"
     UNIT = "m"
-    EDITABLE: bool = False
+    EDITABLE: bool = True
 
     def __init__(self, component: 'Beam') -> None:
         super().__init__(component, 0)
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Length must be a number."
+        if not 0 < value:
+            return False, "Length must be positive."
+        return True, ""
 
     def get_value(self) -> float:
         return self._component.calc_length()
 
     def get_display_value(self) -> str:
         return str(round(self.get_value(), 2))
+
+    def set_value(self, value) -> tuple[bool, str]:
+        filter_result = self.filter(value)
+        if filter_result[0]:
+            start = Point(self._component.start_node.x, self._component.start_node.y)
+            end = Point(self._component.end_node.x, self._component.end_node.y)
+            line = Line(start, end)
+            line.set_length(type(self._value)(value))
+            self._component.end_node.x = line.end.x
+            self._component.end_node.y = line.end.y
+            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+        return filter_result
 
 
 class ConstraintsAttribute(Attribute['Support', int]):

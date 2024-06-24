@@ -92,6 +92,13 @@ class Line:
     def length_scaled(self) -> float:
         return self.length() * 0.01
 
+    def set_length(self, length):
+        direction = self.end.subtract(self.start)
+        ux = direction.x / self.length()
+        uy = direction.y / self.length()
+        self.end.x = round(self.start.x + (ux * length * 100))
+        self.end.y = round(self.start.y + (uy * length * 100))
+
     def angle(self) -> float:
         d = self.end.subtract(self.start)
         angle_degrees = 90 - math.degrees(math.atan2(-d.y, d.x))
