@@ -96,6 +96,8 @@ class CoordinateAttribute(Attribute['Component', int]):
             return False, "Coordinate must be a number."
         return True, ""
 
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
 
 class XCoordinateAttribute(CoordinateAttribute):
 
