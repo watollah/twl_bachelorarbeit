@@ -122,7 +122,11 @@ class SelectTool(ComponentTool):
     def action(self, event):
         self.correct_scrolling(event)
         self.diagram.focus_set()
-        shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, event.x, event.y)
+
+        pos = Point(event.x, event.y)
+        pos.scale(1 / (self.diagram.current_zoom.get() / 100))
+        shape = self.diagram.find_shape_of_list_at(self.selectable_shapes, pos.x, pos.y)
+
         if shape == None:
             self.start_rect_selection(event)
         else:
@@ -143,11 +147,11 @@ class SelectTool(ComponentTool):
         if not self.selection_rect:
             return
         x1, y1, x2, y2 = map(int, self.diagram.coords(self.selection_rect))
-        print(f"Selected area: ({x1}, {y1}) to ({x2}, {y2})")
         p1 = Point(x1, y1)
         p2 = Point(x2, y2)
         p1.scale(1 / (self.diagram.current_zoom.get() / 100))
         p2.scale(1 / (self.diagram.current_zoom.get() / 100))
+        print(f"Selected area: ({p1.x}, {p1.y}) to ({p2.x}, {p2.y})")
         selection = [shape for shape in self.selectable_shapes if all(polygon.in_bounds(p1, p2) for polygon in shape.tk_shapes.values())]
         self.process_selection(event, *selection)
 
