@@ -3,11 +3,11 @@ from tkinter import ttk
 from typing import TypeVar, Generic, Type
 from abc import abstractmethod
 
-from twl_update import TwlWidget
+from twl_update import Observer
 from twl_widgets import CustomRadioButton
 from twl_style import Colors
 from twl_images import add_image_from_path
-from twl_components import Component
+from twl_components import Component, IdAttribute
 from twl_math import Point, Polygon
 
 
@@ -46,7 +46,7 @@ class Shape():
 
 C = TypeVar('C', bound=Component)
 
-class ComponentShape(Generic[C], Shape):
+class ComponentShape(Generic[C], Shape, Observer):
     """Represents the shape of a component in the diagram."""
 
     TEMP = "temp"
@@ -60,20 +60,31 @@ class ComponentShape(Generic[C], Shape):
     LABEL_PREFIX = ""
     LABEL_SIZE = 12
 
-    def __init_subclass__(cls) -> None:
+    def __init_subclass__(cls):
         super().__init_subclass__()
         cls.TAGS = cls.TAGS.copy()
         cls.TAGS.append(cls.TAG)
 
-    def __init__(self, component: C, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
+    def __init__(self, component: C, diagram: 'TwlDiagram'):
         super().__init__(diagram)
         self.component: C = component
+        self.component.model.update_manager.register_observer(self)
 
-        if (not self.TAG == ComponentShape.TEMP) and self.diagram.label_visible(type(self)): 
-            self.label_tk_id, self.label_bg_tk_id = self.draw_label()
-            self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-            x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
-            self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+        self.label_tk_id, self.label_bg_tk_id = self.draw_label()
+        self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
+        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        if component_id == self.component.id and attribute_id == IdAttribute.ID:
+            self.set_label_text(self.component.id)
+            self.diagram.refresh()
+        super().update_observer(component_id, attribute_id)
+
+    def remove(self):
+        for tk_id in self.tk_shapes.keys():
+            self.diagram.delete(tk_id)
+        self.diagram.shapes.remove(self)
 
     def select(self):
         for tk_id in self.tk_shapes.keys():
@@ -108,21 +119,37 @@ class ComponentShape(Generic[C], Shape):
     def scale(self, factor: float):
         """Scale the label."""
         super().scale(factor)
-        if (not self.TAG == ComponentShape.TEMP) and self.diagram.label_visible(type(self)): 
-            self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
+        self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
     @property
     @abstractmethod
     def label_position(self) -> Point:
-        pass
+        return Point(0, 0)
 
     def draw_label(self) -> tuple[int, int]:
-        return self.diagram.create_text_with_bg(self.label_position.x, 
-                                 self.label_position.y, 
+        label_pos = self.label_position
+        return self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
                                  text=self.component.id, 
-                                 tags=self.LABEL_TAG,
+                                 tags=[*self.TAGS, str(self.component.id)],
+                                 label_tag=self.LABEL_TAG,
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
+
+    def set_label_text(self, text: str):
+        self.diagram.itemconfig(self.label_tk_id, text=text)
+        self.update_label_pos()
+
+    def set_label_visible(self, visible: bool):
+        state = tk.NORMAL if visible else tk.HIDDEN
+        self.diagram.itemconfig(self.label_tk_id, state=state)
+        self.diagram.itemconfig(self.label_bg_tk_id, state=state)
+
+    def update_label_pos(self):
+        label_pos = self.label_position
+        self.tk_shapes[self.label_tk_id] = Polygon(label_pos)
+        self.diagram.moveto(self.label_tk_id, label_pos.x, label_pos.y)
+        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
+        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
 
 
 class Tool:
@@ -187,7 +214,7 @@ class Tool:
         return event.state & 0x1 #bitwise ANDing the event.state with the ShiftMask flag
 
 
-class TwlDiagram(tk.Canvas, TwlWidget):
+class TwlDiagram(Observer, tk.Canvas):
 
     ZOOM_STEP: float = 5
     MIN_ZOOM: float = 10
@@ -251,9 +278,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
         for shape in self.shapes:
             shape.scale(self.current_zoom.get() / 100)
 
-    def update(self) -> None:
-        """Redraws the diagram completely from the model."""
-        pass
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        self.refresh()
 
     def clear(self):
         """Removes all shapes from the diagram."""
@@ -364,19 +390,22 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def create_text_with_bg(self, *args, **kw) -> tuple[int, int]:
         """Creates a label with a specific bg color to ensure readability. Used for model component labels."""
+        tags = kw.pop("tags", [])
+        label_tag = kw.pop("label_tag", self.TEXT_TAG)
         bg_tag = kw.pop("bg_tag", self.TEXT_BG_TAG)
+
         bg_color = kw.pop("bg_color", self["background"])
         kw.setdefault("anchor", tk.CENTER)
         kw.setdefault("font", ('Helvetica', self.TEXT_SIZE))
     
-        text_id = super().create_text(*args, **kw)
+        text_id = super().create_text(*args, tags=[*tags, label_tag], **kw)
         bounds = self.bbox(text_id)
     
         bg_id = self.create_rectangle(bounds[0], bounds[1], 
                                  bounds[2], bounds[3],
                                  width=0,
                                  fill=bg_color, 
-                                 tags=bg_tag)
+                                 tags=[*tags, bg_tag])
         self.tag_raise(bg_id)
         self.tag_raise(text_id)
         return text_id, bg_id
@@ -384,7 +413,8 @@ class TwlDiagram(tk.Canvas, TwlWidget):
     def label_visible(self, shape_type: type[Shape]) -> bool:
         return False
 
-    def get_component_shapes(self):
+    @property
+    def component_shapes(self):
         return [shape for shape in self.shapes if isinstance(shape, ComponentShape)]
 
     def find_shape_at(self, x: int, y: int) -> Shape | None:
@@ -397,14 +427,14 @@ class TwlDiagram(tk.Canvas, TwlWidget):
 
     def find_shape_of_type_at(self, component_type: Type[C], x: int, y: int) -> ComponentShape[C] | None:
         """Check if there is a component shape in the diagram at the specified coordinate."""
-        return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.get_component_shapes()), None)
+        return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.component_shapes), None)
 
     def find_component_of_type_at(self, component_type: Type[C], x: int, y: int) -> C | None:
         shape = self.find_shape_of_type_at(component_type, x, y)
         return shape.component if shape else None
 
     def shapes_for(self, component: C) -> list[ComponentShape[C]]:
-        return [shape for shape in self.get_component_shapes() if shape.component == component]
+        return [shape for shape in self.component_shapes if shape.component == component]
 
     S = TypeVar('S', bound=Shape)
     def shapes_of_type_for(self, shape_type: Type[S], component: Component) -> list[S]:

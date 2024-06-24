@@ -8,7 +8,7 @@ from twl_widgets import BorderFrame
 from twl_update import UpdateManager
 from twl_math import Point, Line
 from twl_components import Model, Node, Beam, Support, Force
-from twl_diagram import Tool, Shape
+from twl_diagram import Tool
 from twl_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
 
 
@@ -20,6 +20,7 @@ class TempNodeShape(NodeShape):
     def __init__(self, node: Node, diagram: 'DefinitionDiagram') -> None:
         super().__init__(node, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
 
 
 class TempBeamShape(BeamShape):
@@ -30,6 +31,7 @@ class TempBeamShape(BeamShape):
     def __init__(self, beam: Beam, diagram: 'DefinitionDiagram') -> None:
         super().__init__(beam, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
 
 
 class TempSupportShape(SupportShape):
@@ -40,6 +42,7 @@ class TempSupportShape(SupportShape):
     def __init__(self, support: Support, diagram: 'DefinitionDiagram') -> None:
         super().__init__(support, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
 
 
 class TempForceShape(ForceShape):
@@ -50,6 +53,7 @@ class TempForceShape(ForceShape):
     def __init__(self, force: Force, diagram: 'DefinitionDiagram') -> None:
         super().__init__(force, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
 
 
 class ComponentTool(Tool):
@@ -113,7 +117,7 @@ class SelectTool(ComponentTool):
 
     @property
     def selectable_shapes(self) -> list[ComponentShape]:
-        return list(filter(lambda shape: isinstance(shape.component, (Beam, Support, Force)), self.diagram.get_component_shapes()))
+        return list(filter(lambda shape: isinstance(shape.component, (Beam, Support, Force)), self.diagram.component_shapes))
 
     def action(self, event):
         self.correct_scrolling(event)
@@ -163,9 +167,9 @@ class SelectTool(ComponentTool):
                 shape.select()
 
     def delete_selected(self, event):
-        TwlApp.update_manager().pause()
+        TwlApp.update_manager().pause_observing()
         [shape.component.delete() for shape in self.diagram.selection]
-        TwlApp.update_manager().resume()
+        TwlApp.update_manager().resume_observing()
         self.reset()
 
 
@@ -191,12 +195,15 @@ class BeamTool(ComponentTool):
             self.start_node = clicked_node if clicked_node else self.create_temp_node(event.x, event.y)
             return
         if self.holding_shift_key(event):
-            self.shift_snap_line(event)    
+            self.shift_snap_line(event)
+
+        TwlApp.update_manager().pause_observing()
         if not self.start_node in TwlApp.model().nodes:
             self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
         end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
         self.diagram.create_beam(self.start_node, end_node)
         self.start_node = end_node
+        TwlApp.update_manager().resume_observing()
 
     def create_temp_node(self, x, y) -> Node:
         temp_node = Node(Model(UpdateManager()), x, y)
@@ -339,7 +346,7 @@ class DefinitionDiagram(ModelDiagram):
         #grid
         self.grid_step = tk.DoubleVar(value=20.0)
         self.grid_step.trace_add("write", lambda *ignore: self.refresh())
-        self.grid_visible: bool = False
+        TwlApp.settings().show_grid.trace_add("write", lambda *ignore: self.refresh())
 
         #diagram
         diagram_frame: ttk.Frame = ttk.Frame(master)
@@ -358,6 +365,7 @@ class DefinitionDiagram(ModelDiagram):
                                              image=angle_guide_img, 
                                              anchor=tk.NE, 
                                              tags=self.ANGLE_GUIDE_TAG)
+        TwlApp.settings().show_angle_guide.trace_add("write", lambda *ignore: self.refresh())
 
         #coords label
         self.coords_label = ttk.Label(self, foreground=Colors.GRAY)
@@ -384,8 +392,8 @@ class DefinitionDiagram(ModelDiagram):
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
-    def update(self) -> None:
-        super().update()
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        super().update_observer(component_id, attribute_id)
 
         self.stat_determ_label.configure(text=self.stat_determ_text)
         color = Colors.GREEN if self.stat_determ_text[:5] == "f = 0" else Colors.RED
@@ -420,7 +428,6 @@ class DefinitionDiagram(ModelDiagram):
 
     def delete_grid(self):
         self.delete(self.GRID_TAG)
-        self.grid_visible = False
 
     def draw_grid(self):
         grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
@@ -432,7 +439,6 @@ class DefinitionDiagram(ModelDiagram):
         for i in range(y_start, y_max, grid_spacing):
             self.create_line((x_min, i), (x_max, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
         self.tag_lower(self.GRID_TAG)
-        self.grid_visible = True
 
     def grid_snap(self, x: int, y: int) -> tuple[int, int]:
         grid_spacing = round(self.grid_step.get())

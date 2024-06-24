@@ -2,7 +2,7 @@ import tkinter as tk
 
 from twl_app import TwlApp
 from twl_math import Point, Line, Triangle, Polygon
-from twl_components import Node, Beam, Support, Force
+from twl_components import AngleAttribute, ConstraintsAttribute, EndNodeAttribute, Node, Beam, NodeAttribute, StartNodeAttribute, Support, Force, XCoordinateAttribute, YCoordinateAttribute
 from twl_diagram import Shape, ComponentShape, TwlDiagram
 
 
@@ -49,6 +49,24 @@ class NodeShape(ComponentShape[Node]):
         super().scale(factor)
         self.diagram.itemconfig(self.oval_id, width=self.BORDER * factor)
 
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        if component_id == self.component.id and attribute_id in (XCoordinateAttribute.ID, YCoordinateAttribute.ID):
+            p1, p2 = self.circle_coords()
+            self.tk_shapes[self.oval_id] = Polygon(p1, p2)
+            self.update_label_pos()
+            for beam in self.component.beams:
+                beam_shape = self.diagram.shapes_of_type_for(BeamShape, beam)[0]
+                beam_shape.update_observer(beam.id, StartNodeAttribute.ID if beam.start_node == self.component else EndNodeAttribute.ID)
+            for support in self.component.supports:
+                support_shape = self.diagram.shapes_of_type_for(SupportShape, support)[0]
+                support_shape.update_observer(support.id, NodeAttribute.ID)
+            for force in self.component.forces:
+                force_shape = self.diagram.shapes_of_type_for(ForceShape, force)[0]
+                force_shape.update_observer(force.id, NodeAttribute.ID)
+            self.diagram.refresh()
+        super().update_observer(component_id, attribute_id)
+
+
 class BeamShape(ComponentShape[Beam]):
 
     TAG: str = "beam"
@@ -87,6 +105,14 @@ class BeamShape(ComponentShape[Beam]):
         super().scale(factor)
         self.diagram.itemconfig(self.line_id, width=self.WIDTH * factor)
 
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        if component_id == self.component.id and attribute_id in (StartNodeAttribute.ID, EndNodeAttribute.ID):
+            line = self.line_coords()
+            self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
+            self.update_label_pos()
+            self.diagram.refresh()
+        super().update_observer(component_id, attribute_id)
+
 
 class SupportShape(ComponentShape[Support]):
 
@@ -103,8 +129,8 @@ class SupportShape(ComponentShape[Support]):
 
     def __init__(self, support: Support, diagram: 'ModelDiagram') -> None:
         super().__init__(support, diagram)
-        triangle = self.triangle_coords()
-        self.triangle_id = diagram.create_polygon(triangle.p1.x, 
+        triangle = self.triangle_coords
+        self.triangle_tk_id = diagram.create_polygon(triangle.p1.x, 
                                triangle.p1.y, 
                                triangle.p2.x, 
                                triangle.p2.y, 
@@ -114,22 +140,23 @@ class SupportShape(ComponentShape[Support]):
                                outline=self.COLOR, 
                                width=self.BORDER, 
                                tags=[*self.TAGS, str(support.id)])
-        self.tk_shapes[self.triangle_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
-        if support.constraints == 1:
-            line = self.line_coordinates
-            self.line_id = diagram.create_line(line.start.x, 
-                                line.start.y, 
-                                line.end.x, 
-                                line.end.y, 
-                                fill=self.COLOR, 
-                                width=self.BORDER, 
-                                tags=[*self.TAGS, str(support.id), self.LINE_TAG])
-            self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
+        self.tk_shapes[self.triangle_tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
+        line = self.line_coords
+        self.line_tk_id = diagram.create_line(line.start.x, 
+                            line.start.y, 
+                            line.end.x, 
+                            line.end.y, 
+                            fill=self.COLOR, 
+                            width=self.BORDER, 
+                            tags=[*self.TAGS, str(support.id), self.LINE_TAG])
+        self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
+        self.update_line_visibility()
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
 
     def is_at(self, x: int, y: int) -> bool:
-        return self.triangle_coords().inside_triangle(Point(x, y))
+        return self.triangle_coords.inside_triangle(Point(x, y))
 
+    @property
     def triangle_coords(self) -> Triangle:
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)
@@ -139,7 +166,7 @@ class SupportShape(ComponentShape[Support]):
         return triangle
 
     @property
-    def line_coordinates(self) -> Line:
+    def line_coords(self) -> Line:
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
@@ -162,9 +189,26 @@ class SupportShape(ComponentShape[Support]):
 
     def scale(self, factor: float):
         super().scale(factor)
-        self.diagram.itemconfig(self.triangle_id, width=self.BORDER * factor)
-        if self.component.constraints == 1:
-            self.diagram.itemconfig(self.line_id, width=self.BORDER * factor)
+        self.diagram.itemconfig(self.triangle_tk_id, width=self.BORDER * factor)
+        self.diagram.itemconfig(self.line_tk_id, width=self.BORDER * factor)
+
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        if component_id == self.component.id:
+            if attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
+                triangle = self.triangle_coords
+                self.tk_shapes[self.triangle_tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
+                line = self.line_coords
+                self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
+                self.update_label_pos()
+                self.diagram.refresh()
+            elif attribute_id == ConstraintsAttribute.ID:
+                self.update_line_visibility()
+                self.diagram.refresh()
+        super().update_observer(component_id, attribute_id)
+
+    def update_line_visibility(self):
+        line_visibility = tk.NORMAL if self.component.constraints == 1 else tk.HIDDEN
+        self.diagram.itemconfig(self.line_tk_id, state=line_visibility)
 
 
 class ForceShape(ComponentShape[Force]):
@@ -180,7 +224,7 @@ class ForceShape(ComponentShape[Force]):
 
     def __init__(self, force: Force, diagram: 'ModelDiagram') -> None:
         super().__init__(force, diagram)
-        arrow = self.arrow_coords()
+        arrow = self.arrow_coords
         self.arrow_id = diagram.create_line(arrow.start.x, 
                             arrow.start.y, 
                             arrow.end.x, 
@@ -193,8 +237,9 @@ class ForceShape(ComponentShape[Force]):
         self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
 
     def is_at(self, x: int, y: int) -> bool:
-        return Point(x, y).distance_to_line(self.arrow_coords()) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.arrow_coords) < self.WIDTH/2
 
+    @property
     def arrow_coords(self) -> Line:
         n = Point(self.component.node.x, self.component.node.y)
         a1 = Point(n.x, n.y - self.DISTANCE_FROM_NODE)
@@ -221,58 +266,44 @@ class ForceShape(ComponentShape[Force]):
         scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
         self.diagram.itemconfig(self.arrow_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
 
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        if component_id == self.component.id and attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
+            arrow = self.arrow_coords
+            self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
+            self.update_label_pos()
+            self.diagram.refresh()
+        super().update_observer(component_id, attribute_id)
+
 
 class ModelDiagram(TwlDiagram):
 
     def __init__(self, master):
         super().__init__(master)
+        TwlApp.settings().show_node_labels.trace_add("write", lambda *ignore: self.refresh())
+        TwlApp.settings().show_beam_labels.trace_add("write", lambda *ignore: self.refresh())
+        TwlApp.settings().show_support_labels.trace_add("write", lambda *ignore: self.refresh())
+        TwlApp.settings().show_force_labels.trace_add("write", lambda *ignore: self.refresh())
 
-    def update(self) -> None:
-        super().update()
-        self.clear()
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Updates the diagram whenever a component is added to or removed from the model."""
+        model_components = TwlApp.model().all_components
+        [shape.remove() for shape in self.component_shapes if not shape.component in model_components]
 
-        for node in TwlApp.model().nodes: self.shapes.append(NodeShape(node, self))
-        for beam in TwlApp.model().beams: self.shapes.append(BeamShape(beam, self))
-        for support in TwlApp.model().supports: self.shapes.append(SupportShape(support, self))
-        for force in TwlApp.model().forces: self.shapes.append(ForceShape(force, self))
+        [self.shapes.append(NodeShape(node, self)) for node in TwlApp.model().nodes if not self.shapes_of_type_for(NodeShape, node)]
+        [self.shapes.append(BeamShape(beam, self)) for beam in TwlApp.model().beams if not self.shapes_of_type_for(BeamShape, beam)]
+        [self.shapes.append(SupportShape(support, self)) for support in TwlApp.model().supports if not self.shapes_of_type_for(SupportShape, support)]
+        [self.shapes.append(ForceShape(force, self)) for force in TwlApp.model().forces if not self.shapes_of_type_for(ForceShape, force)]
 
         self.tag_raise(NodeShape.TAG)
         self.tag_raise(ComponentShape.LABEL_BG_TAG)
         self.tag_raise(ComponentShape.LABEL_TAG)
 
-        self.refresh()
+        super().update_observer(component_id, attribute_id)
 
-    def create_node(self, x: int, y: int) -> Node:
-        """Creates a new node in the model."""
-        TwlApp.update_manager().pause()
-        node = Node(TwlApp.model(), x, y)
-        TwlApp.model().nodes.append(node)
-        TwlApp.update_manager().resume()
-        return node
-
-    def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        """Creates a new beam in the model."""
-        TwlApp.update_manager().pause()
-        beam = Beam(TwlApp.model(), start_node, end_node)
-        TwlApp.model().beams.append(beam)
-        TwlApp.update_manager().resume()
-        return beam
-
-    def create_support(self, node: Node, angle: float=0):
-        """Creates a new support in the model."""
-        TwlApp.update_manager().pause()
-        support = Support(TwlApp.model(), node, angle)
-        TwlApp.model().supports.append(support)
-        TwlApp.update_manager().resume()
-        return support
-
-    def create_force(self, node: Node, angle: float=180):
-        """Creates a new force in the model."""
-        TwlApp.update_manager().pause()
-        force = Force(TwlApp.model(), node, angle)
-        TwlApp.model().forces.append(force)
-        TwlApp.update_manager().resume()
-        return force
+    def refresh(self, event=None):
+        super().refresh(event)
+        for shape in self.component_shapes:
+            shape.set_label_visible(self.label_visible(type(shape)))
 
     def label_visible(self, shape_type: type[Shape]) -> bool:
         visible: dict[type[Shape], bool] = {
@@ -282,3 +313,31 @@ class ModelDiagram(TwlDiagram):
             ForceShape: TwlApp.settings().show_force_labels.get()
         }
         return visible.get(shape_type, True)
+
+    def create_node(self, x: int, y: int) -> Node:
+        """Creates a new node in the model."""
+        node = Node(TwlApp.model(), x, y)
+        TwlApp.model().nodes.append(node)
+        return node
+
+    def create_beam(self, start_node: Node, end_node: Node) -> Beam:
+        """Creates a new beam in the model."""
+        beam = Beam(TwlApp.model(), start_node, end_node)
+        TwlApp.model().beams.append(beam)
+        return beam
+
+    def create_support(self, node: Node, angle: float=0):
+        """Creates a new support in the model."""
+        TwlApp.update_manager().pause_observing()
+        support = Support(TwlApp.model(), node, angle)
+        TwlApp.model().supports.append(support)
+        TwlApp.update_manager().resume_observing()
+        return support
+
+    def create_force(self, node: Node, angle: float=180):
+        """Creates a new force in the model."""
+        TwlApp.update_manager().pause_observing()
+        force = Force(TwlApp.model(), node, angle)
+        TwlApp.model().forces.append(force)
+        TwlApp.update_manager().resume_observing()
+        return force

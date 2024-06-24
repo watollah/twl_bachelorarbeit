@@ -2,17 +2,19 @@ import tkinter as tk
 from tkinter import ttk
 
 from twl_app import TwlApp
-from twl_update import TwlWidget, UpdateManager
-from twl_widgets import ToggledFrame, BorderFrame
+from twl_update import UpdateManager
+from twl_widgets import ToggledFrame, BorderFrame, TwlTab
 from twl_components import AngleAttribute, ForceTypeAttribute, Model, Beam, NodeAttribute, Support, Force, Result
 from twl_result_diagram import ResultDiagram
 from twl_table import TwlTable
 
 
-class ResultTab(ttk.Frame, TwlWidget):
+class ResultTab(TwlTab):
+
+    ID: str = "result_tab"
 
     def __init__(self, notebook: ttk.Notebook) -> None:
-        ttk.Frame.__init__(self, notebook)
+        super().__init__(notebook)
 
         horizontal_panes = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         horizontal_panes.pack(fill=tk.BOTH, expand=True)
@@ -26,18 +28,17 @@ class ResultTab(ttk.Frame, TwlWidget):
         horizontal_panes.add(tables_frame, weight=1)
         self.tables = self.create_tables(tables_frame)
 
-        TwlApp.update_manager().result_widgets.append(self)
-
-    def update(self) -> None:
+    def update_observer(self) -> None:
         self.beams_table.component_list = self.get_beam_forces()
-        self.beams_table.update()
+        self.beams_table.update_observer()
         self.supports_table.component_list = self.get_support_forces()
-        self.supports_table.update()
-        self.force_table.update()
+        self.supports_table.update_observer()
+        self.force_table.update_observer()
+        self.result_diagram.update_observer()
 
     def create_diagram(self, frame: ttk.Frame):
-        diagram = ResultDiagram(frame)
-        TwlApp.update_manager().result_widgets.append(diagram)
+        result_diagram = ResultDiagram(frame)
+        return result_diagram
 
     def create_tables(self, frame: ttk.Frame):
         beams_entry = ToggledFrame(frame, "Beams")

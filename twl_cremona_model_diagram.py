@@ -1,11 +1,9 @@
-import tkinter as tk
-
 from twl_style import Colors
 from twl_diagram import ComponentShape
 from twl_components import Component, Node, Force
 from twl_cremona_algorithm import CremonaAlgorithm
 from twl_result_model_diagram import ResultModelDiagram, BeamForceShape
-from twl_model_diagram import NodeShape, BeamShape, SupportShape, ForceShape
+from twl_model_diagram import NodeShape, SupportShape, ForceShape
 
 
 class CremonaModelDiagram(ResultModelDiagram):
@@ -14,8 +12,8 @@ class CremonaModelDiagram(ResultModelDiagram):
         super().__init__(master)
         self.steps: list[tuple[Node | None, Force, Component, bool]] = []
 
-    def update(self) -> None:
-        super().update()
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        super().update_observer(component_id, attribute_id)
         self.steps = CremonaAlgorithm.get_steps()
 
     def display_step(self, selected_step: int):
@@ -34,7 +32,7 @@ class CremonaModelDiagram(ResultModelDiagram):
             [shape.set_visible(True) for shape in self.shapes if isinstance(shape, BeamForceShape)]
 
     def step_highlighting(self, selected_step: int):
-        for shape in self.get_component_shapes():
+        for shape in self.component_shapes:
             self.highlight(shape, Colors.BLACK, Colors.WHITE)
         if 0 < selected_step < len(self.steps) + 1:
             node, force, component, sketch = self.steps[selected_step - 1]

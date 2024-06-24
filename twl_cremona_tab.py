@@ -1,16 +1,18 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_app import TwlApp
 from twl_cremona_model_diagram import CremonaModelDiagram
 from twl_cremona_diagram import CremonaDiagram
 from twl_cremona_control_panel import ControlPanel
+from twl_widgets import TwlTab
 
 
-class CremonaTab(ttk.Frame):
+class CremonaTab(TwlTab):
+
+    ID: str = "cremona_tab"
 
     def __init__(self, notebook: ttk.Notebook) -> None:
-        ttk.Frame.__init__(self, notebook)
+        super().__init__(notebook)
 
         vertical_panes = ttk.Panedwindow(self, orient=tk.VERTICAL)
         vertical_panes.pack(fill=tk.BOTH, expand=True)
@@ -33,29 +35,22 @@ class CremonaTab(ttk.Frame):
 
     def create_model_diagram(self, frame: ttk.Frame) -> CremonaModelDiagram:
         model_diagram = CremonaModelDiagram(frame)
-        TwlApp.update_manager().result_widgets.append(model_diagram)
-
-        title_label = ttk.Label(frame, text="Model", font=("Helvetica", 12))
-        title_label.place(x=10, y=10)
-
+        ttk.Label(frame, text="Model", font=("Helvetica", 12)).place(x=10, y=10)
         return model_diagram
 
     def create_cremona_diagram(self, frame: ttk.Frame) -> CremonaDiagram:
         cremona_diagram = CremonaDiagram(frame)
-        TwlApp.update_manager().result_widgets.append(cremona_diagram)
-
-        title_label = ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12))
-        title_label.place(x=10, y=10)
-
+        ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12)).place(x=10, y=10)
         return cremona_diagram
 
     def create_control_panel(self, frame: ttk.Frame) -> 'ControlPanel':
         background_frame = ttk.Frame(frame, style="ControlPanel.TFrame") #todo: find a way to directly change panedwindow background color
         background_frame.pack(fill=tk.BOTH, expand=True)
-
         control_panel = ControlPanel(background_frame, self.model_diagram, self.cremona_diagram)
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        TwlApp.update_manager().result_widgets.append(control_panel)
-
         return control_panel
 
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        self.model_diagram.update_observer(component_id, attribute_id)
+        self.cremona_diagram.update_observer(component_id, attribute_id)
+        self.control_panel.update_observer(component_id, attribute_id)

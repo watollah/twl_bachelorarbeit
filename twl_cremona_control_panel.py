@@ -1,18 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_app import TwlApp
 from twl_cremona_algorithm import CremonaAlgorithm
-from twl_update import TwlWidget
-from twl_style import Colors
-from twl_math import Point, Line
-from twl_components import Component, Node, Beam, Support, Force
+from twl_update import Observer
+from twl_components import Component, Node, Force
 from twl_widgets import CustomMenuButton, CustomToggleButton
 from twl_cremona_model_diagram import CremonaModelDiagram
-from twl_cremona_diagram import CremonaDiagram, ResultShape, BaseLineShape
+from twl_cremona_diagram import CremonaDiagram
 
 
-class ControlPanel(ttk.Frame, TwlWidget):
+class ControlPanel(Observer, ttk.Frame):
 
     PADDING: int = 5
     SPEED_OPTIONS = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
@@ -99,7 +96,7 @@ class ControlPanel(ttk.Frame, TwlWidget):
         assert(speed)
         self.after(speed, self.run_animation)
 
-    def update(self) -> None:
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
         self.steps = CremonaAlgorithm.get_steps()
         self._scale.config(from_=0, to=len(self.steps) + 1)
         self.selected_step.set(len(self.steps) + 1)

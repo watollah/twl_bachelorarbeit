@@ -4,7 +4,7 @@ from typing import TypeVar, Generic
 
 from twl_components import Component, Attribute
 from twl_widgets import CustomEntry
-from twl_update import TwlWidget
+from twl_update import Observer
 
 
 C = TypeVar('C', bound=Component)
@@ -30,7 +30,7 @@ class TwlTableEntryPopUp(CustomEntry):
             self.destroy()
 
 
-class TwlTable(ttk.Treeview, TwlWidget, Generic[C]):
+class TwlTable(Observer, ttk.Treeview, Generic[C]):
 
     def __init__(self, master, component_list: list[C], component_type: type[C]):
         ttk.Treeview.__init__(self, master, show="headings")
@@ -43,7 +43,7 @@ class TwlTable(ttk.Treeview, TwlWidget, Generic[C]):
 
         self.bind('<Double-1>', self.direct_edit_cell)
 
-    def update(self) -> None:
+    def update_observer(self, component_id: str = "", attribute_id: str = ""):
         self.delete(*self.get_children())
         for c in self.component_list: self.insert("", tk.END, text=str(c.id), values=[attr.get_display_value() for attr in c.attributes])
 

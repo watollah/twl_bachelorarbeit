@@ -1,32 +1,35 @@
-class TwlWidget:
-    
-    def update(self):
+from abc import abstractmethod
+
+
+class Observer:
+    """Class (for example a ui widget) that gets registered with an Observable class. Gets notified when it has to update."""
+
+    @abstractmethod
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update this Observer to show changes. Optionally provided ids for more precise updating."""
         pass
 
+
 class UpdateManager:
+    """Class that keeps track of a list of Observers that get can be notified to reflect changes."""
 
     def __init__(self) -> None:
-        self.paused: bool = False
-        self.design_widgets: list[TwlWidget] = []
-        self.result_widgets: list[TwlWidget] = []
+        self._paused: bool = False
+        self._observers: list[Observer] = []
 
-    def is_active(self) -> bool:
-        return True
+    def pause_observing(self):
+        """Pause the UpdateManager from notifying its Observers for updates. Resume with UpdateManager.resume()."""
+        self._paused = True
 
-    def pause(self):
-        self.paused = True
+    def resume_observing(self):
+        """Resume notifying Observers for updates."""
+        self._paused = False
+        self.notify_observers()
 
-    def resume(self):
-        self.paused = False
-        self.update()
+    def register_observer(self, observer: Observer):
+        self._observers.append(observer)
 
-    def update(self):
-        if not self.paused:
-            for widget in self.design_widgets: widget.update()
-
-    def force_update(self):
-        for widget in self.design_widgets: widget.update()
-
-    def update_results(self):
-        if not self.paused:
-            for widget in self.result_widgets: widget.update()
+    def notify_observers(self, component_id: str="", attribute_id: str=""):
+        """Notify Observers to update themselves. Doesn't do anything while the UpdateManager is paused."""
+        if not self._paused:
+            for observer in self._observers: observer.update_observer(component_id, attribute_id)

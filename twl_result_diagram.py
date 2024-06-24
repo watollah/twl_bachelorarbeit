@@ -51,8 +51,8 @@ class BeamForcePlotShape(ComponentShape[Beam]):
 
 class ResultDiagram(ResultModelDiagram):
 
-    def update(self) -> None:
-        super().update()
+    def update_observer(self, component_id: str="", attribute_id: str=""):
+        super().update_observer(component_id, attribute_id)
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)

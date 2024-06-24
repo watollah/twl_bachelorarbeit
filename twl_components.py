@@ -30,7 +30,7 @@ class Attribute(Generic[C, V]):
         filter_result = self.filter(value)
         if filter_result[0]:
             self._value = type(self._value)(value) #type: ignore
-            self._component.model.update_manager.update()
+            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
             print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
 
@@ -270,6 +270,7 @@ class ForceTypeAttribute(Attribute['Result', ForceType]):
     def get_display_value(self) -> str:
         return self.get_value().value
 
+
 class Component(ABC):
 
     TAG: str = "component"
@@ -459,7 +460,7 @@ class Model:
     def clear(self):
         if not self.is_empty():
             [component_list.clear() for component_list in self.component_lists]
-            self.update_manager.update()
+        self.update_manager.notify_observers()
 
     def is_empty(self) -> bool:
         return all(not component_list for component_list in self.component_lists)
@@ -490,16 +491,12 @@ class ComponentList(list[C]):
     def append(self, *components: C) -> None:
         """Add item to the list and notify connected widgets to update."""
         for component in components: super().append(component)
-        self.update_manager.update()
+        self.update_manager.notify_observers()
 
     def remove(self, *components: C) -> None:
         """Remove item(s) from the list and notify connected widgets to update."""
-        change: bool = False
-        for component in components: 
-            if component in self:
-                super().remove(component)
-                change = True
-        if change: self.update_manager.update()
+        [super().remove(component) for component in components if component in self]
+        self.update_manager.notify_observers()
 
-    def get_component(self, id: str) -> C | None:
+    def component_for_id(self, id: str) -> C | None:
         return next((component for component in self if component.id == id), None)

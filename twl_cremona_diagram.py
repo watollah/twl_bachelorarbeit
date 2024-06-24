@@ -8,7 +8,7 @@ from twl_style import Colors
 from twl_diagram import TwlDiagram, Shape, ComponentShape
 from twl_math import Point, Line, Polygon
 from twl_cremona_algorithm import CremonaAlgorithm
-from twl_components import Component, Node, Beam, Support, Force
+from twl_components import Component, Node, Support, Force
 
 
 class BaseLineShape(Shape):
@@ -110,15 +110,17 @@ class CremonaDiagram(TwlDiagram):
 
     def __init__(self, master):
         super().__init__(master)
+        TwlApp.settings().show_cremona_labels.trace_add("write", lambda *ignore: self.update_observer())
         self.steps = []
 
     def create_bottom_bar(self) -> tk.Frame:
         bottom_bar = super().create_bottom_bar()
         force_spacing_check = ttk.Checkbutton(bottom_bar, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
         force_spacing_check.pack(padx=self.UI_PADDING)
+        TwlApp.settings().force_spacing.trace_add("write", lambda *ignore: self.update_observer())
         return bottom_bar
 
-    def update(self) -> None:
+    def update_observer(self, component_id: str="", attribute_id: str=""):
         self.clear()
         self.steps = CremonaAlgorithm.get_steps()
         pos = self.START_POINT
@@ -140,7 +142,7 @@ class CremonaDiagram(TwlDiagram):
             pos = self.draw_force(pos, force, component, sketch)
         if self.steps and TwlApp.settings().force_spacing.get():
             self.force_spacing()
-        self.update_scrollregion()
+        super().update_observer(component_id, attribute_id)
 
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)
@@ -183,7 +185,7 @@ class CremonaDiagram(TwlDiagram):
             (SketchShape, False): {"width": SketchShape.WIDTH, "dash": SketchShape.DASH},
             (SketchShape, True): {"width": SketchShape.SELECTED_WIDTH, "dash": SketchShape.SELECTED_DASH}
         }
-        for shape in self.get_component_shapes():
+        for shape in self.component_shapes:
             self.highlight(shape, Colors.BLACK, line_style[(type(shape), False)])
         if 0 < selected_step < len(self.steps) + 1:
             node, force, component, sketch = self.steps[selected_step - 1]

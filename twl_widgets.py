@@ -1,8 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
 
+from twl_update import Observer
 from twl_style import Colors
 from twl_images import add_image_from_path
+
+
+class TwlTab(Observer, ttk.Frame):
+
+    ID: str = ""
+
+    def __init__(self, notebook: ttk.Notebook) -> None:
+        ttk.Frame.__init__(self, notebook)
 
 
 class ToolTip(object):

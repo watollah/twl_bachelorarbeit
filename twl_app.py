@@ -1,15 +1,33 @@
+import tkinter as tk
+
 from twl_update import UpdateManager
-from twl_components import Model
 from twl_settings import Settings
+from twl_components import Model
 from twl_solver import Solver
 
 
-class TwlApp:
+class TwlApp():
+
+    _saved_state = None
+    _changed_state = None
 
     _update_manager = None
     _settings = None
     _model = None
     _solver = None
+
+    @staticmethod
+    def saved_state():
+        if TwlApp._saved_state is None:
+            TwlApp._saved_state = tk.BooleanVar()
+        return TwlApp._saved_state
+
+    @staticmethod
+    def changed_state():
+        if TwlApp._changed_state is None:
+            TwlApp._changed_state = tk.BooleanVar()
+        return TwlApp._changed_state
+
 
     @staticmethod
     def update_manager():

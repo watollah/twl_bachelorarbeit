@@ -68,11 +68,10 @@ class ResultModelDiagram(ModelDiagram):
 
     SUPPORT_FORCE_OFFSET_RANGE = 50
 
-    def update(self) -> None:
-        super().update()
+    def update_observer(self, component_id: str="", attribute_id: str=""):
         self.add_support_forces()
         self.add_beam_forces()
-        self.refresh()
+        super().update_observer(component_id, attribute_id)
 
     def add_support_forces(self):
         support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
@@ -90,7 +89,7 @@ class ResultModelDiagram(ModelDiagram):
     def offset_support_force(self, shape: ForceShape, support: Support):
         force = shape.component
         if support.angle - self.SUPPORT_FORCE_OFFSET_RANGE <= force.angle <= support.angle + self.SUPPORT_FORCE_OFFSET_RANGE:
-            p1 = shape.arrow_coords().start
+            p1 = shape.arrow_coords.start
             line = Line(Point(force.node.x, force.node.y), Point(p1.x, p1.y))
             line.resize(SupportShape.HEIGHT)
             p2 = line.end
