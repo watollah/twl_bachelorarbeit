@@ -308,31 +308,3 @@ class ModelDiagram(TwlDiagram):
             ForceShape: TwlApp.settings().show_force_labels.get()
         }
         return visible.get(type(shape), True)
-
-    def create_node(self, x: int, y: int) -> Node:
-        """Creates a new node in the model."""
-        node = Node(TwlApp.model(), x, y)
-        TwlApp.model().nodes.append(node)
-        return node
-
-    def create_beam(self, start_node: Node, end_node: Node) -> Beam:
-        """Creates a new beam in the model."""
-        beam = Beam(TwlApp.model(), start_node, end_node)
-        TwlApp.model().beams.append(beam)
-        return beam
-
-    def create_support(self, node: Node, angle: float=0):
-        """Creates a new support in the model."""
-        TwlApp.update_manager().pause_observing()
-        support = Support(TwlApp.model(), node, angle)
-        TwlApp.model().supports.append(support)
-        TwlApp.update_manager().resume_observing()
-        return support
-
-    def create_force(self, node: Node, angle: float=180):
-        """Creates a new force in the model."""
-        TwlApp.update_manager().pause_observing()
-        force = Force(TwlApp.model(), node, angle)
-        TwlApp.model().forces.append(force)
-        TwlApp.update_manager().resume_observing()
-        return force

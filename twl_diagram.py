@@ -198,9 +198,9 @@ class Tool:
         self.correct_event_pos(event)
         self.action(event)
 
-    def action(self, event):
-        """Code to be executed when the user clicks on the canvas while the tool is active"""
-        pass
+    def action(self, event) -> bool:
+        """Code to be executed when the user clicks on the canvas while the tool is active."""
+        return True
 
     def holding_shift_key(self, event) -> bool:
         return event.state & 0x1 #bitwise ANDing the event.state with the ShiftMask flag

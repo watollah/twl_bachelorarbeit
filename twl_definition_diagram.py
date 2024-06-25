@@ -50,7 +50,7 @@ class SelectTool(Tool):
     def selectable_shapes(self) -> list[ComponentShape]:
         return list(filter(lambda shape: isinstance(shape.component, (Beam, Support, Force)), self.diagram.component_shapes))
 
-    def action(self, event):
+    def action(self, event) -> bool:
         self.correct_scrolling(event)
         self.diagram.focus_set()
 
@@ -62,6 +62,7 @@ class SelectTool(Tool):
             self.start_rect_selection(event)
         else:
             self.process_selection(event, shape)
+        return True
 
     def start_rect_selection(self, event):
         self.selection_rect = self.diagram.create_rectangle(event.x, event.y, event.x, event.y, outline=ComponentShape.SELECTED_COLOR, width=2)
@@ -190,7 +191,15 @@ class ComponentTool(Generic[C], Tool):
         self.diagram.focus_set()
         self.correct_event_pos(event)
         self._snap_event_to_grid(event)
-        self.action(event)
+        if self.action(event):
+            self._create_component()
+
+    def _create_component(self) -> C:
+        TwlApp.update_manager().pause_observing()
+        component = self.create_component()
+        TwlApp.update_manager().resume_observing()
+        self.reset()
+        return component
 
     def _move(self, event):
         self.diagram.focus_set()
@@ -217,6 +226,10 @@ class ComponentTool(Generic[C], Tool):
 
     @abstractmethod
     def show_temp_shape(self):
+        pass
+
+    @abstractmethod
+    def create_component(self) -> C:
         pass
 
 
@@ -255,6 +268,7 @@ class ComponentToolPopup(tk.Toplevel):
                 entry.grid(column=1, row=i + 1, pady=self.CONTENT_PADDING)
                 entry.bind("<FocusIn>", lambda *ignore: self.has_focus.set(True))
                 entry.bind("<Escape>", lambda *ignore: self.diagram.focus_set())
+                entry.bind("<Return>", lambda *ignore: self.on_return())
                 self.entries[attr] = entry
                 self.create_label(f"{attr.UNIT}", 2, i + 1)
 
@@ -265,12 +279,17 @@ class ComponentToolPopup(tk.Toplevel):
         self.style_focus()
         self.bind("<Tab>", self.cycle_focus)
 
+    def on_return(self):
+        self.update_component()
+        self.tool._create_component()
+
     def value_changed(self):
         if self.has_focus.get():
-            for attr, entry in self.entries.items():
-                if attr.filter(entry.get())[0]:
-                    attr.set_value(entry.get())
+            self.update_component()
             self.tool.show_temp_shape()
+
+    def update_component(self):
+        [attr.set_value(entry.get()) for attr, entry in self.entries.items()]
 
     def create_label(self, text: str, column: int, row: int, columnspan: int=1):
         label = tk.Label(self.content, text=text, anchor=tk.W)
@@ -327,17 +346,30 @@ class BeamTool(ComponentTool[Beam]):
         clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if self.start_node is None:
             self.start_node = clicked_node if clicked_node else Node(Model(UpdateManager()), event.x, event.y)
-            return
+            self.component.start_node = self.start_node
+            return False
         else:
             if self.holding_shift_key(event):
                 self.shift_snap_line(event)
-            TwlApp.update_manager().pause_observing()
-            if not self.start_node in TwlApp.model().nodes:
-                self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
-            end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
-            self.diagram.create_beam(self.start_node, end_node)
-            self.start_node = end_node
-            TwlApp.update_manager().resume_observing()
+            self.end_node = clicked_node if clicked_node else Node(Model(UpdateManager()), event.x, event.y)
+            self.component.end_node = self.end_node
+            return True
+
+    def create_component(self) -> Beam:
+        if not self.component.start_node in TwlApp.model().nodes:
+            self.component.start_node = Node(TwlApp.model(), self.component.start_node.x, self.component.start_node.y)
+            TwlApp.model().nodes.append(self.component.start_node)
+        if not self.component.end_node in TwlApp.model().nodes:
+            self.component.end_node = Node(TwlApp.model(), self.component.end_node.x, self.component.end_node.y)
+            TwlApp.model().nodes.append(self.component.end_node)
+        beam = Beam(TwlApp.model(), self.component.start_node, self.component.end_node)
+        TwlApp.model().beams.append(beam)
+        return beam
+
+    def _create_component(self) -> Beam:
+        beam = super()._create_component()
+        self.start_node = beam.end_node
+        return beam
 
     def prepare(self, event) -> bool:
         existing_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
@@ -397,11 +429,17 @@ class SupportTool(ComponentTool[Support]):
             if clicked_node and not clicked_node.supports:
                 self.node = clicked_node
                 self.component.node = self.node
+            return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.diagram.create_support(self.node, angle)
-            self.reset()
+            self.component.angle = angle
+            return True
+
+    def create_component(self) -> Support:
+        support = Support(TwlApp.model(), self.component.node, self.component.angle)
+        TwlApp.model().supports.append(support)
+        return support
 
     def prepare(self, event) -> bool:
         if not self.node:
@@ -442,11 +480,17 @@ class ForceTool(ComponentTool[Force]):
             if clicked_node:
                 self.node = clicked_node
                 self.component.node = self.node
+            return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.diagram.create_force(self.node, angle)
-            self.reset()
+            self.component.angle = angle
+            return True
+
+    def create_component(self) -> Force:
+        force = Force(TwlApp.model(), self.component.node, self.component.angle)
+        TwlApp.model().forces.append(force)
+        return force
 
     def prepare(self, event) -> bool:
         if not self.node:
