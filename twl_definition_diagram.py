@@ -438,12 +438,12 @@ class SupportTool(ComponentTool[Support]):
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if clicked_node and not clicked_node.supports:
                 self.node = clicked_node
-                self.component.node = self.node
+                self.component._node._value = self.node
             return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.component.angle = angle
+            self.component._angle._value = angle
             return True
 
     def create_component(self) -> Support:
@@ -460,7 +460,7 @@ class SupportTool(ComponentTool[Support]):
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.component.angle = angle
+            self.component._angle._value = angle
             return True
 
     def show_temp_shape(self):
@@ -489,12 +489,12 @@ class ForceTool(ComponentTool[Force]):
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if clicked_node:
                 self.node = clicked_node
-                self.component.node = self.node
+                self.component._node._value = self.node
             return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            self.component.angle = angle
+            self.component._angle._value = angle
             return True
 
     def create_component(self) -> Force:
@@ -510,7 +510,7 @@ class ForceTool(ComponentTool[Force]):
             return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            self.component.angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            self.component._angle._value = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             return True
 
     def show_temp_shape(self):
