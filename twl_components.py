@@ -67,21 +67,22 @@ class Component(ABC):
 
     id: AttributeDescriptor[str] = AttributeDescriptor("_id")
 
-    def __init__(self, model: 'Model'):
+    def __init__(self, model: 'Model', id: str | None=None):
         self.model: Model = model
         self.attributes: list[Attribute] = []
-        self._id: IdAttribute = IdAttribute(self)
+        self._id: IdAttribute = IdAttribute(self, id)
 
     @classmethod
     def dummy(cls):
         """Creates a dummy instance of this Component to extract its attributes."""
-        return cls(Model(UpdateManager()))
+        return cls(Model(UpdateManager()), id="")
 
     @abstractmethod
     def delete(self):
         """Deletes the component from the model and deltes components dependent on it."""
 
-    def gen_id(self, i: int) -> str:
+    @staticmethod
+    def gen_id(i: int) -> str:
         """Generate an id based on a number i."""
         return str(i)
 
@@ -94,22 +95,17 @@ class IdAttribute(Attribute[Component, str]):
     UNIT = ""
     EDITABLE: bool = True
 
-    def __init__(self, component: Component) -> None:
-        super().__init__(component, "")
-        self._value = self._generate_next_unique_id()
-
+    def __init__(self, component: Component, value: str | None) -> None:
+        super().__init__(component, value if value else "")
+        if not value:
+            self._value = self._component.model.next_unique_id_for(type(component))
+    
     def filter(self, value) -> tuple[bool, str]:
         if hasattr(self._component, "_id") and self._component.id == value:
             return True, ""
         if value in {component.id for component in self._component.model.all_components}:
             return False, "Id already exists."
         return True, ""
-
-    def _generate_next_unique_id(self) -> str:
-        i = 1
-        while not self.filter(self._component.gen_id(i))[0]:
-            i += 1
-        return self._component.gen_id(i)
 
 
 class Node(Component):
@@ -119,14 +115,14 @@ class Node(Component):
     x: AttributeDescriptor[int] = AttributeDescriptor("_x")
     y: AttributeDescriptor[int] = AttributeDescriptor("_y")
 
-    def __init__(self, model: 'Model', x: int, y: int):
-        super().__init__(model)
+    def __init__(self, model: 'Model', x: int, y: int, id: str | None=None):
+        super().__init__(model, id)
         self._x: XCoordinateAttribute = XCoordinateAttribute(self, x)
         self._y: YCoordinateAttribute = YCoordinateAttribute(self, y)
 
     @classmethod
-    def dummy(cls):
-        return cls(Model(UpdateManager()), 0, 0)
+    def dummy(cls, x: int=0, y:int=0):
+        return cls(Model(UpdateManager()), x, y, id=cls.TAG)
 
     def delete(self):
         for support in self.supports: support.delete()
@@ -145,7 +141,8 @@ class Node(Component):
     def forces(self) -> list['Force']:
         return [force for force in self.model.forces if force.node == self]
 
-    def gen_id(self, i: int) -> str:
+    @staticmethod
+    def gen_id(i: int) -> str:
         return int_to_roman(i)
 
 
@@ -189,8 +186,8 @@ class Beam(Component):
     length: AttributeDescriptor[float] = AttributeDescriptor("_length")
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
 
-    def __init__(self, model: 'Model', start_node: Node, end_node: Node):
-        super().__init__(model)
+    def __init__(self, model: 'Model', start_node: Node, end_node: Node, id: str | None=None):
+        super().__init__(model, id)
         self._start_node: StartNodeAttribute = StartNodeAttribute(self, start_node)
         self._end_node: EndNodeAttribute = EndNodeAttribute(self, end_node)
         self._length: BeamLengthAttribute = BeamLengthAttribute(self)
@@ -198,7 +195,7 @@ class Beam(Component):
 
     @classmethod
     def dummy(cls):
-        return cls(Model(UpdateManager()), Node.dummy(), Node.dummy())
+        return cls(Model(UpdateManager()), Node.dummy(), Node.dummy(), id=cls.TAG)
 
     def delete(self):
         self.model.beams.remove(self)
@@ -215,7 +212,8 @@ class Beam(Component):
         p2 = Point(self.end_node.x, self.end_node.y)
         return Line(p1, p2).angle()
 
-    def gen_id(self, i: int) -> str:
+    @staticmethod
+    def gen_id(i: int) -> str:
         return f"S{i}"
 
 
@@ -334,20 +332,21 @@ class Support(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     constraints: AttributeDescriptor[int] = AttributeDescriptor("_constraints")
 
-    def __init__(self, model: 'Model', node: Node, angle: float=180, constraints: int=2):
-        super().__init__(model)
+    def __init__(self, model: 'Model', node: Node, angle: float=180, constraints: int=2, id: str | None=None):
+        super().__init__(model, id)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._constraints: ConstraintsAttribute = ConstraintsAttribute(self, constraints)
 
     @classmethod
     def dummy(cls):
-        return cls(Model(UpdateManager()), Node.dummy())
+        return cls(Model(UpdateManager()), Node.dummy(), id="")
 
     def delete(self):
         self.model.supports.remove(self)
 
-    def gen_id(self, i: int) -> str:
+    @staticmethod
+    def gen_id(i: int) -> str:
         return chr(i + 64)
 
 
@@ -398,23 +397,23 @@ class Force(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     strength: AttributeDescriptor[float] = AttributeDescriptor("_strength")
 
-    def __init__(self, model: 'Model', node: Node, angle: float=0, strength: float=1.0):
-        super().__init__(model)
+    def __init__(self, model: 'Model', node: Node, angle: float=0, strength: float=1.0, id: str | None=None):
+        super().__init__(model, id)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._strength: StrengthAttribute = StrengthAttribute(self, strength)
 
     @classmethod
-    def dummy(cls, id: str="dummy_force", node: Node | None=None, angle: float=0, strength: float=1.0):
+    def dummy(cls, id="", node: Node | None=None, angle: float=0, strength: float=1.0):
         node = Node.dummy() if node == None else node
-        dummy_force: Force = cls(Model(UpdateManager()), node, angle, strength)
-        dummy_force.id = id
+        dummy_force: Force = cls(Model(UpdateManager()), node, angle, strength, id=id)
         return dummy_force
 
     def delete(self):
         self.model.forces.remove(self)
 
-    def gen_id(self, i: int) -> str:
+    @staticmethod
+    def gen_id(i: int) -> str:
         return f"F{i}"
 
 
@@ -457,14 +456,14 @@ class Result(Component):
     force_type: AttributeDescriptor[ForceType] = AttributeDescriptor("_force_type")
     result: AttributeDescriptor[float] = AttributeDescriptor("_result")
 
-    def __init__(self, model: 'Model', force: Force):
-        super().__init__(model)
+    def __init__(self, model: 'Model', force: Force, id: str | None=None):
+        super().__init__(model, id)
         self.id = force.id
         self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, ForceType.from_value(round(force.strength, 2)))
         self._result: ResultAttribute = ResultAttribute(self, round(force.strength, 2))
 
     @classmethod
-    def dummy(cls, id: str="dummy_result", force: Force | None=None):
+    def dummy(cls, force: Force | None=None, id=""):
         force = force if force else Force.dummy()
         dummy_result: Result = cls(Model(UpdateManager()), force)
         dummy_result.id = id
@@ -536,6 +535,13 @@ class Model:
     def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
+
+    def next_unique_id_for(self, component_type: type[C]) -> str:
+        existing_ids =  {component.id for component in self.all_components}
+        i = 1
+        while component_type.gen_id(i) in existing_ids:
+            i += 1
+        return component_type.gen_id(i)
 
 
 class ComponentList(list[C]):

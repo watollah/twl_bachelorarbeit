@@ -161,19 +161,26 @@ class ComponentTool(Generic[C], Tool):
 
     def __init__(self, diagram: 'DefinitionDiagram'):
         self.diagram: 'DefinitionDiagram' = diagram
-        self.component: C = self.COMPONENT_TYPE.dummy()
+        self.component = self.dummy_component()
         self.popup: ComponentToolPopup | None = None
 
     def reset(self):
         super().reset()
-        self.component = self.COMPONENT_TYPE.dummy()
+        self.component = self.dummy_component()
         if self.popup:
             self.diagram.unbind("<Tab>")
             self.popup.destroy()
             self.popup = None
 
+    def dummy_component(self) -> C:
+        component: C = self.COMPONENT_TYPE.dummy()
+        component.model = TwlApp.model()
+        component._id._value = TwlApp.model().next_unique_id_for(self.COMPONENT_TYPE)
+        return component
+
     def activate(self):
         super().activate()
+        self.component = self.dummy_component()
         self.diagram.bind("<Motion>", self._move)
 
     def deactivate(self):
@@ -214,6 +221,7 @@ class ComponentTool(Generic[C], Tool):
         """Preview of the action with temporary shape and popup once a temp component is ready to be displayed."""
         self.show_temp_shape()
         if self.popup:
+            self.popup.has_focus.set(False)
             self.popup.refresh()
         else:
             self.popup = ComponentToolPopup(self)
@@ -280,8 +288,9 @@ class ComponentToolPopup(tk.Toplevel):
         self.bind("<Tab>", self.cycle_focus)
 
     def on_return(self):
-        self.update_component()
-        self.tool._create_component()
+        if all([attr.filter(entry.get())[0] for attr, entry in self.entries.items()]):
+            self.update_component()
+            self.tool._create_component()
 
     def value_changed(self):
         if self.has_focus.get():
@@ -345,24 +354,24 @@ class BeamTool(ComponentTool[Beam]):
     def action(self, event):
         clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if self.start_node is None:
-            self.start_node = clicked_node if clicked_node else Node(Model(UpdateManager()), event.x, event.y)
-            self.component.start_node = self.start_node
+            self.start_node = clicked_node if clicked_node else Node.dummy(event.x, event.y)
+            self.component._start_node._value = self.start_node
             return False
         else:
             if self.holding_shift_key(event):
                 self.shift_snap_line(event)
-            self.end_node = clicked_node if clicked_node else Node(Model(UpdateManager()), event.x, event.y)
-            self.component.end_node = self.end_node
+            self.end_node = clicked_node if clicked_node else Node.dummy(event.x, event.y)
+            self.component._end_node._value = self.end_node
             return True
 
     def create_component(self) -> Beam:
         if not self.component.start_node in TwlApp.model().nodes:
-            self.component.start_node = Node(TwlApp.model(), self.component.start_node.x, self.component.start_node.y)
+            self.component._start_node._value = Node(TwlApp.model(), self.component.start_node.x, self.component.start_node.y)
             TwlApp.model().nodes.append(self.component.start_node)
         if not self.component.end_node in TwlApp.model().nodes:
-            self.component.end_node = Node(TwlApp.model(), self.component.end_node.x, self.component.end_node.y)
+            self.component._end_node._value = Node(TwlApp.model(), self.component.end_node.x, self.component.end_node.y)
             TwlApp.model().nodes.append(self.component.end_node)
-        beam = Beam(TwlApp.model(), self.component.start_node, self.component.end_node)
+        beam = Beam(TwlApp.model(), self.component.start_node, self.component.end_node, self.component.id)
         TwlApp.model().beams.append(beam)
         return beam
 
@@ -376,14 +385,14 @@ class BeamTool(ComponentTool[Beam]):
         if not self.start_node:
             if not existing_node:
                 self.diagram.delete_with_tag(ComponentShape.TEMP)
-                TempNodeShape(Node(Model(UpdateManager()), event.x, event.y), self.diagram)
+                TempNodeShape(Node.dummy(event.x, event.y), self.diagram)
             return False
         else:
             if self.holding_shift_key(event):
                 self.shift_snap_line(event)
-            self.end_node = existing_node if existing_node else Node(Model(UpdateManager()), event.x, event.y)
-            self.component.start_node = self.start_node
-            self.component.end_node = self.end_node
+            self.end_node = existing_node if existing_node else Node.dummy(event.x, event.y)
+            self.component._start_node._value = self.start_node
+            self.component._end_node._value  = self.end_node
             return True
 
     def shift_snap_line(self, event):
@@ -437,7 +446,7 @@ class SupportTool(ComponentTool[Support]):
             return True
 
     def create_component(self) -> Support:
-        support = Support(TwlApp.model(), self.component.node, self.component.angle)
+        support = Support(TwlApp.model(), self.component.node, self.component.angle, self.component.constraints, self.component.id)
         TwlApp.model().supports.append(support)
         return support
 
@@ -488,7 +497,7 @@ class ForceTool(ComponentTool[Force]):
             return True
 
     def create_component(self) -> Force:
-        force = Force(TwlApp.model(), self.component.node, self.component.angle)
+        force = Force(TwlApp.model(), self.component.node, self.component.angle, self.component.strength, self.component.id)
         TwlApp.model().forces.append(force)
         return force
 

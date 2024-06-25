@@ -23,7 +23,6 @@ class TwlTool(Observer, tk.Tk):
 
         self.geometry("1200x800")
         init_style()
-        TwlApp.update_manager().register_observer(self)
         menubar = self.create_menu_bar()
         self.config(menu=menubar)
 
@@ -41,6 +40,8 @@ class TwlTool(Observer, tk.Tk):
         self.bind("<Control-o>", lambda *ignore: io.open_project())
         self.bind("<Control-s>", lambda *ignore: io.save_project())
         self.bind("<Control-S>", lambda *ignore: io.save_project_as())
+
+        TwlApp.update_manager().register_observer(self)
 
     def update_window_title(self):
         project_name = io.get_project_name()
