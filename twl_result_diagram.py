@@ -28,6 +28,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
                             fill=bg_color,
                             tags=[*self.TAGS, str(self.component.id)])
         self.tk_shapes[self.rect_id] = Polygon(rect[0], rect[1], rect[2], rect[3])
+        self.set_label_visible(False)
 
     def rect_coords(self) -> tuple[Point, Point, Point, Point]:
         p1 = Point(self.component.start_node.x, self.component.start_node.y)

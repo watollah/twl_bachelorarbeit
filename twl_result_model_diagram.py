@@ -27,6 +27,7 @@ class BeamForceShape(ComponentShape[Beam]):
             self.draw_circle()
         else:
             self.draw_arrows()
+        self.set_label_visible(False)
 
     def draw_circle(self):
             oval = self.oval_coords()
@@ -63,6 +64,10 @@ class BeamForceShape(ComponentShape[Beam]):
             scaled_arrow = tuple(value * factor for value in arrow)
             self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
 
+    def set_visible(self, visible: bool):
+        super().set_visible(visible)
+        self.set_label_visible(False)
+
 
 class ResultModelDiagram(ModelDiagram):
 
@@ -93,7 +98,7 @@ class ResultModelDiagram(ModelDiagram):
             line = Line(Point(force.node.x, force.node.y), Point(p1.x, p1.y))
             line.resize(SupportShape.HEIGHT)
             p2 = line.end
-            shape.move(p2.x - p1.x, p2.y - p1.y)
+            shape.move(round(p2.x - p1.x), round(p2.y - p1.y))
 
     def adjust_label_positions(self):
         zero_beam_force_shapes = [shape for shape in self.shapes if isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0]

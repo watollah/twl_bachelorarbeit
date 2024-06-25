@@ -149,11 +149,12 @@ class ComponentShape(Generic[C], Shape, Observer):
         label_pos = self.label_position
         self.tk_shapes[self.label_tk_id] = Polygon(label_pos)
         self.diagram.coords(self.label_tk_id, label_pos.x, label_pos.y)
+        self.diagram.update_idletasks()
         if self.diagram.bbox(self.label_tk_id):
             x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
             self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
         else:
-            print(f"Label not found for {self.component.id}")
+            print(f"Warning: Label not found for {self.component.id}")
 
 
 class Tool:
