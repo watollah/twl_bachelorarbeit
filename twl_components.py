@@ -29,7 +29,7 @@ class Attribute(Generic[C, V]):
         """Set the value of this attribute. The value is tested for validity and cast to the attributes type."""
         filter_result = self.filter(value)
         if filter_result[0]:
-            self._value = type(self._value)(value) #type: ignore
+            self._value = value if isinstance(value, type(self._value)) else (type(self._value))(value) #type: ignore
             self._component.model.update_manager.notify_observers(self._component.id, self.ID)
             print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
