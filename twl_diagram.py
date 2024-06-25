@@ -276,10 +276,8 @@ class TwlDiagram(Observer, tk.Canvas):
     def refresh(self, event=None):
         self.update_scrollregion()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
-        for shape in self.shapes:
-            shape.scale(self.current_zoom.get() / 100)
-        for shape in self.component_shapes:
-            shape.set_label_visible(self.label_visible(type(shape)))
+        [shape.scale(self.current_zoom.get() / 100) for shape in self.shapes]
+        [self.label_visible(shape) for shape in self.component_shapes]
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         self.refresh()
@@ -413,7 +411,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.tag_raise(text_id)
         return text_id, bg_id
 
-    def label_visible(self, shape_type: type[Shape]) -> bool:
+    def label_visible(self, shape: Shape) -> bool:
         return False
 
     @property

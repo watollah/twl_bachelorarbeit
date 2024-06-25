@@ -112,5 +112,5 @@ class ResultModelDiagram(ModelDiagram):
         beam_shape.tk_shapes[beam_shape.label_tk_id].move(delta_x, delta_y)
         beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(delta_x, delta_y)
 
-    def label_visible(self, shape_type: type[Shape]) -> bool:
-        return shape_type not in (SupportShape, BeamForceShape) and super().label_visible(shape_type)
+    def label_visible(self, shape: Shape) -> bool:
+        return type(shape) not in (SupportShape, BeamForceShape) and super().label_visible(shape)

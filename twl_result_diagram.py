@@ -71,5 +71,5 @@ class ResultDiagram(ResultModelDiagram):
             if all(tag not in tags for tag in (shape.LABEL_TAG, shape.LABEL_BG_TAG)):
                 self.itemconfig(tk_id, fill=color)
 
-    def label_visible(self, shape_type: type[Shape]) -> bool:
-        return shape_type != BeamForcePlotShape and super().label_visible(shape_type)
+    def label_visible(self, shape: Shape) -> bool:
+        return type(Shape) != BeamForcePlotShape and super().label_visible(shape)

@@ -104,8 +104,7 @@ class SketchShape(ComponentShape[Force]):
 
     def set_visible(self, visible: bool):
         super().set_visible(visible)
-        self.diagram.itemconfig(self.label_tk_id, state=tk.HIDDEN)
-        self.diagram.itemconfig(self.label_bg_tk_id, state=tk.HIDDEN)
+        self.set_label_visible(False)
 
 
 class CremonaDiagram(TwlDiagram):
@@ -211,5 +210,5 @@ class CremonaDiagram(TwlDiagram):
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
         return [self.shapes_of_type_for(SketchShape if step[3] else ResultShape, step[1])[0] for step in self.steps if step[0] == node]
 
-    def label_visible(self, shape_type: type[Shape]) -> bool:
-        return shape_type == ResultShape and TwlApp.settings().show_cremona_labels.get()
+    def label_visible(self, shape: Shape) -> bool:
+        return isinstance(shape, ResultShape) and round(shape.component.strength, 2) != 0 and TwlApp.settings().show_cremona_labels.get()

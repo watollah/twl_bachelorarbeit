@@ -300,14 +300,14 @@ class ModelDiagram(TwlDiagram):
 
         super().update_observer(component_id, attribute_id)
 
-    def label_visible(self, shape_type: type[Shape]) -> bool:
+    def label_visible(self, shape: Shape) -> bool:
         visible: dict[type[Shape], bool] = {
             NodeShape: TwlApp.settings().show_node_labels.get(),
             BeamShape: TwlApp.settings().show_beam_labels.get(),
             SupportShape: TwlApp.settings().show_support_labels.get(),
             ForceShape: TwlApp.settings().show_force_labels.get()
         }
-        return visible.get(shape_type, True)
+        return visible.get(type(shape), True)
 
     def create_node(self, x: int, y: int) -> Node:
         """Creates a new node in the model."""
