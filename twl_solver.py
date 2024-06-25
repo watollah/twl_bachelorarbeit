@@ -16,7 +16,7 @@ class Solver:
 
     def solve(self):
         self.reset()
-        if not self.model.statically_determined() or self.model.is_empty():
+        if not self.model.is_stat_det() or self.model.is_empty():
             return
 
         self.solution = self.get_unknown_forces()

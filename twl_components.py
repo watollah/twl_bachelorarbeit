@@ -521,7 +521,7 @@ class Model:
     def list_for_type(self, component_type: Type[C]) -> 'ComponentList[C]':
         return cast('ComponentList[C]', next(component_list for component_list in self.component_lists if component_list.component_class == component_type))
 
-    def statically_determined(self) -> bool:
+    def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 

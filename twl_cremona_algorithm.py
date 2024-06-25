@@ -9,7 +9,7 @@ class CremonaAlgorithm:
 
     @staticmethod
     def get_steps() -> list[tuple[Node | None, Force, Component, bool]]:
-        if TwlApp.model().is_empty() or not TwlApp.model().statically_determined():
+        if TwlApp.model().is_empty() or not TwlApp.model().is_stat_det():
             return []
 
         support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}
