@@ -10,8 +10,10 @@ from twl_help import int_to_roman
 C = TypeVar("C", bound='Component')
 V = TypeVar("V")
 
+
 class Attribute(Generic[C, V]):
 
+    TYPE: type[V]
     ID: str = ""
     NAME: str = ""
     UNIT: str = ""
@@ -29,7 +31,7 @@ class Attribute(Generic[C, V]):
         """Set the value of this attribute. The value is tested for validity and cast to the attributes type."""
         filter_result = self.filter(value)
         if filter_result[0]:
-            self._value = value if isinstance(value, type(self._value)) else (type(self._value))(value) #type: ignore
+            self._value = value if isinstance(value, self.TYPE) else self.TYPE(value) #type: ignore
             self._component.model.update_manager.notify_observers(self._component.id, self.ID)
             print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
@@ -58,263 +60,6 @@ class AttributeDescriptor(Generic[V]):
     def __set__(self, instance, value: V) -> tuple[bool, str]:
         return getattr(instance, self.attr_name).set_value(value)
 
-    # def set(self, value: V) -> tuple[bool, str]:
-    #     getattr(instance??, self.attr_name).set_value(value)
-
-
-class IdAttribute(Attribute['Component', str]):
-
-    ID = "id"
-    NAME = "Id"
-    UNIT = ""
-    EDITABLE: bool = True
-
-    def __init__(self, component: 'Component') -> None:
-        super().__init__(component, "")
-        self._value = self._generate_next_unique_id()
-
-    def filter(self, value) -> tuple[bool, str]:
-        if hasattr(self._component, "_id") and self._component.id == value:
-            return True, ""
-        if value in {component.id for component in self._component.model.all_components}:
-            return False, "Id already exists."
-        return True, ""
-
-    def _generate_next_unique_id(self) -> str:
-        i = 1
-        while not self.filter(self._component.gen_id(i))[0]:
-            i += 1
-        return self._component.gen_id(i)
-
-
-class CoordinateAttribute(Attribute['Component', int]):
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = int(value)
-        except ValueError:
-            return False, "Coordinate must be a number."
-        return True, ""
-
-    def get_display_value(self) -> str:
-        return str(round(self.get_value(), 2))
-
-class XCoordinateAttribute(CoordinateAttribute):
-
-    ID = "x"
-    NAME = "X"
-    UNIT = ""
-    EDITABLE: bool = True
-
-
-class YCoordinateAttribute(CoordinateAttribute):
-
-    ID = "y"
-    NAME = "Y"
-    UNIT = ""
-    EDITABLE: bool = True
-
-
-class NodeAttribute(Attribute['Component', 'Node']):
-
-    ID = "node"
-    NAME = "Node"
-    UNIT = ""
-    EDITABLE: bool = False
-
-    def get_display_value(self) -> str:
-        return self._value.id
-
-
-class StartNodeAttribute(NodeAttribute):
-
-    ID = "startnode"
-    NAME = "Start"
-    UNIT = ""
-    EDITABLE: bool = False
-
-
-class EndNodeAttribute(NodeAttribute):
-
-    ID = "endnode"
-    NAME = "End"
-    UNIT = ""
-    EDITABLE: bool = False
-
-
-class AngleAttribute(Attribute['Component', float]):
-
-    ID = "angle"
-    NAME = "Angle"
-    UNIT = "°"
-    EDITABLE: bool = True
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = float(value)
-        except ValueError:
-            return False, "Angle must be a number."
-        if not 0 <= value <= 360:
-            return False, "Angle must be between 0 and 360."
-        return True, ""
-
-    def get_display_value(self) -> str:
-        return str(round(self.get_value(), 2))
-
-
-class BeamAngleAttribute(Attribute['Beam', float]):
-
-    ID = "angle"
-    NAME = "Angle"
-    UNIT = "°"
-    EDITABLE: bool = True
-
-    def __init__(self, component: 'Beam') -> None:
-        super().__init__(component, 0)
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = float(value)
-        except ValueError:
-            return False, "Angle must be a number."
-        if not 0 <= value <= 360:
-            return False, "Angle must be between 0 and 360."
-        return True, ""
-
-    def get_value(self) -> float:
-        return self._component.calc_angle()
-
-    def get_display_value(self) -> str:
-        return str(round(self.get_value(), 2))
-
-    def set_value(self, value) -> tuple[bool, str]:
-        filter_result = self.filter(value)
-        if filter_result[0]:
-            start = Point(self._component.start_node.x, self._component.start_node.y)
-            end = Point(self._component.end_node.x, self._component.end_node.y)
-            line = Line(start, end)
-            rotate_by = (type(self._value)(value) - self.get_value()) % 360
-            line.rotate(start, rotate_by)
-            self._component.end_node.x = line.end.x
-            self._component.end_node.y = line.end.y
-            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
-        return filter_result
-
-
-class BeamLengthAttribute(Attribute['Beam', float]):
-
-    ID = "length"
-    NAME = "Length"
-    UNIT = "m"
-    EDITABLE: bool = True
-
-    def __init__(self, component: 'Beam') -> None:
-        super().__init__(component, 0)
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = float(value)
-        except ValueError:
-            return False, "Length must be a number."
-        if not 0 < value:
-            return False, "Length must be positive."
-        return True, ""
-
-    def get_value(self) -> float:
-        return self._component.calc_length()
-
-    def get_display_value(self) -> str:
-        return str(round(self.get_value(), 2))
-
-    def set_value(self, value) -> tuple[bool, str]:
-        filter_result = self.filter(value)
-        if filter_result[0]:
-            start = Point(self._component.start_node.x, self._component.start_node.y)
-            end = Point(self._component.end_node.x, self._component.end_node.y)
-            line = Line(start, end)
-            line.set_length(type(self._value)(value))
-            self._component.end_node.x = line.end.x
-            self._component.end_node.y = line.end.y
-            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
-        return filter_result
-
-
-class ConstraintsAttribute(Attribute['Support', int]):
-
-    ID = "constraints"
-    NAME = "Constraints"
-    UNIT = ""
-    EDITABLE: bool = True
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = int(value)
-        except ValueError:
-            return False, "Must be 1 or 2."
-        if not value in {1, 2}:
-            return False, "Must be 1 or 2."
-        return True, ""
-
-
-class StrengthAttribute(Attribute['Force', float]):
-
-    ID = "strength"
-    NAME = "Strength"
-    UNIT = "kN"
-    EDITABLE: bool = True
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = float(value)
-        except ValueError:
-            return False, "Strength must be a number."
-        return True, ""
-
-
-class ResultAttribute(Attribute['Result', float]):
-
-    ID = "result"
-    NAME = "Strength"
-    UNIT = "kN"
-    EDITABLE: bool = False
-
-    def filter(self, value) -> tuple[bool, str]:
-        try:
-            value = float(value)
-        except ValueError:
-            return False, "Result must be a number."
-        return True, ""
-
-    def get_display_value(self) -> str:
-        return str(0.0 if self.get_value() == 0 else self.get_value())
-
-
-class ForceType(Enum):
-
-    COMPRESSIVE = "C"
-    ZERO = "0"
-    TENSILE = "T"
-
-    @classmethod
-    def from_value(cls, value: float):
-        if value < 0:
-            return cls.COMPRESSIVE
-        elif value == 0:
-            return cls.ZERO
-        else:
-            return cls.TENSILE
-
-
-class ForceTypeAttribute(Attribute['Result', ForceType]):
-
-    ID = "force_type"
-    NAME = "Type"
-    UNIT = ""
-    EDITABLE: bool = False
-
-    def get_display_value(self) -> str:
-        return self.get_value().value
-
 
 class Component(ABC):
 
@@ -339,6 +84,32 @@ class Component(ABC):
     def gen_id(self, i: int) -> str:
         """Generate an id based on a number i."""
         return str(i)
+
+
+class IdAttribute(Attribute[Component, str]):
+
+    TYPE = str
+    ID = "id"
+    NAME = "Id"
+    UNIT = ""
+    EDITABLE: bool = True
+
+    def __init__(self, component: Component) -> None:
+        super().__init__(component, "")
+        self._value = self._generate_next_unique_id()
+
+    def filter(self, value) -> tuple[bool, str]:
+        if hasattr(self._component, "_id") and self._component.id == value:
+            return True, ""
+        if value in {component.id for component in self._component.model.all_components}:
+            return False, "Id already exists."
+        return True, ""
+
+    def _generate_next_unique_id(self) -> str:
+        i = 1
+        while not self.filter(self._component.gen_id(i))[0]:
+            i += 1
+        return self._component.gen_id(i)
 
 
 class Node(Component):
@@ -376,6 +147,37 @@ class Node(Component):
 
     def gen_id(self, i: int) -> str:
         return int_to_roman(i)
+
+
+class CoordinateAttribute(Attribute[Node, int]):
+
+    TYPE = int
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = int(value)
+        except ValueError:
+            return False, "Coordinate must be a number."
+        return True, ""
+
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
+
+class XCoordinateAttribute(CoordinateAttribute):
+
+    ID = "x"
+    NAME = "X"
+    UNIT = ""
+    EDITABLE: bool = True
+
+
+class YCoordinateAttribute(CoordinateAttribute):
+
+    ID = "y"
+    NAME = "Y"
+    UNIT = ""
+    EDITABLE: bool = True
 
 
 class Beam(Component):
@@ -417,6 +219,113 @@ class Beam(Component):
         return f"S{i}"
 
 
+class NodeAttribute(Attribute[Component, Node]):
+
+    TYPE = Node
+    ID = "node"
+    NAME = "Node"
+    UNIT = ""
+    EDITABLE: bool = False
+
+    def get_display_value(self) -> str:
+        return self._value.id
+
+
+class StartNodeAttribute(NodeAttribute):
+
+    ID = "startnode"
+    NAME = "Start"
+    UNIT = ""
+    EDITABLE: bool = False
+
+
+class EndNodeAttribute(NodeAttribute):
+
+    ID = "endnode"
+    NAME = "End"
+    UNIT = ""
+    EDITABLE: bool = False
+
+
+class BeamAngleAttribute(Attribute[Beam, float]):
+
+    TYPE = float
+    ID = "angle"
+    NAME = "Angle"
+    UNIT = "°"
+    EDITABLE: bool = True
+
+    def __init__(self, component: Beam) -> None:
+        super().__init__(component, 0.0)
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Angle must be a number."
+        if not 0 <= value <= 360:
+            return False, "Angle must be between 0 and 360."
+        return True, ""
+
+    def get_value(self) -> float:
+        return self._component.calc_angle()
+
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
+    def set_value(self, value) -> tuple[bool, str]:
+        filter_result = self.filter(value)
+        if filter_result[0]:
+            start = Point(self._component.start_node.x, self._component.start_node.y)
+            end = Point(self._component.end_node.x, self._component.end_node.y)
+            line = Line(start, end)
+            rotate_by = (float(value) - self.get_value()) % 360
+            line.rotate(start, rotate_by)
+            self._component.end_node.x = line.end.x
+            self._component.end_node.y = line.end.y
+            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+        return filter_result
+
+
+class BeamLengthAttribute(Attribute[Beam, float]):
+
+    TYPE = float
+    ID = "length"
+    NAME = "Length"
+    UNIT = "m"
+    EDITABLE: bool = True
+
+    def __init__(self, component: Beam) -> None:
+        super().__init__(component, 0.0)
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Length must be a number."
+        if not 0 < value:
+            return False, "Length must be positive."
+        return True, ""
+
+    def get_value(self) -> float:
+        return self._component.calc_length()
+
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
+    def set_value(self, value) -> tuple[bool, str]:
+        filter_result = self.filter(value)
+        if filter_result[0]:
+            start = Point(self._component.start_node.x, self._component.start_node.y)
+            end = Point(self._component.end_node.x, self._component.end_node.y)
+            line = Line(start, end)
+            line.set_length(float(value))
+            self._component.end_node.x = line.end.x
+            self._component.end_node.y = line.end.y
+            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+        return filter_result
+
+
 class Support(Component):
 
     TAG: str = "support"
@@ -440,6 +349,45 @@ class Support(Component):
 
     def gen_id(self, i: int) -> str:
         return chr(i + 64)
+
+
+class AngleAttribute(Attribute[Component, float]):
+
+    TYPE = float
+    ID = "angle"
+    NAME = "Angle"
+    UNIT = "°"
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Angle must be a number."
+        if not 0 <= value <= 360:
+            return False, "Angle must be between 0 and 360."
+        return True, ""
+
+    def get_display_value(self) -> str:
+        return str(round(self.get_value(), 2))
+
+
+class ConstraintsAttribute(Attribute[Support, int]):
+
+    TYPE = int
+    ID = "constraints"
+    NAME = "Constraints"
+    UNIT = ""
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = int(value)
+        except ValueError:
+            return False, "Must be 1 or 2."
+        if not value in {1, 2}:
+            return False, "Must be 1 or 2."
+        return True, ""
 
 
 class Force(Component):
@@ -470,6 +418,38 @@ class Force(Component):
         return f"F{i}"
 
 
+class StrengthAttribute(Attribute[Force, float]):
+
+    TYPE = float
+    ID = "strength"
+    NAME = "Strength"
+    UNIT = "kN"
+    EDITABLE: bool = True
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Strength must be a number."
+        return True, ""
+
+
+class ForceType(Enum):
+
+    COMPRESSIVE = "C"
+    ZERO = "0"
+    TENSILE = "T"
+
+    @classmethod
+    def from_value(cls, value: float):
+        if value < 0:
+            return cls.COMPRESSIVE
+        elif value == 0:
+            return cls.ZERO
+        else:
+            return cls.TENSILE
+
+
 class Result(Component):
 
     TAG: str = "result"
@@ -492,6 +472,38 @@ class Result(Component):
 
     def delete(self):
         pass
+
+
+class ResultAttribute(Attribute[Result, float]):
+
+    TYPE = float
+    ID = "result"
+    NAME = "Strength"
+    UNIT = "kN"
+    EDITABLE: bool = False
+
+    def filter(self, value) -> tuple[bool, str]:
+        try:
+            value = float(value)
+        except ValueError:
+            return False, "Result must be a number."
+        return True, ""
+
+    def get_display_value(self) -> str:
+        return str(0.0 if self.get_value() == 0 else self.get_value())
+
+
+class ForceTypeAttribute(Attribute[Result, ForceType]):
+
+    TYPE = ForceType
+    ID = "force_type"
+    NAME = "Type"
+    UNIT = ""
+    EDITABLE: bool = False
+
+    def get_display_value(self) -> str:
+        return self.get_value().value
+
 
 class Model:
     def __init__(self, update_manager: UpdateManager):

@@ -6,7 +6,7 @@ from typing import Generic, TypeVar
 from twl_app import TwlApp
 from twl_style import Colors
 from twl_images import add_image_from_path
-from twl_widgets import BorderFrame
+from twl_widgets import BorderFrame, CustomEntry
 from twl_update import UpdateManager
 from twl_math import Point, Line
 from twl_components import Attribute, Component, Model, Node, Beam, Support, Force
@@ -222,35 +222,60 @@ class ComponentTool(Generic[C], Tool):
 
 class ComponentToolPopup(tk.Toplevel):
 
+    BORDER = 1
     DIAGRAM_PADDING = 46
-    BORDER_PADDING = 10
+    BORDER_PADDING = 6
     CONTENT_PADDING = 2
 
     def __init__(self, tool: ComponentTool[C]):
         super().__init__(tool.diagram)
         self.wm_overrideredirect(True)
         self.attributes("-topmost", True)
+        self.has_focus = tk.BooleanVar()
+        self.has_focus.trace_add("write", lambda *ignore: self.style_focus())
+        self.tool = tool
         self.component = tool.component
         self.diagram = tool.diagram
-        self.content = tk.Frame(self)
+        self.background = tk.Frame(self)
+        self.background.pack(padx=self.BORDER, pady=self.BORDER)
+        self.content = tk.Frame(self.background)
         self.content.pack(padx=self.BORDER_PADDING, pady=self.BORDER_PADDING)
-
-        tk.Label(self.content, text="[Tab] to edit:").grid(column=0, row=0, columnspan=3, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
         self.entries: dict[Attribute, tk.Entry] = {}
+        self.labels: list[tk.Label] = []
+        self.bind("<FocusOut>", lambda *ignore: self.has_focus.set(False))
+
+        self.create_label("[Tab] to edit:", 0, 0, 3)
+        self.entries = {}
         for i, attr in enumerate(self.component.attributes):
             if attr.EDITABLE:
-                tk.Label(self.content, text=f"{attr.NAME}:", width=7, anchor=tk.W).grid(column=0, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
-                entry = tk.Entry(self.content, width=5)
+                self.create_label(f"{attr.NAME}:", 0, i + 1)
+                entry = CustomEntry(self.content, attr.filter, width=6, justify=tk.LEFT, bd=0)
+                entry.variable.trace_add("write", lambda *ignore: self.value_changed())
                 entry.insert(0, attr.get_display_value())
-                entry.grid(column=1, row=i + 1, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+                entry.grid(column=1, row=i + 1, pady=self.CONTENT_PADDING)
+                entry.bind("<FocusIn>", lambda *ignore: self.has_focus.set(True))
+                entry.bind("<Escape>", lambda *ignore: self.diagram.focus_set())
                 self.entries[attr] = entry
-                tk.Label(self.content, text=f"{attr.UNIT}", width=3, anchor=tk.W).grid(column=2, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+                self.create_label(f"{attr.UNIT}", 2, i + 1)
 
         self.update_idletasks()
         x_position = self.diagram.winfo_rootx() + self.diagram.winfo_width() - self.DIAGRAM_PADDING - self.winfo_width()
         y_position = self.diagram.winfo_rooty() + self.diagram.winfo_height() - self.DIAGRAM_PADDING - self.winfo_height()
         self.wm_geometry(f"+{x_position}+{y_position}")
+        self.style_focus()
         self.bind("<Tab>", self.cycle_focus)
+
+    def value_changed(self):
+        if self.has_focus.get():
+            for attr, entry in self.entries.items():
+                if attr.filter(entry.get())[0]:
+                    attr.set_value(entry.get())
+            self.tool.show_temp_shape()
+
+    def create_label(self, text: str, column: int, row: int, columnspan: int=1):
+        label = tk.Label(self.content, text=text, anchor=tk.W)
+        self.labels.append(label)
+        label.grid(column=column, row=row, columnspan=columnspan, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
 
     def refresh(self):
         for attr, entry in self.entries.items():
@@ -264,6 +289,16 @@ class ComponentToolPopup(tk.Toplevel):
         entries[next_index].focus_set()
         entries[next_index].select_range(0, tk.END)
         return "break"
+
+    def style_focus(self):
+        fg_color = Colors.BLACK if self.has_focus.get() else Colors.VERY_DARK_GRAY
+        bg_color = Colors.SELECTED if self.has_focus.get() else Colors.WHITE
+        bd_color = Colors.BLACK if self.has_focus.get() else Colors.LIGHT_GRAY
+        [entry.configure(bg=bg_color, fg=fg_color) for entry in self.entries.values()]
+        [label.configure(bg=bg_color, fg=fg_color) for label in self.labels]
+        self.configure(bg=bd_color)
+        self.background.configure(bg=bg_color)
+        self.content.configure(bg=bg_color)
 
     def destroy(self):
         self.unbind("<Tab>")
