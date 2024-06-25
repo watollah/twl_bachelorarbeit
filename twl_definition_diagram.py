@@ -319,9 +319,9 @@ class ComponentToolPopup(tk.Toplevel):
         return "break"
 
     def style_focus(self):
+        bd_color = Colors.BLACK if self.has_focus.get() else Colors.VERY_LIGHT_GRAY
         fg_color = Colors.BLACK if self.has_focus.get() else Colors.VERY_DARK_GRAY
-        bg_color = Colors.SELECTED if self.has_focus.get() else Colors.WHITE
-        bd_color = Colors.BLACK if self.has_focus.get() else Colors.LIGHT_GRAY
+        bg_color = Colors.WHITE
         [entry.configure(bg=bg_color, fg=fg_color) for entry in self.entries.values()]
         [label.configure(bg=bg_color, fg=fg_color) for label in self.labels]
         self.configure(bg=bd_color)
