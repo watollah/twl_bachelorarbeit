@@ -55,7 +55,7 @@ class ResultShape(ComponentShape[Force]):
     def line_coords(self):
         return Line(self.start, self.end)
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
     @property
@@ -83,7 +83,7 @@ class SketchShape(ComponentShape[Force]):
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
         line = Line(start, end)
         if line.length() < self.MIN_LENGTH:
-            line = Line(Point(start.x, round(start.y - self.MIN_LENGTH / 2)), Point(end.x, round(end.y + self.MIN_LENGTH / 2)))
+            line = Line(Point(start.x, start.y - self.MIN_LENGTH / 2), Point(end.x, end.y + self.MIN_LENGTH / 2))
             line.rotate(start, force.angle)
         line.resize(self.EXTEND)
         self.start = line.start
@@ -99,7 +99,7 @@ class SketchShape(ComponentShape[Force]):
     def line_coords(self):
         return Line(self.start, self.end)
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
     def set_visible(self, visible: bool):
@@ -133,7 +133,7 @@ class CremonaDiagram(TwlDiagram):
             existing_force_shape = self.find_withtags(ResultShape.TAG, force.id)
             if node and existing_force_shape:
                 coords = self.coords(existing_force_shape)
-                pos = Point(round(coords[2]), round(coords[3]))
+                pos = Point(coords[2], coords[3])
                 if type(component) in (Support, Force):
                     continue
             if sketch:
@@ -151,7 +151,7 @@ class CremonaDiagram(TwlDiagram):
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)
         start = Point(start.x, start.y)
-        end = Point(start.x + round(force.strength * math.sin(angle) * self.SCALE), start.y + (-round(force.strength * math.cos(angle) * self.SCALE)))
+        end = Point(start.x + force.strength * math.sin(angle) * self.SCALE, start.y + (-force.strength * math.cos(angle) * self.SCALE))
         if sketch:
             self.shapes.append(SketchShape(Point(start.x, start.y), Point(end.x, end.y), force, self))
         else:
@@ -165,7 +165,7 @@ class CremonaDiagram(TwlDiagram):
         [self.shapes_for(force)[0].move(2 * BaseLineShape.SPACING, 0) for force in support_forces]
         self.shapes.append(BaseLineShape(Point(self.START_POINT.x + BaseLineShape.SPACING, self.START_POINT.y), self))
         coords = self.coords(self.find_withtag(force_forces[len(force_forces) - 1].id)[0])
-        self.shapes.append(BaseLineShape(Point(round(coords[2]), round(coords[3])), self))
+        self.shapes.append(BaseLineShape(Point(coords[2], coords[3]), self))
 
     def display_step(self, selected_step: int):
         self.step_visibility(selected_step)

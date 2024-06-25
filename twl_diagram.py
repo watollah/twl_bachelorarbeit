@@ -40,7 +40,7 @@ class Shape():
             self.diagram.itemconfig(tk_id, state=state)
 
     @abstractmethod
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return False
 
 
@@ -410,19 +410,19 @@ class TwlDiagram(Observer, tk.Canvas):
     def component_shapes(self):
         return [shape for shape in self.shapes if isinstance(shape, ComponentShape)]
 
-    def find_shape_at(self, x: int, y: int) -> Shape | None:
+    def find_shape_at(self, x: float, y: float) -> Shape | None:
         """Check if there is a shape in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), self.shapes), None)
 
-    def find_shape_of_list_at(self, shapes: list[ComponentShape], x: int, y: int) -> ComponentShape | None:
+    def find_shape_of_list_at(self, shapes: list[ComponentShape], x: float, y: float) -> ComponentShape | None:
         """Check if there is a shape that is included in the list in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), shapes), None)
 
-    def find_shape_of_type_at(self, component_type: Type[C], x: int, y: int) -> ComponentShape[C] | None:
+    def find_shape_of_type_at(self, component_type: Type[C], x: float, y: float) -> ComponentShape[C] | None:
         """Check if there is a component shape in the diagram at the specified coordinate."""
         return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.component_shapes), None)
 
-    def find_component_of_type_at(self, component_type: Type[C], x: int, y: int) -> C | None:
+    def find_component_of_type_at(self, component_type: Type[C], x: float, y: float) -> C | None:
         shape = self.find_shape_of_type_at(component_type, x, y)
         return shape.component if shape else None
 

@@ -9,6 +9,7 @@ from twl_images import add_image_from_path
 from twl_widgets import BorderFrame, CustomEntry
 from twl_update import UpdateManager
 from twl_math import Point, Line
+from twl_help import f_range
 from twl_components import Attribute, Component, Model, Node, Beam, Support, Force
 from twl_diagram import Tool
 from twl_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
@@ -627,18 +628,18 @@ class DefinitionDiagram(ModelDiagram):
         self.delete(self.GRID_TAG)
 
     def draw_grid(self):
-        grid_spacing = round(self.grid_step.get() * self.current_zoom.get() / 100)
+        grid_spacing = self.grid_step.get() * self.current_zoom.get() / 100
         x_min, y_min, x_max, y_max = self.get_scrollregion()
         x_start = x_min - (x_min % grid_spacing) + grid_spacing
         y_start = y_min - (y_min % grid_spacing) + grid_spacing
-        for i in range(x_start, x_max, grid_spacing):
+        for i in f_range(x_start, x_max, grid_spacing):
             self.create_line((i, y_min), (i, y_max), fill=self.GRID_COLOR, tags=self.GRID_TAG)
-        for i in range(y_start, y_max, grid_spacing):
+        for i in f_range(y_start, y_max, grid_spacing):
             self.create_line((x_min, i), (x_max, i), fill=self.GRID_COLOR, tags=self.GRID_TAG)
         self.tag_lower(self.GRID_TAG)
 
-    def grid_snap(self, x: int, y: int) -> tuple[int, int]:
-        grid_spacing = round(self.grid_step.get())
+    def grid_snap(self, x: float, y: float) -> tuple[float, float]:
+        grid_spacing = self.grid_step.get()
         nearest_x = round(x / grid_spacing) * grid_spacing
         nearest_y = round(y / grid_spacing) * grid_spacing
         distance = Point(x, y).distance_to_point(Point(nearest_x, nearest_y))

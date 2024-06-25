@@ -26,3 +26,8 @@ def int_to_letter(num) -> str:
         return uppercase_letter
     else:
         return "?"
+
+def f_range(start: float, stop: float, step: float):
+    while start < stop:
+        yield start
+        start += step

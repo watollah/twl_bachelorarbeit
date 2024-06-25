@@ -112,16 +112,16 @@ class Node(Component):
 
     TAG: str = "node"
 
-    x: AttributeDescriptor[int] = AttributeDescriptor("_x")
-    y: AttributeDescriptor[int] = AttributeDescriptor("_y")
+    x: AttributeDescriptor[float] = AttributeDescriptor("_x")
+    y: AttributeDescriptor[float] = AttributeDescriptor("_y")
 
-    def __init__(self, model: 'Model', x: int, y: int, id: str | None=None):
+    def __init__(self, model: 'Model', x: float, y: float, id: str | None=None):
         super().__init__(model, id)
         self._x: XCoordinateAttribute = XCoordinateAttribute(self, x)
         self._y: YCoordinateAttribute = YCoordinateAttribute(self, y)
 
     @classmethod
-    def dummy(cls, x: int=0, y:int=0):
+    def dummy(cls, x: float=0, y: float=0):
         return cls(Model(UpdateManager()), x, y, id=cls.TAG)
 
     def delete(self):
@@ -146,13 +146,13 @@ class Node(Component):
         return int_to_roman(i)
 
 
-class CoordinateAttribute(Attribute[Node, int]):
+class CoordinateAttribute(Attribute[Node, float]):
 
-    TYPE = int
+    TYPE = float
 
     def filter(self, value) -> tuple[bool, str]:
         try:
-            value = int(value)
+            value = float(value)
         except ValueError:
             return False, "Coordinate must be a number."
         return True, ""
@@ -254,7 +254,7 @@ class BeamAngleAttribute(Attribute[Beam, float]):
     EDITABLE: bool = True
 
     def __init__(self, component: Beam) -> None:
-        super().__init__(component, 0.0)
+        super().__init__(component, 0)
 
     def filter(self, value) -> tuple[bool, str]:
         try:
@@ -294,7 +294,7 @@ class BeamLengthAttribute(Attribute[Beam, float]):
     EDITABLE: bool = True
 
     def __init__(self, component: Beam) -> None:
-        super().__init__(component, 0.0)
+        super().__init__(component, 0)
 
     def filter(self, value) -> tuple[bool, str]:
         try:

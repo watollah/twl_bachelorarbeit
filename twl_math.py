@@ -15,9 +15,9 @@ class Direction(Enum):
 
 
 class Point:
-    def __init__(self, x: int, y: int):
-        self.x: int = x
-        self.y: int = y
+    def __init__(self, x: float, y: float):
+        self.x: float = x
+        self.y: float = y
 
     def rotate(self, center_of_rotation: 'Point', angle: float):
         angle %= 360
@@ -28,14 +28,14 @@ class Point:
         translated_y = self.y - center_of_rotation.y
         
         #Rotate the translated point around the origin by the specified angle
-        rotated_x = int(translated_x * math.cos(angle) - translated_y * math.sin(angle))
-        rotated_y = int(translated_x * math.sin(angle) + translated_y * math.cos(angle))
+        rotated_x = translated_x * math.cos(angle) - translated_y * math.sin(angle)
+        rotated_y = translated_x * math.sin(angle) + translated_y * math.cos(angle)
         
         #Translate the rotated point back to its original position
         self.x = rotated_x + center_of_rotation.x
         self.y = rotated_y + center_of_rotation.y
 
-    def move(self, x: int, y: int):
+    def move(self, x: float, y: float):
         self.x += x
         self.y += y
 
@@ -96,17 +96,17 @@ class Line:
         direction = self.end.subtract(self.start)
         ux = direction.x / self.length()
         uy = direction.y / self.length()
-        self.end.x = round(self.start.x + (ux * length * 100))
-        self.end.y = round(self.start.y + (uy * length * 100))
+        self.end.x = self.start.x + (ux * length * 100)
+        self.end.y = self.start.y + (uy * length * 100)
 
     def angle(self) -> float:
         d = self.end.subtract(self.start)
         angle_degrees = 90 - math.degrees(math.atan2(-d.y, d.x))
         angle_degrees %= 360
         return angle_degrees
-    
+
     def angle_rounded(self) -> float:
-        return (int((self.angle() + 22.5) // 45) * 45) % 360
+        return (round((self.angle() + 22.5) // 45) * 45) % 360
 
     def distance(self, point: Point) -> float:
         return point.distance_to_line(self)
@@ -117,13 +117,13 @@ class Line:
     def rotate(self, center_of_rotation: Point, angle: float):
         [p.rotate(center_of_rotation, angle) for p in [self.start, self.end]]
 
-    def move(self, x: int, y: int):
+    def move(self, x: float, y: float):
         self.start.move(x, y)
         self.end.move(x, y)
 
     def midpoint(self) -> Point:
-        mid_x = (self.start.x + self.end.x) // 2
-        mid_y = (self.start.y + self.end.y) // 2
+        mid_x = (self.start.x + self.end.x) / 2
+        mid_y = (self.start.y + self.end.y) / 2
         return Point(mid_x, mid_y)
 
     def resize(self, amount):
@@ -165,9 +165,9 @@ class Line:
         slope = self.slope()
         perp_slope = self.perp_slope()
         if perp_slope is None:
-            return Point(point.x, round(self.start.y))
+            return Point(point.x, self.start.y)
         elif slope is None:
-            return Point(round(self.start.x), point.y)
+            return Point(self.start.x, point.y)
         else:
             y_intercept = self.y_intercept()
             assert(y_intercept)
@@ -175,7 +175,7 @@ class Line:
 
             intersection_x = (y_intercept - perp_y_intercept) / (perp_slope - slope)
             intersection_y = slope * intersection_x + y_intercept
-            return Point(round(intersection_x), round(intersection_y))
+            return Point(intersection_x, intersection_y)
 
     def direction_to_point(self, point: Point) -> Direction:
         vector1 = (self.start.x - point.x, self.start.y - point.y)
@@ -244,11 +244,11 @@ class Polygon:
     def in_bounds(self, p1: Point, p2: Point) -> bool:
         return all(point.in_bounds(p1, p2) for point in self.points)
 
-    def move(self, x: int, y: int):
+    def move(self, x: float, y: float):
         for point in self.points: 
             point.move(x, y)
 
     def midpoint(self):
         x = sum(point.x for point in self.points) / len(self.points)
         y = sum(point.y for point in self.points) / len(self.points)
-        return Point(round(x), round(y))
+        return Point(x, y)

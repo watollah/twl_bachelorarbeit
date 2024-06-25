@@ -28,7 +28,7 @@ class NodeShape(ComponentShape[Node]):
     def circle_coords(self) -> tuple[Point, Point]:
         return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
 
     def default_style(self, *tags: str) -> dict[str, str]:
@@ -88,7 +88,7 @@ class BeamShape(ComponentShape[Beam]):
     def line_coords(self) -> Line:
         return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
     def default_style(self, *tags: str) -> dict[str, str]:
@@ -153,7 +153,7 @@ class SupportShape(ComponentShape[Support]):
         self.update_line_visibility()
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return self.triangle_coords.inside_triangle(Point(x, y))
 
     @property
@@ -236,7 +236,7 @@ class ForceShape(ComponentShape[Force]):
                             tags=[*self.TAGS, str(force.id)])
         self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
 
-    def is_at(self, x: int, y: int) -> bool:
+    def is_at(self, x: float, y: float) -> bool:
         return Point(x, y).distance_to_line(self.arrow_coords) < self.WIDTH/2
 
     @property
@@ -257,7 +257,7 @@ class ForceShape(ComponentShape[Force]):
     @property
     def label_position(self) -> Point:
         n_point = Point(self.component.node.x, self.component.node.y)
-        point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) // 2))
+        point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) / 2))
         point.rotate(n_point, self.component.angle)
         return point
 
