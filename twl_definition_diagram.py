@@ -1,3 +1,4 @@
+from abc import abstractmethod
 import tkinter as tk
 from tkinter import ttk
 from typing import Generic, TypeVar
@@ -13,136 +14,7 @@ from twl_diagram import Tool
 from twl_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
 
 
-class TempNodeShape(NodeShape):
-
-    TAG: str = ComponentShape.TEMP
-    COLOR: str = ComponentShape.TEMP_COLOR
-
-    def __init__(self, node: Node, diagram: 'DefinitionDiagram') -> None:
-        super().__init__(node, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-        self.set_label_visible(False)
-
-
-class TempBeamShape(BeamShape):
-
-    TAG: str = ComponentShape.TEMP
-    COLOR: str = ComponentShape.TEMP_COLOR
-
-    def __init__(self, beam: Beam, diagram: 'DefinitionDiagram') -> None:
-        super().__init__(beam, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-        self.set_label_visible(False)
-
-
-class TempSupportShape(SupportShape):
-
-    TAG: str = ComponentShape.TEMP
-    COLOR = ComponentShape.TEMP_COLOR
-
-    def __init__(self, support: Support, diagram: 'DefinitionDiagram') -> None:
-        super().__init__(support, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-        self.set_label_visible(False)
-
-
-class TempForceShape(ForceShape):
-
-    TAG: str = ComponentShape.TEMP
-    COLOR = ComponentShape.TEMP_COLOR
-
-    def __init__(self, force: Force, diagram: 'DefinitionDiagram') -> None:
-        super().__init__(force, diagram)
-        self.scale(self.diagram.current_zoom.get() / 100)
-        self.set_label_visible(False)
-
-
-class ComponentTool(Tool):
-
-    def __init__(self, diagram: 'DefinitionDiagram'):
-        self.diagram: 'DefinitionDiagram' = diagram
-        self.popup: ComponentToolPopup | None = None
-
-    def reset(self):
-        super().reset()
-        if self.popup:
-            self.diagram.unbind("<Tab>")
-            self.popup.destroy()
-            self.popup = None
-
-    def deactivate(self):
-        super().deactivate()
-        self.diagram.bind("<Motion>", self.diagram.update_coords_label)
-
-    def snap_event_to_grid(self, event):
-        if TwlApp.settings().show_grid.get():
-            snap_point = self.diagram.grid_snap(event.x, event.y)
-            event.x = snap_point[0]
-            event.y = snap_point[1]
-
-    def _action(self, event):
-        self.correct_event_pos(event)
-        self.snap_event_to_grid(event)
-        self.action(event)
-
-    def _preview(self, event):
-        self.correct_event_pos(event)
-        self.snap_event_to_grid(event)
-        self.preview(event)
-        self.diagram.update_coords_label(event)
-
-
-class ComponentToolPopup(tk.Toplevel):
-
-    DIAGRAM_PADDING = 46
-    BORDER_PADDING = 10
-    CONTENT_PADDING = 2
-
-    def __init__(self, component: Component, diagram: 'DefinitionDiagram'):
-        super().__init__(diagram)
-        self.wm_overrideredirect(True)
-        self.attributes("-topmost", True)
-        self.component = component
-        self.diagram = diagram
-        self.content = tk.Frame(self)
-        self.content.pack(padx=self.BORDER_PADDING, pady=self.BORDER_PADDING)
-
-        tk.Label(self.content, text="[Tab] to edit:").grid(column=0, row=0, columnspan=3, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
-        self.entries: dict[Attribute, tk.Entry] = {}
-        for i, attr in enumerate(component.attributes):
-            if attr.EDITABLE:
-                tk.Label(self.content, text=f"{attr.NAME}:", width=7, anchor=tk.W).grid(column=0, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
-                entry = tk.Entry(self.content, width=5)
-                entry.insert(0, attr.get_display_value())
-                entry.grid(column=1, row=i + 1, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
-                self.entries[attr] = entry
-                tk.Label(self.content, text=f"{attr.UNIT}", width=3, anchor=tk.W).grid(column=2, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
-
-        self.update_idletasks()
-        x_position = self.diagram.winfo_rootx() + self.diagram.winfo_width() - self.DIAGRAM_PADDING - self.winfo_width()
-        y_position = self.diagram.winfo_rooty() + self.diagram.winfo_height() - self.DIAGRAM_PADDING - self.winfo_height()
-        self.wm_geometry(f"+{x_position}+{y_position}")
-        self.bind("<Tab>", self.cycle_focus)
-
-    def refresh(self):
-        for attr, entry in self.entries.items():
-            entry.delete(0, tk.END)
-            entry.insert(0, attr.get_display_value())
-
-    def cycle_focus(self, event):
-        entries = list(self.entries.values())
-        current_focus = self.focus_get()
-        next_index = (entries.index(current_focus) + 1) % len(entries) if current_focus in entries else 0
-        entries[next_index].focus_set()
-        entries[next_index].select_range(0, tk.END)
-        return "break"
-
-    def destroy(self):
-        self.unbind("<Tab>")
-        super().destroy()
-
-
-class SelectTool(ComponentTool):
+class SelectTool(Tool):
 
     ID: int = 0
     NAME: str = "Select"
@@ -200,7 +72,7 @@ class SelectTool(ComponentTool):
             return
         start_x, start_y, _, _ = self.diagram.coords(self.selection_rect)
         self.diagram.coords(self.selection_rect, start_x, start_y, event.x, event.y)
-        self.diagram.update_coords_label(event)
+        #self.diagram.update_coords_label(event)
 
     def end_rect_selection(self, event):
         if not self.selection_rect:
@@ -236,8 +108,171 @@ class SelectTool(ComponentTool):
         self.reset()
 
 
-class BeamTool(ComponentTool):
+class TempNodeShape(NodeShape):
 
+    TAG: str = ComponentShape.TEMP
+    COLOR: str = ComponentShape.TEMP_COLOR
+
+    def __init__(self, node: Node, diagram: 'DefinitionDiagram') -> None:
+        super().__init__(node, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
+
+
+class TempBeamShape(BeamShape):
+
+    TAG: str = ComponentShape.TEMP
+    COLOR: str = ComponentShape.TEMP_COLOR
+
+    def __init__(self, beam: Beam, diagram: 'DefinitionDiagram') -> None:
+        super().__init__(beam, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
+
+
+class TempSupportShape(SupportShape):
+
+    TAG: str = ComponentShape.TEMP
+    COLOR = ComponentShape.TEMP_COLOR
+
+    def __init__(self, support: Support, diagram: 'DefinitionDiagram') -> None:
+        super().__init__(support, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
+
+
+class TempForceShape(ForceShape):
+
+    TAG: str = ComponentShape.TEMP
+    COLOR = ComponentShape.TEMP_COLOR
+
+    def __init__(self, force: Force, diagram: 'DefinitionDiagram') -> None:
+        super().__init__(force, diagram)
+        self.scale(self.diagram.current_zoom.get() / 100)
+        self.set_label_visible(False)
+
+
+C = TypeVar("C", bound='Component')
+
+class ComponentTool(Generic[C], Tool):
+
+    COMPONENT_TYPE: type[C]
+
+    def __init__(self, diagram: 'DefinitionDiagram'):
+        self.diagram: 'DefinitionDiagram' = diagram
+        self.component: C = self.COMPONENT_TYPE.dummy()
+        self.popup: ComponentToolPopup | None = None
+
+    def reset(self):
+        super().reset()
+        self.component = self.COMPONENT_TYPE.dummy()
+        if self.popup:
+            self.diagram.unbind("<Tab>")
+            self.popup.destroy()
+            self.popup = None
+
+    def activate(self):
+        super().activate()
+        self.diagram.bind("<Motion>", self._move)
+
+    def deactivate(self):
+        super().deactivate()
+        self.diagram.unbind("<Motion>")
+        self.diagram.bind("<Motion>", self.diagram.update_coords_label)
+
+    def _snap_event_to_grid(self, event):
+        if TwlApp.settings().show_grid.get():
+            snap_point = self.diagram.grid_snap(event.x, event.y)
+            event.x = snap_point[0]
+            event.y = snap_point[1]
+
+    def _action(self, event):
+        self.diagram.focus_set()
+        self.correct_event_pos(event)
+        self._snap_event_to_grid(event)
+        self.action(event)
+
+    def _move(self, event):
+        self.diagram.focus_set()
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.correct_event_pos(event)
+        self._snap_event_to_grid(event)
+        if self.prepare(event):
+            self._preview()
+        self.diagram.update_coords_label(event)
+
+    def _preview(self):
+        """Preview of the action with temporary shape and popup once a temp component is ready to be displayed."""
+        self.show_temp_shape()
+        if self.popup:
+            self.popup.refresh()
+        else:
+            self.popup = ComponentToolPopup(self)
+            self.diagram.bind("<Tab>", self.popup.cycle_focus)
+
+    @abstractmethod
+    def prepare(self, event) -> bool:
+        """Prepare the preview."""
+        return False
+
+    @abstractmethod
+    def show_temp_shape(self):
+        pass
+
+
+class ComponentToolPopup(tk.Toplevel):
+
+    DIAGRAM_PADDING = 46
+    BORDER_PADDING = 10
+    CONTENT_PADDING = 2
+
+    def __init__(self, tool: ComponentTool[C]):
+        super().__init__(tool.diagram)
+        self.wm_overrideredirect(True)
+        self.attributes("-topmost", True)
+        self.component = tool.component
+        self.diagram = tool.diagram
+        self.content = tk.Frame(self)
+        self.content.pack(padx=self.BORDER_PADDING, pady=self.BORDER_PADDING)
+
+        tk.Label(self.content, text="[Tab] to edit:").grid(column=0, row=0, columnspan=3, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+        self.entries: dict[Attribute, tk.Entry] = {}
+        for i, attr in enumerate(self.component.attributes):
+            if attr.EDITABLE:
+                tk.Label(self.content, text=f"{attr.NAME}:", width=7, anchor=tk.W).grid(column=0, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+                entry = tk.Entry(self.content, width=5)
+                entry.insert(0, attr.get_display_value())
+                entry.grid(column=1, row=i + 1, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+                self.entries[attr] = entry
+                tk.Label(self.content, text=f"{attr.UNIT}", width=3, anchor=tk.W).grid(column=2, row=i + 1, sticky=tk.W, padx=self.CONTENT_PADDING, pady=self.CONTENT_PADDING)
+
+        self.update_idletasks()
+        x_position = self.diagram.winfo_rootx() + self.diagram.winfo_width() - self.DIAGRAM_PADDING - self.winfo_width()
+        y_position = self.diagram.winfo_rooty() + self.diagram.winfo_height() - self.DIAGRAM_PADDING - self.winfo_height()
+        self.wm_geometry(f"+{x_position}+{y_position}")
+        self.bind("<Tab>", self.cycle_focus)
+
+    def refresh(self):
+        for attr, entry in self.entries.items():
+            entry.delete(0, tk.END)
+            entry.insert(0, attr.get_display_value())
+
+    def cycle_focus(self, event):
+        entries = list(self.entries.values())
+        current_focus = self.focus_get()
+        next_index = (entries.index(current_focus) + 1) % len(entries) if current_focus in entries else 0
+        entries[next_index].focus_set()
+        entries[next_index].select_range(0, tk.END)
+        return "break"
+
+    def destroy(self):
+        self.unbind("<Tab>")
+        super().destroy()
+
+
+class BeamTool(ComponentTool[Beam]):
+
+    COMPONENT_TYPE = Beam
     ID: int = 1
     NAME: str = "Beam Tool"
     DESCR: str = "Create beam between two nodes."
@@ -247,63 +282,42 @@ class BeamTool(ComponentTool):
         super().__init__(diagram)
         self.start_node: Node | None = None
         self.end_node: Node | None = None
-        self.beam: Beam = Beam.dummy()
 
     def reset(self):
         super().reset()
         self.start_node = None
         self.end_node = None
-        self.beam = Beam.dummy()
 
     def action(self, event):
-        self.diagram.focus_set()
         clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if self.start_node is None:
             self.start_node = clicked_node if clicked_node else Node(Model(UpdateManager()), event.x, event.y)
             return
-        if self.holding_shift_key(event):
-            self.shift_snap_line(event)
+        else:
+            if self.holding_shift_key(event):
+                self.shift_snap_line(event)
+            TwlApp.update_manager().pause_observing()
+            if not self.start_node in TwlApp.model().nodes:
+                self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
+            end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
+            self.diagram.create_beam(self.start_node, end_node)
+            self.start_node = end_node
+            TwlApp.update_manager().resume_observing()
 
-        TwlApp.update_manager().pause_observing()
-        if not self.start_node in TwlApp.model().nodes:
-            self.start_node = self.diagram.create_node(self.start_node.x, self.start_node.y)
-        end_node = clicked_node if clicked_node else self.diagram.create_node(event.x, event.y)
-        self.diagram.create_beam(self.start_node, end_node)
-        self.start_node = end_node
-        TwlApp.update_manager().resume_observing()
-
-    def preview(self, event):
-        #preview node following mouse cursor before first click
+    def prepare(self, event) -> bool:
         existing_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if not self.start_node:
             if not existing_node:
                 self.diagram.delete_with_tag(ComponentShape.TEMP)
                 TempNodeShape(Node(Model(UpdateManager()), event.x, event.y), self.diagram)
-            return
-
-        #preview beam before second click
-        if self.holding_shift_key(event):
-            self.shift_snap_line(event)
-        self.end_node = existing_node if existing_node else Node(Model(UpdateManager()), event.x, event.y)
-        self.beam.start_node = self.start_node
-        self.beam.end_node = self.end_node
-        self.show_temp_beam()
-        if self.popup:
-            self.popup.refresh()
+            return False
         else:
-            self.popup = ComponentToolPopup(self.beam, self.diagram)
-            self.diagram.bind("<Tab>", self.popup.cycle_focus)
-        self.diagram.focus_set()
-
-    def show_temp_beam(self):
-        assert(self.start_node)
-        assert(self.end_node)
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
-        if self.start_node not in TwlApp.model().nodes:
-            TempNodeShape(self.start_node, self.diagram)
-        if self.end_node not in TwlApp.model().nodes:
-            TempNodeShape(self.end_node, self.diagram)
-        TempBeamShape(self.beam, self.diagram)
+            if self.holding_shift_key(event):
+                self.shift_snap_line(event)
+            self.end_node = existing_node if existing_node else Node(Model(UpdateManager()), event.x, event.y)
+            self.component.start_node = self.start_node
+            self.component.end_node = self.end_node
+            return True
 
     def shift_snap_line(self, event):
         assert(self.start_node)
@@ -315,9 +329,20 @@ class BeamTool(ComponentTool):
         event.x = new_point.x
         event.y = new_point.y
 
+    def show_temp_shape(self):
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        assert(self.start_node)
+        assert(self.end_node)
+        if self.start_node not in TwlApp.model().nodes:
+            TempNodeShape(self.start_node, self.diagram)
+        if self.end_node not in TwlApp.model().nodes:
+            TempNodeShape(self.end_node, self.diagram)
+        TempBeamShape(self.component, self.diagram)
 
-class SupportTool(ComponentTool):
 
+class SupportTool(ComponentTool[Support]):
+
+    COMPONENT_TYPE = Support
     ID: int = 2
     NAME: str = "Support Tool"
     DESCR: str = "Create support on node."
@@ -332,32 +357,37 @@ class SupportTool(ComponentTool):
         self.node = None
 
     def action(self, event):
-        self.diagram.focus_set()
         if not self.node:
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if clicked_node and not clicked_node.supports:
                 self.node = clicked_node
+                self.component.node = self.node
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             self.diagram.create_support(self.node, angle)
             self.reset()
 
-    def preview(self, event):
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+    def prepare(self, event) -> bool:
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node and not hovering_node.supports:
                 TempSupportShape(Support(Model(UpdateManager()), hovering_node), self.diagram)
+            return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempSupportShape(Support(Model(UpdateManager()), self.node, angle), self.diagram)
-        self.diagram.focus_set()
+            self.component.angle = angle
+            return True
+
+    def show_temp_shape(self):
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        TempSupportShape(self.component, self.diagram)
 
 
-class ForceTool(ComponentTool):
+class ForceTool(ComponentTool[Force]):
 
+    COMPONENT_TYPE = Force
     ID: int = 3
     NAME: str = "Force Tool"
     DESCR: str = "Create force on node."
@@ -372,28 +402,31 @@ class ForceTool(ComponentTool):
         self.node = None
 
     def action(self, event):
-        self.diagram.focus_set()
         if not self.node:
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if clicked_node:
                 self.node = clicked_node
+                self.component.node = self.node
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
             angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
             self.diagram.create_force(self.node, angle)
             self.reset()
 
-    def preview(self, event):
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+    def prepare(self, event) -> bool:
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
             if hovering_node:
                 TempForceShape(Force(Model(UpdateManager()), hovering_node), self.diagram)
+            return False
         else:
             line = Line(Point(self.node.x, self.node.y), Point(event.x, event.y))
-            angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
-            TempForceShape(Force(Model(UpdateManager()), self.node, angle), self.diagram)
-        self.diagram.focus_set()
+            self.component.angle = line.angle_rounded() if self.holding_shift_key(event) else line.angle()
+            return True
+
+    def show_temp_shape(self):
+        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        TempForceShape(self.component, self.diagram)
 
 
 class DefinitionDiagram(ModelDiagram):

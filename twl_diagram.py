@@ -166,13 +166,11 @@ class Tool:
 
     def activate(self):
         self.diagram.bind("<Button-1>", self._action)
-        self.diagram.bind("<Motion>", self._preview)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
         self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(ComponentShape.TEMP))
 
     def deactivate(self):
         self.diagram.unbind("<Button-1>")
-        self.diagram.unbind("<Motion>")
         self.diagram.unbind("<Escape>")
         self.diagram.unbind("<Leave>")
         self.reset()
@@ -202,14 +200,6 @@ class Tool:
 
     def action(self, event):
         """Code to be executed when the user clicks on the canvas while the tool is active"""
-        pass
-
-    def _preview(self, event):
-        self.correct_event_pos(event)
-        self.preview(event)
-
-    def preview(self, event):
-        """Preview of the action when the user moves the mouse on the canvas while the tool is active"""
         pass
 
     def holding_shift_key(self, event) -> bool:
