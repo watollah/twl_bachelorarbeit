@@ -27,15 +27,15 @@ class TwlTool(Observer, tk.Tk):
         menubar = self.create_menu_bar()
         self.config(menu=menubar)
 
-        notebook = ttk.Notebook(self)
-        self.definition_tab = DefinitionTab(notebook)
-        notebook.add(self.definition_tab, text="Definition")
-        self.cremona_tab = CremonaTab(notebook)
-        notebook.add(self.cremona_tab, text="Cremona")
-        self.result_tab = ResultTab(notebook)
-        notebook.add(self.result_tab, text="Result")
-        notebook.pack(fill=tk.BOTH, expand=True)
-        notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
+        self.notebook = ttk.Notebook(self)
+        self.definition_tab = DefinitionTab(self.notebook)
+        self.notebook.add(self.definition_tab, text="Definition")
+        self.cremona_tab = CremonaTab(self.notebook)
+        self.notebook.add(self.cremona_tab, text="Cremona", state=tk.DISABLED)
+        self.result_tab = ResultTab(self.notebook)
+        self.notebook.add(self.result_tab, text="Result", state=tk.DISABLED)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
 
         self.bind("<Control-n>", lambda *ignore: io.clear_project())
         self.bind("<Control-o>", lambda *ignore: io.open_project())
@@ -47,11 +47,11 @@ class TwlTool(Observer, tk.Tk):
         self.title(f"{"" if TwlApp.saved_state().get() else "*"}{self.TITLE}{" - " + project_name if project_name else ""}")
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
-        if TwlApp.model().is_empty():
-            TwlApp.saved_state().set(True)
-        else:
-            TwlApp.saved_state().set(False)
-            TwlApp.changed_state().set(True)
+        tab_state = tk.NORMAL if TwlApp.model().statically_determined() and not TwlApp.model().is_empty() else tk.DISABLED
+        self.notebook.tab(self.cremona_tab, state=tab_state)
+        self.notebook.tab(self.result_tab, state=tab_state)
+        TwlApp.saved_state().set(TwlApp.model().is_empty())
+        TwlApp.changed_state().set(not TwlApp.model().is_empty())
 
     def tab_changed(self, event):
         selected_tab = event.widget.nametowidget(event.widget.select())
