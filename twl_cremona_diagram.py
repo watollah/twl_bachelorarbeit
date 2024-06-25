@@ -102,6 +102,11 @@ class SketchShape(ComponentShape[Force]):
     def is_at(self, x: int, y: int) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
+    def set_visible(self, visible: bool):
+        super().set_visible(visible)
+        self.diagram.itemconfig(self.label_tk_id, state=tk.HIDDEN)
+        self.diagram.itemconfig(self.label_bg_tk_id, state=tk.HIDDEN)
+
 
 class CremonaDiagram(TwlDiagram):
 
