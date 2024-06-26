@@ -1,31 +1,36 @@
 name: Build EXE for Windows
 
+
 on:
   push:
     branches:
       - master
   workflow_dispatch:
+    branches:
+      - develop
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
+
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout Repository
+      uses: actions/checkout@v2
       
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: '3.12'
 
-    - name: Install dependencies
+    - name: Install Dependencies
       run: pip install -r requirements.txt
 
     - name: Build EXE
       run: pyinstaller build/main.spec
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: C2D
         path: dist/C2D.exe
