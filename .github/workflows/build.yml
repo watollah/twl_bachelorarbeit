@@ -23,3 +23,9 @@ jobs:
 
     - name: Build EXE
       run: pyinstaller build/main.spec
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: C2D
+        path: dist/C2D.exe
