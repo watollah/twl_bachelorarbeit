@@ -19,11 +19,8 @@ def add_image_by_name(name: str, width: int|None=None, height: int|None=None) ->
     return add_image(pil_image, width, height)
 
 def get_image_path(image_name: str):
-    """Get absolute path to resource, works for dev and for PyInstaller."""
-    try:
-        #PyInstaller creates a temporary folder and stores path in _MEIPASS
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    except AttributeError:
-        base_path = os.path.abspath(".")
-    img_dir = os.path.join(base_path, '..', 'img')
-    return os.path.join(img_dir, f"{image_name}.png")
+    """Get absolute path to image, works for dev and for PyInstaller."""
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))) #PyInstaller creates a temporary folder and stores path in _MEIPASS
+    if base_path.endswith("src"):
+        base_path = os.path.join(base_path, '..')
+    return os.path.join(base_path, 'img', f"{image_name}.png")
