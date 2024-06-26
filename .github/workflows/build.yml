@@ -1,15 +1,18 @@
 name: Build EXE for Windows
 
+
 on:
   push:
     branches:
       - master
   workflow_dispatch:
+      - develop
 
 jobs:
   build:
     runs-on: windows-latest
-    
+
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout
