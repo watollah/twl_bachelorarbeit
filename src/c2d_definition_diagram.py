@@ -596,8 +596,6 @@ class DefinitionDiagram(ModelDiagram):
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
 
-        self.selected_tool.reset()
-
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
 
