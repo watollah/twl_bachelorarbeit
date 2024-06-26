@@ -6,7 +6,7 @@ from abc import abstractmethod
 from c2d_update import Observer
 from c2d_widgets import CustomRadioButton
 from c2d_style import Colors
-from c2d_images import add_image_from_path
+from c2d_images import add_image_by_name
 from c2d_components import Component, IdAttribute
 from c2d_math import Point, Polygon
 
@@ -368,7 +368,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.config(cursor="arrow")
 
     def add_button(self, tool: Tool, toolbar: ttk.Frame):
-        image = add_image_from_path(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
+        image = add_image_by_name(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
         button = CustomRadioButton(toolbar, image=image, variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, outlinewidth=1)
         button.pack()
 

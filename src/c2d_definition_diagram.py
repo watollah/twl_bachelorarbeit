@@ -5,7 +5,7 @@ from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
 from c2d_style import Colors
-from c2d_images import add_image_from_path
+from c2d_images import add_image_by_name
 from c2d_widgets import BorderFrame, CustomEntry
 from c2d_update import UpdateManager
 from c2d_math import Point, Line
@@ -20,7 +20,7 @@ class SelectTool(Tool):
     ID: int = 0
     NAME: str = "Select"
     DESCR: str = "Select objects in model."
-    ICON: str = "img/select_icon.png"
+    ICON: str = "select_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
         super().__init__(diagram)
@@ -340,7 +340,7 @@ class BeamTool(ComponentTool[Beam]):
     ID: int = 1
     NAME: str = "Beam Tool"
     DESCR: str = "Create beam between two nodes."
-    ICON: str = "img/beam_icon.png"
+    ICON: str = "beam_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
         super().__init__(diagram)
@@ -423,7 +423,7 @@ class SupportTool(ComponentTool[Support]):
     ID: int = 2
     NAME: str = "Support Tool"
     DESCR: str = "Create support on node."
-    ICON: str = "img/support_icon.png"
+    ICON: str = "support_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
         super().__init__(diagram)
@@ -474,7 +474,7 @@ class ForceTool(ComponentTool[Force]):
     ID: int = 3
     NAME: str = "Force Tool"
     DESCR: str = "Create force on node."
-    ICON: str = "img/force_icon.png"
+    ICON: str = "force_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
         super().__init__(diagram)
@@ -527,7 +527,7 @@ class DefinitionDiagram(ModelDiagram):
     MAX_GRID = 500
 
     ANGLE_GUIDE_TAG = "angle_guide"
-    ANGLE_GUIDE_IMG = "img/angle_guide.png"
+    ANGLE_GUIDE_IMG = "angle_guide"
     ANGLE_GUIDE_SIZE = 120
     ANGLE_GUIDE_PADDING = 10
 
@@ -557,7 +557,7 @@ class DefinitionDiagram(ModelDiagram):
 
         #angle guide
         self.angle_guide_visible: bool = False
-        angle_guide_img = add_image_from_path(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
+        angle_guide_img = add_image_by_name(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
         self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
                                              self.ANGLE_GUIDE_PADDING, 
                                              image=angle_guide_img, 

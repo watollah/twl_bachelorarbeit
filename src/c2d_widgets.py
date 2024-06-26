@@ -3,7 +3,7 @@ from tkinter import ttk
 
 from c2d_update import Observer
 from c2d_style import Colors
-from c2d_images import add_image_from_path
+from c2d_images import add_image_by_name
 
 
 class TwlTab(Observer, ttk.Frame):
@@ -159,8 +159,8 @@ class ToggledFrame(tk.Frame):
 
     HEADER_SIZE = 50
 
-    OPEN_ICON: str = "img/arrow_open_icon.png"
-    CLOSED_ICON: str = "img/arrow_closed_icon.png"
+    OPEN_ICON: str = "arrow_open_icon"
+    CLOSED_ICON: str = "arrow_closed_icon"
 
     def __init__(self, parent, title: str = "", *args, **options):
         tk.Frame.__init__(self, parent, *args, **options)
@@ -173,8 +173,8 @@ class ToggledFrame(tk.Frame):
 
         self.content: ttk.Frame = ttk.Frame(self)
 
-        open_icon = add_image_from_path(self.OPEN_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
-        closed_icon = add_image_from_path(self.CLOSED_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+        open_icon = add_image_by_name(self.OPEN_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+        closed_icon = add_image_by_name(self.CLOSED_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
 
         self.toggle_button = CustomToggleButton(self.title_frame, 
                                                 style="ToggledFrame.TButton",
