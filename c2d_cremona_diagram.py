@@ -3,12 +3,12 @@ from tkinter import ttk
 from typing import Any
 import math
 
-from twl_app import TwlApp
-from twl_style import Colors
-from twl_diagram import TwlDiagram, Shape, ComponentShape
-from twl_math import Point, Line, Polygon
-from twl_cremona_algorithm import CremonaAlgorithm
-from twl_components import Component, Node, Support, Force
+from c2d_app import TwlApp
+from c2d_style import Colors
+from c2d_diagram import TwlDiagram, Shape, ComponentShape
+from c2d_math import Point, Line, Polygon
+from c2d_cremona_algorithm import CremonaAlgorithm
+from c2d_components import Component, Node, Support, Force
 
 
 class BaseLineShape(Shape):

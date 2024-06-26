@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_update import Observer
-from twl_style import Colors
-from twl_images import add_image_from_path
+from c2d_update import Observer
+from c2d_style import Colors
+from c2d_images import add_image_from_path
 
 
 class TwlTab(Observer, ttk.Frame):

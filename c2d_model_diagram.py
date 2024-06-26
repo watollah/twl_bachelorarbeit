@@ -1,9 +1,9 @@
 import tkinter as tk
 
-from twl_app import TwlApp
-from twl_math import Point, Line, Triangle, Polygon
-from twl_components import AngleAttribute, ConstraintsAttribute, EndNodeAttribute, Node, Beam, NodeAttribute, StartNodeAttribute, Support, Force, XCoordinateAttribute, YCoordinateAttribute
-from twl_diagram import Shape, ComponentShape, TwlDiagram
+from c2d_app import TwlApp
+from c2d_math import Point, Line, Triangle, Polygon
+from c2d_components import AngleAttribute, ConstraintsAttribute, EndNodeAttribute, Node, Beam, NodeAttribute, StartNodeAttribute, Support, Force, XCoordinateAttribute, YCoordinateAttribute
+from c2d_diagram import Shape, ComponentShape, TwlDiagram
 
 
 class NodeShape(ComponentShape[Node]):

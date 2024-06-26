@@ -1,9 +1,9 @@
 import tkinter as tk
 
-from twl_update import UpdateManager
-from twl_settings import Settings
-from twl_components import Model
-from twl_solver import Solver
+from c2d_update import UpdateManager
+from c2d_settings import Settings
+from c2d_components import Model
+from c2d_solver import Solver
 
 
 class TwlApp():

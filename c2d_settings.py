@@ -1,6 +1,6 @@
 import tkinter as tk
 
-from twl_update import UpdateManager
+from c2d_update import UpdateManager
 
 
 class Settings:

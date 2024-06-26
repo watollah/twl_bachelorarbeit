@@ -1,12 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_app import TwlApp
-from twl_update import UpdateManager
-from twl_widgets import ToggledFrame, BorderFrame, TwlTab
-from twl_components import AngleAttribute, ForceTypeAttribute, Model, Beam, NodeAttribute, Support, Force, Result
-from twl_result_diagram import ResultDiagram
-from twl_table import TwlTable
+from c2d_app import TwlApp
+from c2d_update import UpdateManager
+from c2d_widgets import ToggledFrame, BorderFrame, TwlTab
+from c2d_components import AngleAttribute, ForceTypeAttribute, Model, Beam, NodeAttribute, Support, Force, Result
+from c2d_result_diagram import ResultDiagram
+from c2d_table import TwlTable
 
 
 class ResultTab(TwlTab):

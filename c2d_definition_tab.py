@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_app import TwlApp
-from twl_widgets import ToggledFrame, BorderFrame, TwlTab
-from twl_components import Node, Beam, Support, Force
-from twl_definition_diagram import DefinitionDiagram
-from twl_table import TwlTable
+from c2d_app import TwlApp
+from c2d_widgets import ToggledFrame, BorderFrame, TwlTab
+from c2d_components import Node, Beam, Support, Force
+from c2d_definition_diagram import DefinitionDiagram
+from c2d_table import TwlTable
 
 
 class DefinitionTab(TwlTab):

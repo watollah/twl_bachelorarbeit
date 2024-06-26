@@ -1,12 +1,12 @@
 import math
 
-from twl_app import TwlApp
-from twl_math import Point, Line, Polygon
-from twl_style import Colors
-from twl_components import Beam, Force
-from twl_diagram import Shape
-from twl_model_diagram import ComponentShape
-from twl_result_model_diagram import ResultModelDiagram
+from c2d_app import TwlApp
+from c2d_math import Point, Line, Polygon
+from c2d_style import Colors
+from c2d_components import Beam, Force
+from c2d_diagram import Shape
+from c2d_model_diagram import ComponentShape
+from c2d_result_model_diagram import ResultModelDiagram
 
 
 class BeamForcePlotShape(ComponentShape[Beam]):

@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import TypeVar, Generic
 
-from twl_components import Component, Attribute
-from twl_widgets import CustomEntry
-from twl_update import Observer
+from c2d_components import Component, Attribute
+from c2d_widgets import CustomEntry
+from c2d_update import Observer
 
 
 C = TypeVar('C', bound=Component)

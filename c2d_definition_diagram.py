@@ -3,16 +3,16 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Generic, TypeVar
 
-from twl_app import TwlApp
-from twl_style import Colors
-from twl_images import add_image_from_path
-from twl_widgets import BorderFrame, CustomEntry
-from twl_update import UpdateManager
-from twl_math import Point, Line
-from twl_help import f_range
-from twl_components import Attribute, Component, Model, Node, Beam, Support, Force
-from twl_diagram import Tool
-from twl_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
+from c2d_app import TwlApp
+from c2d_style import Colors
+from c2d_images import add_image_from_path
+from c2d_widgets import BorderFrame, CustomEntry
+from c2d_update import UpdateManager
+from c2d_math import Point, Line
+from c2d_help import f_range
+from c2d_components import Attribute, Component, Model, Node, Beam, Support, Force
+from c2d_diagram import Tool
+from c2d_model_diagram import ModelDiagram, ComponentShape, NodeShape, BeamShape, SupportShape, ForceShape
 
 
 class SelectTool(Tool):

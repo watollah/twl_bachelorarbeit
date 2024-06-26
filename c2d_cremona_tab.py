@@ -1,10 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_cremona_model_diagram import CremonaModelDiagram
-from twl_cremona_diagram import CremonaDiagram
-from twl_cremona_control_panel import ControlPanel
-from twl_widgets import TwlTab
+from c2d_cremona_model_diagram import CremonaModelDiagram
+from c2d_cremona_diagram import CremonaDiagram
+from c2d_cremona_control_panel import ControlPanel
+from c2d_widgets import TwlTab
 
 
 class CremonaTab(TwlTab):

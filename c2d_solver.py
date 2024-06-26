@@ -1,8 +1,8 @@
 import numpy as np
 import math
 
-from twl_math import Orientation, Point, Line
-from twl_components import Model, Component, Node, Beam, Force
+from c2d_math import Orientation, Point, Line
+from c2d_components import Model, Component, Node, Beam, Force
 
 
 class Solver:

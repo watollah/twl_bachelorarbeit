@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageDraw, ImageFont
 
-from twl_images import add_image
+from c2d_images import add_image
 
 
 TTK_CLAM = "clam"

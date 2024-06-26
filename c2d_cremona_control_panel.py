@@ -1,12 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
 
-from twl_cremona_algorithm import CremonaAlgorithm
-from twl_update import Observer
-from twl_components import Component, Node, Force
-from twl_widgets import CustomMenuButton, CustomToggleButton
-from twl_cremona_model_diagram import CremonaModelDiagram
-from twl_cremona_diagram import CremonaDiagram
+from c2d_cremona_algorithm import CremonaAlgorithm
+from c2d_update import Observer
+from c2d_components import Component, Node, Force
+from c2d_widgets import CustomMenuButton, CustomToggleButton
+from c2d_cremona_model_diagram import CremonaModelDiagram
+from c2d_cremona_diagram import CremonaDiagram
 
 
 class ControlPanel(Observer, ttk.Frame):

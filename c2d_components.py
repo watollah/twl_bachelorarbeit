@@ -2,9 +2,9 @@ from abc import ABC, abstractmethod
 from typing import TypeVar, Type, cast, Generic
 from enum import Enum
 
-from twl_math import Point, Line
-from twl_update import UpdateManager
-from twl_help import int_to_roman
+from c2d_math import Point, Line
+from c2d_update import UpdateManager
+from c2d_help import int_to_roman
 
 
 C = TypeVar("C", bound='Component')

@@ -1,9 +1,9 @@
-from twl_style import Colors
-from twl_diagram import ComponentShape
-from twl_components import Component, Node, Force
-from twl_cremona_algorithm import CremonaAlgorithm
-from twl_result_model_diagram import ResultModelDiagram, BeamForceShape
-from twl_model_diagram import NodeShape, SupportShape, ForceShape
+from c2d_style import Colors
+from c2d_diagram import ComponentShape
+from c2d_components import Component, Node, Force
+from c2d_cremona_algorithm import CremonaAlgorithm
+from c2d_result_model_diagram import ResultModelDiagram, BeamForceShape
+from c2d_model_diagram import NodeShape, SupportShape, ForceShape
 
 
 class CremonaModelDiagram(ResultModelDiagram):

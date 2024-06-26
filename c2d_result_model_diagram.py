@@ -1,10 +1,10 @@
 import tkinter as tk
 
-from twl_app import TwlApp
-from twl_math import Point, Line, Polygon
-from twl_diagram import ComponentShape, Shape
-from twl_model_diagram import ModelDiagram, BeamShape, SupportShape, ForceShape
-from twl_components import Beam, Support, Force
+from c2d_app import TwlApp
+from c2d_math import Point, Line, Polygon
+from c2d_diagram import ComponentShape, Shape
+from c2d_model_diagram import ModelDiagram, BeamShape, SupportShape, ForceShape
+from c2d_components import Beam, Support, Force
 
 
 class BeamForceShape(ComponentShape[Beam]):

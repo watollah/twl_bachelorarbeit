@@ -3,12 +3,12 @@ from tkinter import ttk
 from typing import TypeVar, Generic, Type
 from abc import abstractmethod
 
-from twl_update import Observer
-from twl_widgets import CustomRadioButton
-from twl_style import Colors
-from twl_images import add_image_from_path
-from twl_components import Component, IdAttribute
-from twl_math import Point, Polygon
+from c2d_update import Observer
+from c2d_widgets import CustomRadioButton
+from c2d_style import Colors
+from c2d_images import add_image_from_path
+from c2d_components import Component, IdAttribute
+from c2d_math import Point, Polygon
 
 
 class Shape():

@@ -2,8 +2,8 @@ from tkinter import filedialog, messagebox
 import json
 import os
 
-from twl_app import TwlApp
-from twl_components import Node, Beam, Support, Force
+from c2d_app import TwlApp
+from c2d_components import Node, Beam, Support, Force
 
 
 FILENAME: str | None = None
