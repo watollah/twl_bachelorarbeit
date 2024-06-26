@@ -299,7 +299,7 @@ class ComponentToolPopup(tk.Toplevel):
             self.tool.show_temp_shape()
 
     def update_component(self):
-        [attr.set_value(entry.get()) for attr, entry in self.entries.items()]
+        [attr.set_value(entry.get(), False) for attr, entry in self.entries.items()]
 
     def create_label(self, text: str, column: int, row: int, columnspan: int=1):
         label = tk.Label(self.content, text=text, anchor=tk.W)
