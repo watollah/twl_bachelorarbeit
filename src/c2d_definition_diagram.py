@@ -5,7 +5,7 @@ from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
 from c2d_style import Colors
-from c2d_images import add_image_by_name
+from c2d_images import add_png_by_name
 from c2d_widgets import BorderFrame, CustomEntry
 from c2d_update import UpdateManager
 from c2d_math import Point, Line
@@ -557,7 +557,7 @@ class DefinitionDiagram(ModelDiagram):
 
         #angle guide
         self.angle_guide_visible: bool = False
-        angle_guide_img = add_image_by_name(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
+        angle_guide_img = add_png_by_name(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
         self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
                                              self.ANGLE_GUIDE_PADDING, 
                                              image=angle_guide_img, 

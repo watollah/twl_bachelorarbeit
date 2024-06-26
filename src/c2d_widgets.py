@@ -3,7 +3,7 @@ from tkinter import ttk
 
 from c2d_update import Observer
 from c2d_style import Colors
-from c2d_images import add_image_by_name
+from c2d_images import add_png_by_name
 
 
 class TwlTab(Observer, ttk.Frame):
@@ -173,8 +173,8 @@ class ToggledFrame(tk.Frame):
 
         self.content: ttk.Frame = ttk.Frame(self)
 
-        open_icon = add_image_by_name(self.OPEN_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
-        closed_icon = add_image_by_name(self.CLOSED_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+        open_icon = add_png_by_name(self.OPEN_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
+        closed_icon = add_png_by_name(self.CLOSED_ICON, self.HEADER_SIZE, self.HEADER_SIZE)
 
         self.toggle_button = CustomToggleButton(self.title_frame, 
                                                 style="ToggledFrame.TButton",
