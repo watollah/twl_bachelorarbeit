@@ -578,6 +578,12 @@ class DefinitionDiagram(ModelDiagram):
         self.select_tool(SelectTool.ID)
         BorderFrame(toolbar).pack(fill="both", expand=True)
 
+        self.bind("<Unmap>", self.on_hide)
+
+    def on_hide(self, event):
+        if event.widget == self:
+            self.selected_tool.reset()
+
     def refresh(self, event=None):
         super().refresh(event)
         self.delete_grid()
@@ -589,6 +595,8 @@ class DefinitionDiagram(ModelDiagram):
 
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
+
+        self.selected_tool.reset()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
