@@ -19,7 +19,7 @@ jobs:
       uses: actions/checkout@v2
       
     - name: Set up Python
-      uses: actions/setup-python
+      uses: actions/setup-python@v3
       with:
         python-version: '3.12'
 
@@ -30,7 +30,7 @@ jobs:
       run: pyinstaller build/main.spec
 
     - name: Upload Artifact
-      uses: actions/upload-artifact
+      uses: actions/upload-artifact@v3
       with:
         name: C2D
         path: dist/C2D.exe
