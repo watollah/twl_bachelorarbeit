@@ -29,11 +29,9 @@ class ResultTab(TwlTab):
         self.tables = self.create_tables(tables_frame)
 
     def update_observer(self) -> None:
-        self.beams_table.component_list = self.get_beam_forces()
-        self.beams_table.update_observer()
-        self.supports_table.component_list = self.get_support_forces()
-        self.supports_table.update_observer()
-        self.force_table.update_observer()
+        self.beams_table.component_list = self.get_result_forces(Beam)
+        self.supports_table.component_list = self.get_result_forces(Support)
+        [table.update_observer() for table in self.tables]
         self.result_diagram.update_observer()
 
     def create_diagram(self, frame: ttk.Frame):
@@ -43,12 +41,12 @@ class ResultTab(TwlTab):
     def create_tables(self, frame: ttk.Frame):
         beams_entry = ToggledFrame(frame, "Beams")
         beams_entry.pack(fill="x")
-        self.beams_table = TwlTable(beams_entry.content, self.get_beam_forces(), Result)
+        self.beams_table = TwlTable(beams_entry.content, self.get_result_forces(Beam), Result)
         self.beams_table.pack(fill="both")
 
         supports_entry = ToggledFrame(frame, "Supports")
         supports_entry.pack(fill="x")
-        self.supports_table = TwlTable(supports_entry.content, self.get_support_forces(), Result)
+        self.supports_table = TwlTable(supports_entry.content, self.get_result_forces(Support), Result)
         self.supports_table.pack(fill="both")
         self.supports_table.hide_columns(ForceTypeAttribute.ID)
 
@@ -59,11 +57,8 @@ class ResultTab(TwlTab):
         self.force_table.hide_columns(NodeAttribute.ID, AngleAttribute.ID)
 
         BorderFrame(frame).pack(fill="both", expand=True)
+        return self.beams_table, self.supports_table, self.force_table
 
-    def get_beam_forces(self):
+    def get_result_forces(self, component_type: type[Beam] | type[Support]):
         model = Model(UpdateManager())
-        return [Result(model, force) for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)]
-
-    def get_support_forces(self):
-        model = Model(UpdateManager())
-        return [Result(model, force) for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)]
+        return [Result(model, force) for force, component in TwlApp.solver().solution.items() if isinstance(component, component_type)]

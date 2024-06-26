@@ -30,6 +30,7 @@ class DefinitionTab(TwlTab):
     def create_diagram(self, frame: ttk.Frame):
         diagram = DefinitionDiagram(frame)
         TwlApp.update_manager().register_observer(diagram)
+        return diagram
 
     def create_tables(self, frame: ttk.Frame):
         nodes_entry = ToggledFrame(frame, "Nodes")
@@ -57,3 +58,4 @@ class DefinitionTab(TwlTab):
         TwlApp.update_manager().register_observer(forces_table)
 
         BorderFrame(frame).pack(fill="both", expand=True)
+        return nodes_table, beams_table, supports_table, forces_table
