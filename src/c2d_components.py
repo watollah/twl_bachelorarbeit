@@ -27,13 +27,14 @@ class Attribute(Generic[C, V]):
     def get_value(self) -> V:
         return self._value
 
-    def set_value(self, value) -> tuple[bool, str]:
+    def set_value(self, value, update: bool=True) -> tuple[bool, str]:
         """Set the value of this attribute. The value is tested for validity and cast to the attributes type."""
         filter_result = self.filter(value)
         if filter_result[0]:
             self._value = value if isinstance(value, self.TYPE) else self.TYPE(value) #type: ignore
-            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
-            print(f"detected change in {self._component}, changed attribute: {self.NAME}")
+            if update:
+                self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+                print(f"detected change in {self._component}, changed attribute: {self.NAME}")
         return filter_result
 
     def filter(self, value) -> tuple[bool, str]:
@@ -271,7 +272,7 @@ class BeamAngleAttribute(Attribute[Beam, float]):
     def get_display_value(self) -> str:
         return str(round(self.get_value(), 2))
 
-    def set_value(self, value) -> tuple[bool, str]:
+    def set_value(self, value, update: bool=True) -> tuple[bool, str]:
         filter_result = self.filter(value)
         if filter_result[0]:
             start = Point(self._component.start_node.x, self._component.start_node.y)
@@ -279,9 +280,10 @@ class BeamAngleAttribute(Attribute[Beam, float]):
             line = Line(start, end)
             rotate_by = (float(value) - self.get_value()) % 360
             line.rotate(start, rotate_by)
-            self._component.end_node.x = line.end.x
-            self._component.end_node.y = line.end.y
-            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+            self._component.end_node._x._value = line.end.x
+            self._component.end_node._y._value = line.end.y
+            if update:
+                self._component.model.update_manager.notify_observers(self._component.id, self.ID)
         return filter_result
 
 
@@ -311,16 +313,17 @@ class BeamLengthAttribute(Attribute[Beam, float]):
     def get_display_value(self) -> str:
         return str(round(self.get_value(), 2))
 
-    def set_value(self, value) -> tuple[bool, str]:
+    def set_value(self, value, update: bool=True) -> tuple[bool, str]:
         filter_result = self.filter(value)
         if filter_result[0]:
             start = Point(self._component.start_node.x, self._component.start_node.y)
             end = Point(self._component.end_node.x, self._component.end_node.y)
             line = Line(start, end)
             line.set_length(float(value))
-            self._component.end_node.x = line.end.x
-            self._component.end_node.y = line.end.y
-            self._component.model.update_manager.notify_observers(self._component.id, self.ID)
+            self._component.end_node._x._value = line.end.x
+            self._component.end_node._y._value = line.end.y
+            if update:
+                self._component.model.update_manager.notify_observers(self._component.id, self.ID)
         return filter_result
 
 

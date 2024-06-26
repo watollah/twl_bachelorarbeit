@@ -6,6 +6,7 @@ import c2d_io as io
 from c2d_app import TwlApp
 from c2d_update import Observer
 from c2d_style import init_style
+from c2d_images import get_image_path
 from c2d_definition_tab import DefinitionTab
 from c2d_cremona_tab import CremonaTab
 from c2d_result_tab import ResultTab
@@ -14,6 +15,7 @@ from c2d_result_tab import ResultTab
 class TwlTool(Observer, tk.Tk):
 
     TITLE: str = "C2D"
+    ICON: str = "c2d_icon"
 
     def __init__(self):
         super().__init__()
@@ -22,6 +24,7 @@ class TwlTool(Observer, tk.Tk):
         TwlApp.saved_state().set(True)
 
         self.geometry("1200x800")
+        self.iconbitmap(get_image_path(self.ICON, "ico"))
         init_style()
         menubar = self.create_menu_bar()
         self.config(menu=menubar)

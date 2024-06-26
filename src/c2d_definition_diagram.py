@@ -5,7 +5,7 @@ from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
 from c2d_style import Colors
-from c2d_images import add_image_by_name
+from c2d_images import add_png_by_name
 from c2d_widgets import BorderFrame, CustomEntry
 from c2d_update import UpdateManager
 from c2d_math import Point, Line
@@ -299,7 +299,7 @@ class ComponentToolPopup(tk.Toplevel):
             self.tool.show_temp_shape()
 
     def update_component(self):
-        [attr.set_value(entry.get()) for attr, entry in self.entries.items()]
+        [attr.set_value(entry.get(), False) for attr, entry in self.entries.items()]
 
     def create_label(self, text: str, column: int, row: int, columnspan: int=1):
         label = tk.Label(self.content, text=text, anchor=tk.W)
@@ -557,7 +557,7 @@ class DefinitionDiagram(ModelDiagram):
 
         #angle guide
         self.angle_guide_visible: bool = False
-        angle_guide_img = add_image_by_name(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
+        angle_guide_img = add_png_by_name(self.ANGLE_GUIDE_IMG, self.ANGLE_GUIDE_SIZE, self.ANGLE_GUIDE_SIZE)
         self.angle_guide = self.create_image(self.winfo_width() - self.ANGLE_GUIDE_PADDING, 
                                              self.ANGLE_GUIDE_PADDING, 
                                              image=angle_guide_img, 
@@ -595,8 +595,6 @@ class DefinitionDiagram(ModelDiagram):
 
         angle_guide_state = tk.NORMAL if TwlApp.settings().show_angle_guide.get() else tk.HIDDEN
         self.itemconfigure(self.angle_guide, state=angle_guide_state)
-
-        self.selected_tool.reset()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)

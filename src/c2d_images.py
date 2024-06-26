@@ -14,13 +14,13 @@ def add_image(pil_image: Image.Image, width: int|None=None, height: int|None=Non
     image_references.append(tk_image)
     return tk_image
 
-def add_image_by_name(name: str, width: int|None=None, height: int|None=None) -> tk.PhotoImage:
-    pil_image = Image.open(get_image_path(name))
+def add_png_by_name(name: str, width: int|None=None, height: int|None=None) -> tk.PhotoImage:
+    pil_image = Image.open(get_image_path(name, "png"))
     return add_image(pil_image, width, height)
 
-def get_image_path(image_name: str):
+def get_image_path(image_name: str, image_type: str):
     """Get absolute path to image, works for dev and for PyInstaller."""
     base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))) #PyInstaller creates a temporary folder and stores path in _MEIPASS
     if base_path.endswith("src"):
         base_path = os.path.join(base_path, '..')
-    return os.path.join(base_path, 'img', f"{image_name}.png")
+    return os.path.join(base_path, 'img', f"{image_name}.{image_type}")
