@@ -2,13 +2,13 @@ import tkinter as tk
 from tkinter import ttk
 import webbrowser
 
-import twl_io as io
-from twl_app import TwlApp
-from twl_update import Observer
-from twl_style import init_style
-from twl_definition_tab import DefinitionTab
-from twl_cremona_tab import CremonaTab
-from twl_result_tab import ResultTab
+import c2d_io as io
+from c2d_app import TwlApp
+from c2d_update import Observer
+from c2d_style import init_style
+from c2d_definition_tab import DefinitionTab
+from c2d_cremona_tab import CremonaTab
+from c2d_result_tab import ResultTab
 
 
 class TwlTool(Observer, tk.Tk):
