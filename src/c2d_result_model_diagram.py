@@ -27,7 +27,6 @@ class BeamForceShape(ComponentShape[Beam]):
             self.draw_circle()
         else:
             self.draw_arrows()
-        self.set_label_visible(False)
 
     def draw_circle(self):
             oval = self.oval_coords()
@@ -64,19 +63,16 @@ class BeamForceShape(ComponentShape[Beam]):
             scaled_arrow = tuple(value * factor for value in arrow)
             self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
 
-    def set_visible(self, visible: bool):
-        super().set_visible(visible)
-        self.set_label_visible(False)
-
 
 class ResultModelDiagram(ModelDiagram):
 
     SUPPORT_FORCE_OFFSET_RANGE = 50
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        super().update_observer(component_id, attribute_id)
         self.add_support_forces()
         self.add_beam_forces()
-        super().update_observer(component_id, attribute_id)
+        self.label_visibility()
 
     def add_support_forces(self):
         support_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Support)}

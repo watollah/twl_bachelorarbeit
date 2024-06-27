@@ -584,8 +584,8 @@ class DefinitionDiagram(ModelDiagram):
         if event.widget == self:
             self.selected_tool.reset()
 
-    def refresh(self, event=None):
-        super().refresh(event)
+    def refresh(self):
+        super().refresh()
         self.delete_grid()
         if TwlApp.settings().show_grid.get():
             self.draw_grid()
