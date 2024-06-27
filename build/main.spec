@@ -23,7 +23,7 @@ exe = EXE(
     a.datas,
     [],
     name='C2D',
-    icon='../img/s2d_icon.ico',
+    icon=os.path.abspath('img/c2d_icon.ico'),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
