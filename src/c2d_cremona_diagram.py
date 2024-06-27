@@ -102,10 +102,6 @@ class SketchShape(ComponentShape[Force]):
     def is_at(self, x: float, y: float) -> bool:
         return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
 
-    def set_visible(self, visible: bool):
-        super().set_visible(visible)
-        self.set_label_visible(False)
-
 
 class CremonaDiagram(TwlDiagram):
 
@@ -178,7 +174,9 @@ class CremonaDiagram(TwlDiagram):
             shape = self.shapes_of_type_for(shape_type, step[1])[0]
             if i <= selected_step - 1 and not (not step[3] and round(step[1].strength, 2) == 0):
                 visible.add(shape)
-            shape.set_visible(shape in visible)
+            is_visible = shape in visible
+            shape.set_visible(is_visible)
+            shape.set_label_visible(is_visible and self.label_visible(shape))
 
     def step_highlighting(self, selected_step: int):
         line_style: dict[tuple[type, bool], dict[str, Any]] = {

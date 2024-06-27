@@ -6,7 +6,7 @@ from c2d_style import Colors
 from c2d_components import Beam, Force
 from c2d_diagram import Shape
 from c2d_model_diagram import ComponentShape
-from c2d_result_model_diagram import ResultModelDiagram
+from c2d_result_model_diagram import BeamForceShape, ResultModelDiagram
 
 
 class BeamForcePlotShape(ComponentShape[Beam]):
@@ -28,7 +28,6 @@ class BeamForcePlotShape(ComponentShape[Beam]):
                             fill=bg_color,
                             tags=[*self.TAGS, str(self.component.id)])
         self.tk_shapes[self.rect_id] = Polygon(rect[0], rect[1], rect[2], rect[3])
-        self.set_label_visible(False)
 
     def rect_coords(self) -> tuple[Point, Point, Point, Point]:
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
@@ -73,4 +72,4 @@ class ResultDiagram(ResultModelDiagram):
                 self.itemconfig(tk_id, fill=color)
 
     def label_visible(self, shape: Shape) -> bool:
-        return type(Shape) != BeamForcePlotShape and super().label_visible(shape)
+        return type(shape) not in (BeamForceShape, BeamForcePlotShape) and super().label_visible(shape)
