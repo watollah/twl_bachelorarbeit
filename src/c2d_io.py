@@ -71,8 +71,7 @@ def deserialize_project(serialized_project):
     model.clear()
 
     for id, x, y in serialized_project["nodes"]:
-        node = Node(model, x, y)
-        node.id = id
+        node = Node(model, x, y, id)
         model.nodes.append(node)
 
     for id, start_node_id, end_node_id in serialized_project["beams"]:
@@ -80,18 +79,17 @@ def deserialize_project(serialized_project):
         end_node = model.nodes.component_for_id(end_node_id)
         assert(start_node)
         assert(end_node)
-        beam = Beam(model, start_node, end_node)
-        beam.id = id
+        beam = Beam(model, start_node, end_node, id)
         model.beams.append(beam)
 
     for id, node_id, angle, constraints in serialized_project["supports"]:
         node = model.nodes.component_for_id(node_id)
         assert(node)
-        support = Support(model, node, angle, constraints)
+        support = Support(model, node, angle, constraints, id)
         model.supports.append(support)
 
     for id, node_id, angle, strength in serialized_project["forces"]:
         node = model.nodes.component_for_id(node_id)
         assert(node)
-        force = Force(model, node, angle, strength)
+        force = Force(model, node, angle, strength, id)
         model.forces.append(force)
