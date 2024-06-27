@@ -461,7 +461,7 @@ class Result(Component):
 
     def __init__(self, model: 'Model', force: Force, id: str | None=None):
         super().__init__(model, id)
-        self.id = force.id
+        self._id._value = force.id
         self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, ForceType.from_value(round(force.strength, 2)))
         self._result: ResultAttribute = ResultAttribute(self, round(force.strength, 2))
 
@@ -469,7 +469,7 @@ class Result(Component):
     def dummy(cls, force: Force | None=None, id=""):
         force = force if force else Force.dummy()
         dummy_result: Result = cls(Model(UpdateManager()), force)
-        dummy_result.id = id
+        dummy_result._id._value = id
         return dummy_result
 
     def delete(self):
