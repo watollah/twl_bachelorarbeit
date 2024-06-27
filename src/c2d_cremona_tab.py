@@ -13,6 +13,7 @@ class CremonaTab(TwlTab):
 
     def __init__(self, notebook: ttk.Notebook) -> None:
         super().__init__(notebook)
+        self.selected_step = tk.IntVar()
 
         vertical_panes = ttk.Panedwindow(self, orient=tk.VERTICAL)
         vertical_panes.pack(fill=tk.BOTH, expand=True)
@@ -34,19 +35,19 @@ class CremonaTab(TwlTab):
         self.control_panel = self.create_control_panel(control_panel_frame)
 
     def create_model_diagram(self, frame: ttk.Frame) -> CremonaModelDiagram:
-        model_diagram = CremonaModelDiagram(frame)
+        model_diagram = CremonaModelDiagram(frame, self.selected_step)
         ttk.Label(frame, text="Model", font=("Helvetica", 12)).place(x=10, y=10)
         return model_diagram
 
     def create_cremona_diagram(self, frame: ttk.Frame) -> CremonaDiagram:
-        cremona_diagram = CremonaDiagram(frame)
+        cremona_diagram = CremonaDiagram(frame, self.selected_step)
         ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12)).place(x=10, y=10)
         return cremona_diagram
 
     def create_control_panel(self, frame: ttk.Frame) -> 'ControlPanel':
         background_frame = ttk.Frame(frame, style="ControlPanel.TFrame") #todo: find a way to directly change panedwindow background color
         background_frame.pack(fill=tk.BOTH, expand=True)
-        control_panel = ControlPanel(background_frame, self.model_diagram, self.cremona_diagram)
+        control_panel = ControlPanel(background_frame, self.selected_step)
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         return control_panel
 

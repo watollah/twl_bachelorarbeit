@@ -271,7 +271,6 @@ class TwlDiagram(Observer, tk.Canvas):
         self.update_scrollregion()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
         [shape.scale(self.current_zoom.get() / 100) for shape in self.shapes]
-        self.label_visibility()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         self.refresh()

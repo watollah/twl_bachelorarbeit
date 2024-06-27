@@ -1,3 +1,5 @@
+import tkinter as tk
+
 from c2d_style import Colors
 from c2d_diagram import ComponentShape
 from c2d_components import Component, Node, Force
@@ -8,8 +10,10 @@ from c2d_model_diagram import NodeShape, SupportShape, ForceShape
 
 class CremonaModelDiagram(ResultModelDiagram):
 
-    def __init__(self, master):
+    def __init__(self, master, selected_step: tk.IntVar):
         super().__init__(master)
+        self.selected_step: tk.IntVar = selected_step
+        self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))
         self.steps: list[tuple[Node | None, Force, Component, bool]] = []
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
