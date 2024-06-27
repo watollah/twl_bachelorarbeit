@@ -143,6 +143,7 @@ class CremonaDiagram(TwlDiagram):
         if self.steps and TwlApp.settings().force_spacing.get():
             self.force_spacing()
         super().update_observer(component_id, attribute_id)
+        self.display_step(len(self.steps) + 1)
 
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)

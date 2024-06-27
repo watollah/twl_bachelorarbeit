@@ -35,9 +35,6 @@ class CremonaAlgorithm:
             steps.extend(to_be_added)
             forces_for_nodes.pop(node)
             node = CremonaAlgorithm._find_next_node(forces_for_nodes, steps)
-        for i, step in enumerate(steps):
-            node = step[0].id if step[0] else "None"
-            print(f"Step {i}: {node}, {step[1].id}, {step[2].id}, {step[3]}")
         return steps
 
     @staticmethod
