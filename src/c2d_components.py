@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
+import math
 from typing import TypeVar, Type, cast, Generic
 from enum import Enum
+
+import numpy as np
 
 from c2d_math import Point, Line
 from c2d_update import UpdateManager
@@ -538,6 +541,63 @@ class Model:
     def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
+
+    def is_stable(self) -> bool:
+        return not (sum(support.constraints for support in self.supports) < 3 or self.supports_parallel() or self.all_supports_intersect())
+
+    def supports_parallel(self):
+        if len(self.supports) > 2 and all(support.constraints == 1 for support in self.supports):
+            return all(self.supports[0].angle % 180 == support.angle % 180 for support in self.supports)
+        return False
+
+    def all_supports_intersect(self):
+        if not len(self.supports) == 3 or not all(support.constraints == 1 for support in self.supports) or self.supports_parallel():
+            return False
+        intersections = [self.support_intersection(self.supports[0], self.supports[1]),
+                         self.support_intersection(self.supports[1], self.supports[2]),
+                         self.support_intersection(self.supports[0], self.supports[2])]
+        if any(not intersection[0] for intersection in intersections):
+            return False #at least 2 supports do not intersect
+        if any(intersection[0] and not intersection[1] for intersection in intersections):
+            return True #2 supports are colinear -> all 3 intersect in one point
+        all_x = [intersection[1].x for intersection in intersections if intersection[1]]
+        all_y = [intersection[1].y for intersection in intersections if intersection[1]]
+        return all(math.isclose(x, all_x[0]) for x in all_x) and all(math.isclose(y, all_y[0]) for y in all_y)
+
+    def support_intersection(self, s1: Support, s2: Support) -> tuple[bool, Point | None]:
+        s1_m, s1_c = self.line_equation(s1)
+        s2_m, s2_c = self.line_equation(s2)
+        if math.isclose(s1_m, s2_m):
+            if math.isclose(s1_c, s2_c):
+                return True, None #colinear
+            return False, None #parallel
+        elif s1.angle in (90, 270) and s2.angle in (0, 180, 360):
+            x = s2.node.x
+            y = s1.node.y
+        elif s2.angle in (90, 270) and s1.angle in (0, 180, 360):
+            x = s1.node.x
+            y = s2.node.y
+        elif s1.angle in (90, 270):
+            y = s1.node.y
+            x = (y - s2_c) / s2_m
+        elif s1.angle in (0, 180, 360):
+            x = s1.node.x
+            y = s2_m * x + s2_c
+        elif s2.angle in (90, 270):
+            y = s2.node.y
+            x = (y - s1_c) / s1_m
+        elif s2.angle in (0, 180, 360):
+            x = s2.node.x
+            y = s1_m * x + s1_c
+        else:
+            x = (s1_c - s2_c) / (s2_m - s1_m)
+            y = s1_m * x + s1_c
+        return True, Point(x, y)
+
+    def line_equation(self, support: Support):
+            m = -math.tan(math.radians(support.angle))
+            c = -(-support.node.y + m * support.node.x)
+            return m, c
 
     def next_unique_id_for(self, component_type: type[C]) -> str:
         existing_ids =  {component.id for component in self.all_components}

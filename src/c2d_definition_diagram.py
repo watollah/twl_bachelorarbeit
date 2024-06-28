@@ -1,10 +1,11 @@
 from abc import abstractmethod
 import tkinter as tk
 from tkinter import ttk
+from tkinter import font as tkfont
 from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
-from c2d_style import Colors
+from c2d_style import Colors, FONT
 from c2d_images import add_png_by_name
 from c2d_widgets import BorderFrame, CustomEntry
 from c2d_update import UpdateManager
@@ -552,8 +553,9 @@ class DefinitionDiagram(ModelDiagram):
         super().__init__(diagram_frame)
 
         #statically determinate label
-        self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
-        self.stat_determ_label.place(x=self.UI_PADDING, y=self.UI_PADDING)
+        self.validation_text = tk.Text(self, borderwidth=0, font=FONT, width=40, height=4)
+        self.validation_text.place(x=self.UI_PADDING, y=self.UI_PADDING)
+        self.update_validation_text()
 
         #angle guide
         self.angle_guide_visible: bool = False
@@ -598,11 +600,7 @@ class DefinitionDiagram(ModelDiagram):
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
-
-        self.stat_determ_label.configure(text=self.stat_determ_text)
-        color = Colors.GREEN if self.stat_determ_text[:5] == "f = 0" else Colors.RED
-        ttk.Style().configure("Diagram.TLabel", foreground=color)
-
+        self.update_validation_text()
         self.tag_lower(self.GRID_TAG)
         self.tag_raise(self.ANGLE_GUIDE_TAG)
 
@@ -653,7 +651,19 @@ class DefinitionDiagram(ModelDiagram):
             return nearest_x, nearest_y
         return x, y
 
-    @property
+    def update_validation_text(self):
+        text = self.validation_text
+        text.config(state=tk.NORMAL)
+        text.delete("1.0", tk.END)
+        text.insert(tk.END, self.stat_determ_text() + "\n" + self.stable_text())
+        text.tag_add("stat_determ", "1.0", "3.end")
+        text.tag_config("stat_determ", foreground=Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
+        text.tag_add("stable", "4.0", "4.end" if TwlApp.model().is_stable() else tk.END)
+        text.tag_config("stable", foreground=Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
+        width = max(tkfont.Font(font=FONT).measure(line) for line in text.get("1.0", tk.END).split("\n"))
+        height = len(text.get("1.0", tk.END).split("\n")) - 1
+        text.config(state=tk.DISABLED, width=(width // tkfont.Font(font=FONT).measure("0") + 1), height=height)
+
     def stat_determ_text(self) -> str:
         """Get the explanation text about static determinacy."""
         nodes = len(TwlApp.model().nodes)
@@ -663,6 +673,16 @@ class DefinitionDiagram(ModelDiagram):
         unknowns = constraints + beams
         f = equations - unknowns
         return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
+
+    def stable_text(self) -> str:
+        stable = TwlApp.model().is_stable()
+        text = f"The model is {"stable" if stable else "not stable"}."
+        if not stable:
+            constraints = sum(support.constraints for support in TwlApp.model().supports)
+            text += f"{"\nThere should be exactly 3 reaction forces." if constraints < 3 else ""}"
+            text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
+            text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"
+        return text
 
     def update_coords_label(self, event):
         self.coords_label.config(text=f"x: {int(event.x)} y: {int(event.y)}")

@@ -1,2 +1,3 @@
-*test*.py
+test/
+help/
 __pycache__
