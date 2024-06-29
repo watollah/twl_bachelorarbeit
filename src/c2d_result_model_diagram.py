@@ -82,7 +82,7 @@ class ResultModelDiagram(ModelDiagram):
             self.offset_support_force(shape, support)
 
     def add_beam_forces(self):
-        [shape.remove() for shape in self.shapes if isinstance(shape, BeamForceShape)]
+        [shape.remove() for shape in self.shapes.copy() if isinstance(shape, BeamForceShape)]
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             self.shapes.append(BeamForceShape(beam, force, self))
