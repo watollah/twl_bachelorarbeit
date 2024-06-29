@@ -565,7 +565,7 @@ class Model:
             sum(support.constraints for support in self.supports) < 3,
             self.supports_parallel(),
             self.all_supports_intersect(),
-            self.has_higher_order_polygons()])
+            self.has_non_triangular_shapes()])
 
     def has_three_reaction_forces(self) -> bool:
         return sum(support.constraints for support in self.supports) == 3
@@ -574,9 +574,11 @@ class Model:
         beam_to_line: Callable[[Beam], Line] = lambda beam: Line(Point(beam.start_node.x, beam.start_node.y), Point(beam.end_node.x, beam.end_node.y))
         return any(beam_to_line(b1).intersects(beam_to_line(b2)) for b1, b2 in itertools.combinations(self.beams, 2))
 
-    def has_higher_order_polygons(self):
-        if self.is_empty():
+    def has_non_triangular_shapes(self):
+        if self.is_empty() or self.has_overlapping_beams():
             return False
+        if any(len(node.beams) < 2 for node in self.nodes):
+            return True
         beams_for_nodes: Callable[[Node], list[Beam]] = lambda node: [Beam.dummy(node, beam.start_node if not beam.start_node == node else beam.end_node, beam.id) for beam in node.beams]
         sorted_beams = {node: sorted(beams_for_nodes(node), key=lambda beam: self.rel_beam_angle(node, beam)) for node in self.nodes}
         orders: list[int] = []
