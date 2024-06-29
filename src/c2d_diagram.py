@@ -125,7 +125,7 @@ class ComponentShape(Generic[C], Shape, Observer):
     @property
     @abstractmethod
     def label_position(self) -> Point:
-        return Point(0, 0)
+        return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
 
     def draw_label(self) -> tuple[int, int]:
         label_pos = self.label_position
@@ -268,9 +268,9 @@ class TwlDiagram(Observer, tk.Canvas):
 
     def refresh(self):
         """Configures diagram navigation and ui layout. Configures shape scale and visibility."""
-        self.update_scrollregion()
         self.bottom_bar.place(x=self.UI_PADDING, y=self.winfo_height() - self.UI_PADDING, anchor=tk.SW)
         [shape.scale(self.current_zoom.get() / 100) for shape in self.shapes]
+        self.update_scrollregion()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         self.refresh()
@@ -323,7 +323,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.refresh()
 
     def update_scrollregion(self):
-        shapes = [tk_id for shape in self.shapes for tk_id in shape.tk_shapes.keys()]
+        shapes = [tk_id for shape in self.shapes for tk_id in shape.tk_shapes.keys() if self.itemcget(tk_id, "state") in (tk.NORMAL, "")]
         if shapes:
             bbox = self.bbox(*shapes)
             self.configure(scrollregion=(min(0, bbox[0] - self.SCROLL_EXTEND), 
