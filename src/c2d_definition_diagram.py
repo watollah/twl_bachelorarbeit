@@ -679,6 +679,7 @@ class DefinitionDiagram(ModelDiagram):
             text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
             text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"
             text += f"{"\nThere are non-triangular shapes." if TwlApp.model().has_non_triangular_shapes() else ""}"
+            text += f"{"\nThe model is not connected." if not TwlApp.model().is_connected() else ""}"
         return text
 
     def update_coords_label(self, event):

@@ -553,9 +553,6 @@ class Model:
             not self.has_overlapping_beams()
         ])
 
-    def is_connected(self) -> bool:
-        return True
-
     def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
@@ -565,7 +562,25 @@ class Model:
             sum(support.constraints for support in self.supports) < 3,
             self.supports_parallel(),
             self.all_supports_intersect(),
+            not self.is_connected(),
             self.has_non_triangular_shapes()])
+
+    def is_connected(self) -> bool:
+        if self.is_empty():
+            return True
+        else:
+            adj: dict[Node, list[Node]] = {}
+            for node in self.nodes:
+                adj[node] = []
+            for beam in self.beams:
+                adj[beam.start_node].append(beam.end_node)
+                adj[beam.end_node].append(beam.start_node)
+            visited: list[Node] = []
+            def dfs(node: Node, visited: list[Node]):
+                visited.append(node)
+                [dfs(neighbor, visited) for neighbor in adj[node] if neighbor not in visited]
+            dfs(self.nodes[0], visited)
+            return len(visited) == len(self.nodes)
 
     def has_three_reaction_forces(self) -> bool:
         return sum(support.constraints for support in self.supports) == 3
@@ -575,7 +590,7 @@ class Model:
         return any(beam_to_line(b1).intersects(beam_to_line(b2)) for b1, b2 in itertools.combinations(self.beams, 2))
 
     def has_non_triangular_shapes(self):
-        if self.is_empty() or self.has_overlapping_beams():
+        if self.is_empty() or self.has_overlapping_beams() or not self.is_connected():
             return False
         if any(len(node.beams) < 2 for node in self.nodes):
             return True
