@@ -407,14 +407,14 @@ class Force(Component):
     angle: AttributeDescriptor[float] = AttributeDescriptor("_angle")
     strength: AttributeDescriptor[float] = AttributeDescriptor("_strength")
 
-    def __init__(self, model: 'Model', node: Node, angle: float=0, strength: float=1.0, id: str | None=None):
+    def __init__(self, model: 'Model', node: Node, angle: float=0, strength: float=50.0, id: str | None=None):
         super().__init__(model, id)
         self._node: NodeAttribute = NodeAttribute(self, node)
         self._angle: AngleAttribute = AngleAttribute(self, angle)
         self._strength: StrengthAttribute = StrengthAttribute(self, strength)
 
     @classmethod
-    def dummy(cls, id="", node: Node | None=None, angle: float=0, strength: float=1.0):
+    def dummy(cls, id="", node: Node | None=None, angle: float=0, strength: float=50.0):
         node = Node.dummy() if node == None else node
         dummy_force: Force = cls(Model(UpdateManager()), node, angle, strength, id=id)
         return dummy_force
