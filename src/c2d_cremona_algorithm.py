@@ -1,3 +1,4 @@
+import math
 from c2d_app import TwlApp
 from c2d_math import Point, Line, Polygon
 from c2d_components import Component, Node, Beam, Support, Force
@@ -89,4 +90,4 @@ class CremonaAlgorithm:
 
     @staticmethod
     def _get_start_angle(forces: dict[Force, Component], steps: list[tuple[Node | None, Force, Component, bool]]):
-        return next((force.angle for force in forces.keys() if CremonaAlgorithm._count_occurences(force, steps) > 0 and force.strength > 0.001), 0)
+        return next((force.angle for force in forces.keys() if CremonaAlgorithm._count_occurences(force, steps) > 0 and not math.isclose(force.strength, 0)), 0)
