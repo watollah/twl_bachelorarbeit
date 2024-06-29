@@ -6,7 +6,10 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/main.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args": [
+                "C:/Users/watol/Documents/Bachelorarbeit/twl_ba_repository/twl_bachelorarbeit/examples/Uebung.c2d"
+            ]
         }
     ]
 }

@@ -36,18 +36,18 @@ def save_project():
 
 def save_project_as():
     global FILENAME
-    new_filename = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D projects", f"*{EXTENSION}")])
+    new_filename = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D Projects", f"*{EXTENSION}")])
     if new_filename:
         FILENAME = new_filename
         save_project()
 
-def open_project(filename=None):
+def open_project(filename=None) -> bool:
     global FILENAME
     if not TwlApp.saved_state().get():
         ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
         if not ok:
-            return
-    filename = filename if filename else filedialog.askopenfilename(filetypes=[("C2D projects", f"*{EXTENSION}")])
+            return False
+    filename = filename if filename else filedialog.askopenfilename(filetypes=[("C2D Projects", f"*{EXTENSION}")])
     if filename:
         FILENAME = filename
         with open(FILENAME, "r") as file:
@@ -57,6 +57,8 @@ def open_project(filename=None):
             TwlApp.update_manager().resume_observing()
         print("Project loaded from", FILENAME)
         TwlApp.saved_state().set(True)
+        return True
+    return False
 
 def serialize_project():
     serialized_project = {
