@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+import itertools
 import math
-from typing import TypeVar, Type, cast, Generic
+from typing import Callable, TypeVar, Type, cast, Generic
 from enum import Enum
 
 import numpy as np
@@ -547,6 +548,10 @@ class Model:
 
     def has_three_reaction_forces(self) -> bool:
         return sum(support.constraints for support in self.supports) == 3
+
+    def has_overlapping_beams(self) -> bool:
+        beam_to_line: Callable[[Beam], Line] = lambda beam: Line(Point(beam.start_node.x, beam.start_node.y), Point(beam.end_node.x, beam.end_node.y))
+        return any(beam_to_line(b1).intersects(beam_to_line(b2)) for b1, b2 in itertools.combinations(self.beams, 2))
 
     def supports_parallel(self):
         if len(self.supports) > 2 and all(support.constraints == 1 for support in self.supports):

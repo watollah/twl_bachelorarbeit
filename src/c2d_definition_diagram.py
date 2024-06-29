@@ -659,6 +659,8 @@ class DefinitionDiagram(ModelDiagram):
             text.text_add("\nThere have to be exactly 3 reaction forces.", "reaction_forces", Colors.RED)
         if len(TwlApp.model().forces) == 0:
             text.text_add("\nThere should be at least one force.", "missing_forces", Colors.RED)
+        if TwlApp.model().has_overlapping_beams():
+            text.text_add("\nThere are overlapping beams.", "overlapping", Colors.RED)
 
     def stat_determ_text(self) -> str:
         """Get the explanation text about static determinacy."""
