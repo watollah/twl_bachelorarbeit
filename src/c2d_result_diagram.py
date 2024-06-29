@@ -33,7 +33,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         line = Line(Point(p1.x, p1.y), Point(p2.x, p2.y))
-        height = (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
+        height = 0 if self.get_max_strength() == 0 else (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
         angle = (self.component.angle + 90) % 360
         if 0 <= angle <= 90 or 270 < angle <= 360:
             angle = (angle + 180) % 360
@@ -53,6 +53,7 @@ class ResultDiagram(ResultModelDiagram):
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
+        [shape.remove() for shape in self.shapes.copy() if isinstance(shape, BeamForcePlotShape)]
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)

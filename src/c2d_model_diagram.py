@@ -300,6 +300,10 @@ class ModelDiagram(TwlDiagram):
 
         super().update_observer(component_id, attribute_id)
 
+    def refresh(self):
+        super().refresh()
+        self.label_visibility()
+
     def label_visible(self, shape: Shape) -> bool:
         visible: dict[type[Shape], bool] = {
             NodeShape: TwlApp.settings().show_node_labels.get(),

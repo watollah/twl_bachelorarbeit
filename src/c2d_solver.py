@@ -29,7 +29,7 @@ class Solver:
 
         np_solution = np.linalg.solve(self.factor_matrix, self.result_vector).tolist()
         for i, force in enumerate(self.solution.keys()):
-            force.strength = np_solution[i]
+            force._strength._value = np_solution[i]
         self.print_result()
 
     def reset(self):

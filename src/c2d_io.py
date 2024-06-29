@@ -7,6 +7,7 @@ from c2d_components import Node, Beam, Support, Force
 
 
 FILENAME: str | None = None
+EXTENSION: str = ".c2d"
 
 def get_project_name() -> str | None:
     return os.path.splitext(os.path.basename(FILENAME))[0] if FILENAME else None
@@ -35,20 +36,20 @@ def save_project():
 
 def save_project_as():
     global FILENAME
-    new_filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+    new_filename = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D projects", f"*{EXTENSION}")])
     if new_filename:
         FILENAME = new_filename
         save_project()
 
-def open_project():
+def open_project(filename=None):
     global FILENAME
     if not TwlApp.saved_state().get():
         ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
         if not ok:
             return
-    new_filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
-    if new_filename:
-        FILENAME = new_filename
+    filename = filename if filename else filedialog.askopenfilename(filetypes=[("C2D projects", f"*{EXTENSION}")])
+    if filename:
+        FILENAME = filename
         with open(FILENAME, "r") as file:
             serialized_project = json.load(file)
             TwlApp.update_manager().pause_observing()
@@ -71,8 +72,7 @@ def deserialize_project(serialized_project):
     model.clear()
 
     for id, x, y in serialized_project["nodes"]:
-        node = Node(model, x, y)
-        node.id = id
+        node = Node(model, x, y, id)
         model.nodes.append(node)
 
     for id, start_node_id, end_node_id in serialized_project["beams"]:
@@ -80,18 +80,17 @@ def deserialize_project(serialized_project):
         end_node = model.nodes.component_for_id(end_node_id)
         assert(start_node)
         assert(end_node)
-        beam = Beam(model, start_node, end_node)
-        beam.id = id
+        beam = Beam(model, start_node, end_node, id)
         model.beams.append(beam)
 
     for id, node_id, angle, constraints in serialized_project["supports"]:
         node = model.nodes.component_for_id(node_id)
         assert(node)
-        support = Support(model, node, angle, constraints)
+        support = Support(model, node, angle, constraints, id)
         model.supports.append(support)
 
     for id, node_id, angle, strength in serialized_project["forces"]:
         node = model.nodes.component_for_id(node_id)
         assert(node)
-        force = Force(model, node, angle, strength)
+        force = Force(model, node, angle, strength, id)
         model.forces.append(force)

@@ -14,16 +14,13 @@ class ControlPanel(Observer, ttk.Frame):
     PADDING: int = 5
     SPEED_OPTIONS = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
 
-    def __init__(self, master, model_diagram: CremonaModelDiagram, cremona_diagram: CremonaDiagram):
+    def __init__(self, master, selected_step: tk.IntVar):
         super().__init__(master, style="ControlPanel.TFrame")
-        self.model_diagram: CremonaModelDiagram = model_diagram
-        self.cremona_diagram: CremonaDiagram = cremona_diagram
-
         self.steps: list[tuple[Node | None, Force, Component, bool]] = []
+        self.selected_step = selected_step
 
         self.label_text = tk.StringVar()
         self.play_state = tk.BooleanVar()
-        self.selected_step = tk.IntVar()
         self.selected_speed = tk.StringVar()
 
         self._label = self.create_label()
@@ -61,8 +58,6 @@ class ControlPanel(Observer, ttk.Frame):
         scale = ttk.Scale(scale_frame, from_=1, to=100, variable=self.selected_step, orient="horizontal", takefocus=False, style="TScale")
         scale.pack(fill=tk.BOTH, expand=True)
         self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))
-        self.selected_step.trace_add("write", lambda *ignore: self.cremona_diagram.display_step(self.selected_step.get()))
-        self.selected_step.trace_add("write", lambda *ignore: self.model_diagram.display_step(self.selected_step.get()))
         self.selected_step.set(0)
         return scale
 
@@ -78,7 +73,7 @@ class ControlPanel(Observer, ttk.Frame):
     def display_step(self, selected_step: int):
         if selected_step == 0:
             self.label_text.set("Before starting: Calculate support forces!")
-        elif selected_step == len(self.cremona_diagram.steps) + 1:
+        elif selected_step == len(self.steps) + 1:
             self.label_text.set("Cremona diagram complete!")
         else:
             node, force, component, sketch = self.steps[selected_step - 1]

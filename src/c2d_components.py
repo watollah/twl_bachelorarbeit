@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Type, cast, Generic
+import itertools
+import math
+from typing import Callable, TypeVar, Type, cast, Generic
 from enum import Enum
+
+import numpy as np
 
 from c2d_math import Point, Line
 from c2d_update import UpdateManager
@@ -195,8 +199,11 @@ class Beam(Component):
         self._angle: BeamAngleAttribute = BeamAngleAttribute(self)
 
     @classmethod
-    def dummy(cls):
-        return cls(Model(UpdateManager()), Node.dummy(), Node.dummy(), id=cls.TAG)
+    def dummy(cls, start: Node|None=None, end: Node|None=None, id: str|None=None):
+        start = start if start else Node.dummy()
+        end = end if end else Node.dummy()
+        id = id if id else cls.TAG
+        return cls(model=Model(UpdateManager()), start_node=start, end_node=end, id=id)
 
     def delete(self):
         self.model.beams.remove(self)
@@ -461,7 +468,7 @@ class Result(Component):
 
     def __init__(self, model: 'Model', force: Force, id: str | None=None):
         super().__init__(model, id)
-        self.id = force.id
+        self._id._value = force.id
         self._force_type: ForceTypeAttribute = ForceTypeAttribute(self, ForceType.from_value(round(force.strength, 2)))
         self._result: ResultAttribute = ResultAttribute(self, round(force.strength, 2))
 
@@ -469,7 +476,7 @@ class Result(Component):
     def dummy(cls, force: Force | None=None, id=""):
         force = force if force else Force.dummy()
         dummy_result: Result = cls(Model(UpdateManager()), force)
-        dummy_result.id = id
+        dummy_result._id._value = id
         return dummy_result
 
     def delete(self):
@@ -535,9 +542,129 @@ class Model:
     def list_for_type(self, component_type: Type[C]) -> 'ComponentList[C]':
         return cast('ComponentList[C]', next(component_list for component_list in self.component_lists if component_list.component_class == component_type))
 
+    def is_valid(self) -> bool:
+        return all([
+            not self.is_empty(),
+            len(self.forces) > 0,
+            self.has_three_reaction_forces(),
+            self.is_connected(),
+            self.is_stat_det(),
+            self.is_stable(),
+            not self.has_overlapping_beams()
+        ])
+
     def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
+
+    def is_stable(self) -> bool:
+        return self.is_empty() or not any([
+            sum(support.constraints for support in self.supports) < 3,
+            self.supports_parallel(),
+            self.all_supports_intersect(),
+            not self.is_connected(),
+            self.has_non_triangular_shapes()])
+
+    def is_connected(self) -> bool:
+        if self.is_empty():
+            return True
+        else:
+            adj: dict[Node, list[Node]] = {}
+            for node in self.nodes:
+                adj[node] = []
+            for beam in self.beams:
+                adj[beam.start_node].append(beam.end_node)
+                adj[beam.end_node].append(beam.start_node)
+            visited: list[Node] = []
+            def dfs(node: Node, visited: list[Node]):
+                visited.append(node)
+                [dfs(neighbor, visited) for neighbor in adj[node] if neighbor not in visited]
+            dfs(self.nodes[0], visited)
+            return len(visited) == len(self.nodes)
+
+    def has_three_reaction_forces(self) -> bool:
+        return sum(support.constraints for support in self.supports) == 3
+
+    def has_overlapping_beams(self) -> bool:
+        beam_to_line: Callable[[Beam], Line] = lambda beam: Line(Point(beam.start_node.x, beam.start_node.y), Point(beam.end_node.x, beam.end_node.y))
+        return any(beam_to_line(b1).intersects(beam_to_line(b2)) for b1, b2 in itertools.combinations(self.beams, 2))
+
+    def has_non_triangular_shapes(self):
+        if self.is_empty() or self.has_overlapping_beams() or not self.is_connected():
+            return False
+        if any(len(node.beams) < 2 for node in self.nodes):
+            return True
+        beams_for_nodes: Callable[[Node], list[Beam]] = lambda node: [Beam.dummy(node, beam.start_node if not beam.start_node == node else beam.end_node, beam.id) for beam in node.beams]
+        sorted_beams = {node: sorted(beams_for_nodes(node), key=lambda beam: self.rel_beam_angle(node, beam)) for node in self.nodes}
+        orders: list[int] = []
+        next_beam = sorted_beams[self.nodes[0]][0]
+        while(next_beam):
+            orders.append(self.find_face(sorted_beams, next_beam.start_node, next_beam, 0))
+            next_beam = next((beam for beams in sorted_beams.values() for beam in beams), None)
+        return len([order for order in orders if order > 3]) > 1
+
+    def find_face(self, sorted_beams: dict[Node, list[Beam]], start_node: Node, beam: Beam, count: int):
+        sorted_beams[beam.start_node].remove(beam)
+        count += 1
+        if beam.end_node == start_node:
+            return count
+        else:
+            incoming_angle = self.rel_beam_angle(beam.end_node, beam)
+            smaller_angle_beams = [beam for beam in  sorted_beams[beam.end_node] if beam.angle < incoming_angle]
+            next_beam = smaller_angle_beams[-1] if smaller_angle_beams else sorted_beams[beam.end_node][-1]
+            return self.find_face(sorted_beams, start_node, next_beam, count)
+
+    def rel_beam_angle(self, node: Node, beam: Beam) -> float:
+        start, end = (beam.start_node, beam.end_node) if beam.start_node == node else (beam.end_node, beam.start_node)
+        return Line(Point(start.x, start.y), Point(end.x, end.y)).angle()
+
+    def supports_parallel(self):
+        if len(self.supports) > 2 and all(support.constraints == 1 for support in self.supports):
+            return all(self.supports[0].angle % 180 == support.angle % 180 for support in self.supports)
+        return False
+
+    def all_supports_intersect(self):
+        if not len(self.supports) == 3 or not all(support.constraints == 1 for support in self.supports) or self.supports_parallel():
+            return False
+        intersections = [self.support_intersection(self.supports[0], self.supports[1]),
+                         self.support_intersection(self.supports[1], self.supports[2]),
+                         self.support_intersection(self.supports[0], self.supports[2])]
+        if any(not intersection[0] for intersection in intersections):
+            return False #at least 2 supports do not intersect
+        if any(intersection[0] and not intersection[1] for intersection in intersections):
+            return True #2 supports are colinear -> all 3 intersect in one point
+        all_x = [intersection[1].x for intersection in intersections if intersection[1]]
+        all_y = [intersection[1].y for intersection in intersections if intersection[1]]
+        return all(math.isclose(x, all_x[0]) for x in all_x) and all(math.isclose(y, all_y[0]) for y in all_y)
+
+    def support_intersection(self, s1: Support, s2: Support) -> tuple[bool, Point | None]:
+        if s1.angle in (90, 270) and s2.angle in (90, 270): #both horizontal
+            return (True, None) if s1.node.y == s2.node.y else (False, None) #colinear or parallel
+        if s1.angle in (0, 180, 360) and s2.angle in (0, 180, 360): #both vertical
+            return (True, None) if s1.node.x == s2.node.x else (False, None) #colinear or parallel
+        s1_m, s1_c = self.line_equation(s1)
+        s2_m, s2_c = self.line_equation(s2)
+        if math.isclose(s1_m, s2_m):
+            if math.isclose(s1_c, s2_c):
+                return True, None #colinear
+            return False, None #parallel
+        get_result: dict[tuple[bool, bool, bool, bool], tuple[float, float]] = {
+            #s1 hor, s1 vert, s2 hor, s2 vert
+            (True, False, False, True): (s2.node.x, s1.node.y),
+            (False, True, True, False): (s1.node.x, s2.node.y),
+            (True, False, False, False): ((s1.node.y - s2_c) / s2_m, s1.node.y),
+            (False, True, False, False): (s1.node.x, s2_m * s1.node.x + s2_c),
+            (False, False, True, False): ((s2.node.y - s1_c) / s1_m, s2.node.y),
+            (False, False, False, True): (s2.node.x, s1_m * s2.node.x + s1_c),
+            (False, False, False, False): ((s1_c - s2_c) / (s2_m - s1_m), s1_m * ((s1_c - s2_c) / (s2_m - s1_m)) + s1_c),
+        }
+        x, y = get_result[s1.angle in (90, 270), s1.angle in (0, 180, 360), s2.angle in (90, 270), s2.angle in (0, 180, 360)]
+        return True, Point(x, y)
+
+    def line_equation(self, support: Support):
+            m = -math.tan(math.radians(support.angle))
+            c = -(-support.node.y + m * support.node.x)
+            return m, c
 
     def next_unique_id_for(self, component_type: type[C]) -> str:
         existing_ids =  {component.id for component in self.all_components}

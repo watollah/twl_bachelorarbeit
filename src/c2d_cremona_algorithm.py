@@ -72,15 +72,20 @@ class CremonaAlgorithm:
 
     @staticmethod
     def _find_next_node(forces_for_nodes: dict[Node, dict[Force, Component]], steps: list[tuple[Node | None, Force, Component, bool]]):
-        return next((node for node in forces_for_nodes.keys() if CremonaAlgorithm._count_unknown_on_node(node, list(forces_for_nodes[node].keys()), steps) <= 2), None)
+        return next((node for node in forces_for_nodes.keys() if (CremonaAlgorithm._count_unknown_on_node(list(forces_for_nodes[node].keys()), steps) <= 2) 
+                     and (CremonaAlgorithm._count_known_on_node(list(forces_for_nodes[node].keys()), steps) > 0)), None)
 
     @staticmethod
     def _count_occurences(force: Force, steps: list[tuple[Node | None, Force, Component, bool]]):
         return [step[1].id for step in steps].count(force.id)
 
     @staticmethod
-    def _count_unknown_on_node(node: Node, forces_for_node: list[Force], steps: list[tuple[Node | None, Force, Component, bool]]) -> int:
+    def _count_unknown_on_node(forces_for_node: list[Force], steps: list[tuple[Node | None, Force, Component, bool]]) -> int:
         return sum(CremonaAlgorithm._count_occurences(force, steps) == 0 for force in forces_for_node)
+
+    @staticmethod
+    def _count_known_on_node(forces_for_node: list[Force], steps: list[tuple[Node | None, Force, Component, bool]]) -> int:
+        return sum(CremonaAlgorithm._count_occurences(force, steps) > 0 for force in forces_for_node)
 
     @staticmethod
     def _get_start_angle(forces: dict[Force, Component], steps: list[tuple[Node | None, Force, Component, bool]]):

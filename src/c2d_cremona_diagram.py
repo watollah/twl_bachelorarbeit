@@ -108,9 +108,11 @@ class CremonaDiagram(TwlDiagram):
     START_POINT = Point(800, 50)
     SCALE = 6
 
-    def __init__(self, master):
+    def __init__(self, master, selected_step: tk.IntVar):
         super().__init__(master)
         TwlApp.settings().show_cremona_labels.trace_add("write", lambda *ignore: self.update_observer())
+        self.selected_step: tk.IntVar = selected_step
+        self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))
         self.steps = []
 
     def create_bottom_bar(self) -> tk.Frame:
@@ -143,7 +145,7 @@ class CremonaDiagram(TwlDiagram):
         if self.steps and TwlApp.settings().force_spacing.get():
             self.force_spacing()
         super().update_observer(component_id, attribute_id)
-        self.display_step(len(self.steps) + 1)
+        self.display_step(self.selected_step.get())
 
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
         angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)

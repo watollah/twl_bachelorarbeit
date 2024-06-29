@@ -4,9 +4,9 @@ from tkinter import ttk
 from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
-from c2d_style import Colors
+from c2d_style import Colors, FONT
 from c2d_images import add_png_by_name
-from c2d_widgets import BorderFrame, CustomEntry
+from c2d_widgets import BorderFrame, CustomEntry, ValidationText
 from c2d_update import UpdateManager
 from c2d_math import Point, Line
 from c2d_help import f_range
@@ -552,8 +552,9 @@ class DefinitionDiagram(ModelDiagram):
         super().__init__(diagram_frame)
 
         #statically determinate label
-        self.stat_determ_label = ttk.Label(self, style= "Diagram.TLabel", text=self.stat_determ_text)
-        self.stat_determ_label.place(x=self.UI_PADDING, y=self.UI_PADDING)
+        self.validation_text = ValidationText(self, self.update_validation_text, borderwidth=0, font=FONT)
+        self.validation_text.place(x=self.UI_PADDING, y=self.UI_PADDING)
+        self.update_validation_text()
 
         #angle guide
         self.angle_guide_visible: bool = False
@@ -598,11 +599,7 @@ class DefinitionDiagram(ModelDiagram):
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
-
-        self.stat_determ_label.configure(text=self.stat_determ_text)
-        color = Colors.GREEN if self.stat_determ_text[:5] == "f = 0" else Colors.RED
-        ttk.Style().configure("Diagram.TLabel", foreground=color)
-
+        self.update_validation_text()
         self.tag_lower(self.GRID_TAG)
         self.tag_raise(self.ANGLE_GUIDE_TAG)
 
@@ -653,7 +650,23 @@ class DefinitionDiagram(ModelDiagram):
             return nearest_x, nearest_y
         return x, y
 
-    @property
+    def update_validation_text(self):
+        text = self.validation_text
+        text.clear()
+        if text.is_expanded:
+            text.text_add(self.stat_determ_text(), "stat_determ", Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
+            text.text_add(self.stable_text(), "stable", Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
+            if not TwlApp.model().has_three_reaction_forces():
+                text.text_add("\nThere have to be exactly 3 reaction forces.", "reaction_forces", Colors.RED)
+            if len(TwlApp.model().forces) == 0:
+                text.text_add("\nThere should be at least one force.", "missing_forces", Colors.RED)
+            if TwlApp.model().has_overlapping_beams():
+                text.text_add("\nThere are overlapping beams.", "overlapping", Colors.RED)
+        else:
+            is_valid = TwlApp.model().is_valid()
+            text.text_add(f"The model is {"" if is_valid else "in"}valid.", "valid", Colors.GREEN if is_valid else Colors.RED)
+        text.add_button()
+
     def stat_determ_text(self) -> str:
         """Get the explanation text about static determinacy."""
         nodes = len(TwlApp.model().nodes)
@@ -662,7 +675,17 @@ class DefinitionDiagram(ModelDiagram):
         beams = len(TwlApp.model().beams)
         unknowns = constraints + beams
         f = equations - unknowns
-        return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
+        return f"f = {f}, the model is statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
+
+    def stable_text(self) -> str:
+        stable = TwlApp.model().is_stable()
+        text = f"\nThe model is {"stable" if stable else "not stable"}."
+        if not stable:
+            text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
+            text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"
+            text += f"{"\nThere are non-triangular shapes." if TwlApp.model().has_non_triangular_shapes() else ""}"
+            text += f"{"\nThe model is not connected." if not TwlApp.model().is_connected() else ""}"
+        return text
 
     def update_coords_label(self, event):
         self.coords_label.config(text=f"x: {int(event.x)} y: {int(event.y)}")
