@@ -552,7 +552,7 @@ class DefinitionDiagram(ModelDiagram):
         super().__init__(diagram_frame)
 
         #statically determinate label
-        self.validation_text = ValidationText(self, borderwidth=0, font=FONT)
+        self.validation_text = ValidationText(self, self.update_validation_text, borderwidth=0, font=FONT)
         self.validation_text.place(x=self.UI_PADDING, y=self.UI_PADDING)
         self.update_validation_text()
 
@@ -653,14 +653,19 @@ class DefinitionDiagram(ModelDiagram):
     def update_validation_text(self):
         text = self.validation_text
         text.clear()
-        text.text_add(self.stat_determ_text(), "stat_determ", Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
-        text.text_add(self.stable_text(), "stable", Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
-        if not TwlApp.model().has_three_reaction_forces():
-            text.text_add("\nThere have to be exactly 3 reaction forces.", "reaction_forces", Colors.RED)
-        if len(TwlApp.model().forces) == 0:
-            text.text_add("\nThere should be at least one force.", "missing_forces", Colors.RED)
-        if TwlApp.model().has_overlapping_beams():
-            text.text_add("\nThere are overlapping beams.", "overlapping", Colors.RED)
+        if text.is_expanded:
+            text.text_add(self.stat_determ_text(), "stat_determ", Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
+            text.text_add(self.stable_text(), "stable", Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
+            if not TwlApp.model().has_three_reaction_forces():
+                text.text_add("\nThere have to be exactly 3 reaction forces.", "reaction_forces", Colors.RED)
+            if len(TwlApp.model().forces) == 0:
+                text.text_add("\nThere should be at least one force.", "missing_forces", Colors.RED)
+            if TwlApp.model().has_overlapping_beams():
+                text.text_add("\nThere are overlapping beams.", "overlapping", Colors.RED)
+        else:
+            is_valid = TwlApp.model().is_valid()
+            text.text_add(f"The model is {"" if is_valid else "in"}valid.", "valid", Colors.GREEN if is_valid else Colors.RED)
+        text.add_button()
 
     def stat_determ_text(self) -> str:
         """Get the explanation text about static determinacy."""

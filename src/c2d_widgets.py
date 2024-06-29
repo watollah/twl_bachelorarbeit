@@ -259,6 +259,11 @@ class CustomEntry(tk.Entry):
 
 class ValidationText(tk.Text):
 
+    def __init__(self, master, action, **kwargs):
+        super().__init__(master, kwargs)
+        self.is_expanded = False
+        self.action = action
+
     def clear(self):
         self.config(state=tk.NORMAL)
         self.delete("1.0", tk.END)
@@ -268,10 +273,27 @@ class ValidationText(tk.Text):
         self.config(state=tk.NORMAL)
         start = self.index("end-1c")
         self.insert(start, text)
-        self.tag_add(tag, start, tk.END)
+        self.tag_add(tag, start, "end-1c")
         self.tag_config(tag, foreground=color)
         self.resize()
         self.config(state=tk.DISABLED)
+
+    def add_button(self):
+        self.config(state=tk.NORMAL)
+        text = "show less" if self.is_expanded else "show more"
+        start = self.index("end-1c")
+        self.insert(tk.END, f"\n{text}")
+        self.tag_add("button", start, tk.END)
+        self.tag_config("button", foreground=Colors.BLACK, underline=True)
+        self.tag_bind("button", "<Button-1>", self.on_action)
+        self.tag_bind("button", "<Enter>", lambda event: event.widget.config(cursor="hand2"))
+        self.tag_bind("button", "<Leave>", lambda event: event.widget.config(cursor=""))
+        self.resize()
+        self.config(state=tk.DISABLED)
+
+    def on_action(self, event):
+        self.is_expanded = not self.is_expanded
+        self.action()
 
     def resize(self):
         width = max(tkfont.Font(font=FONT).measure(line) for line in self.get("1.0", tk.END).split("\n"))

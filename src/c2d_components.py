@@ -558,7 +558,7 @@ class Model:
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 
     def is_stable(self) -> bool:
-        return not any([
+        return self.is_empty() or not any([
             sum(support.constraints for support in self.supports) < 3,
             self.supports_parallel(),
             self.all_supports_intersect(),
