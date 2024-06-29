@@ -107,8 +107,7 @@ class TwlTool(Observer, tk.Tk):
 
 if __name__ == "__main__":
     twl_tool = TwlTool()
-    twl_tool.mainloop()
-
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
         io.open_project(file_path)
+    twl_tool.mainloop()
