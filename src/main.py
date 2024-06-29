@@ -52,7 +52,7 @@ class TwlTool(Observer, tk.Tk):
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
         model = TwlApp.model()
-        tab_state = tk.NORMAL if model.is_stat_det() and model.is_stable() and not model.is_empty() and model.has_three_reaction_forces() and len(model.forces) > 0 and not model.has_overlapping_beams() else tk.DISABLED
+        tab_state = tk.NORMAL if model.is_valid() else tk.DISABLED
         self.notebook.tab(self.cremona_tab, state=tab_state)
         self.notebook.tab(self.result_tab, state=tab_state)
         TwlApp.saved_state().set(model.is_empty())

@@ -678,6 +678,7 @@ class DefinitionDiagram(ModelDiagram):
         if not stable:
             text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
             text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"
+            text += f"{"\nThe structure should be made of triangles." if TwlApp.model().has_higher_order_polygons() else ""}"
         return text
 
     def update_coords_label(self, event):

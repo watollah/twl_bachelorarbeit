@@ -199,8 +199,11 @@ class Beam(Component):
         self._angle: BeamAngleAttribute = BeamAngleAttribute(self)
 
     @classmethod
-    def dummy(cls):
-        return cls(Model(UpdateManager()), Node.dummy(), Node.dummy(), id=cls.TAG)
+    def dummy(cls, start: Node|None=None, end: Node|None=None, id: str|None=None):
+        start = start if start else Node.dummy()
+        end = end if end else Node.dummy()
+        id = id if id else cls.TAG
+        return cls(model=Model(UpdateManager()), start_node=start, end_node=end, id=id)
 
     def delete(self):
         self.model.beams.remove(self)
@@ -539,12 +542,30 @@ class Model:
     def list_for_type(self, component_type: Type[C]) -> 'ComponentList[C]':
         return cast('ComponentList[C]', next(component_list for component_list in self.component_lists if component_list.component_class == component_type))
 
+    def is_valid(self) -> bool:
+        return all([
+            not self.is_empty(),
+            len(self.forces) > 0,
+            self.has_three_reaction_forces(),
+            self.is_connected(),
+            self.is_stat_det(),
+            self.is_stable(),
+            not self.has_overlapping_beams()
+        ])
+
+    def is_connected(self) -> bool:
+        return True
+
     def is_stat_det(self) -> bool:
         """Check if the model is statically determined and thus ready for analysis."""
         return ((2 * len(self.nodes)) - (sum(support.constraints for support in self.supports) + len(self.beams))) == 0
 
     def is_stable(self) -> bool:
-        return not (sum(support.constraints for support in self.supports) < 3 or self.supports_parallel() or self.all_supports_intersect())
+        return not any([
+            sum(support.constraints for support in self.supports) < 3,
+            self.supports_parallel(),
+            self.all_supports_intersect(),
+            self.has_higher_order_polygons()])
 
     def has_three_reaction_forces(self) -> bool:
         return sum(support.constraints for support in self.supports) == 3
@@ -552,6 +573,33 @@ class Model:
     def has_overlapping_beams(self) -> bool:
         beam_to_line: Callable[[Beam], Line] = lambda beam: Line(Point(beam.start_node.x, beam.start_node.y), Point(beam.end_node.x, beam.end_node.y))
         return any(beam_to_line(b1).intersects(beam_to_line(b2)) for b1, b2 in itertools.combinations(self.beams, 2))
+
+    def has_higher_order_polygons(self):
+        if self.is_empty():
+            return False
+        beams_for_nodes: Callable[[Node], list[Beam]] = lambda node: [Beam.dummy(node, beam.start_node if not beam.start_node == node else beam.end_node, beam.id) for beam in node.beams]
+        sorted_beams = {node: sorted(beams_for_nodes(node), key=lambda beam: self.rel_beam_angle(node, beam)) for node in self.nodes}
+        orders: list[int] = []
+        next_beam = sorted_beams[self.nodes[0]][0]
+        while(next_beam):
+            orders.append(self.find_face(sorted_beams, next_beam.start_node, next_beam, 0))
+            next_beam = next((beam for beams in sorted_beams.values() for beam in beams), None)
+        return len([order for order in orders if order > 3]) > 1
+
+    def find_face(self, sorted_beams: dict[Node, list[Beam]], start_node: Node, beam: Beam, count: int):
+        sorted_beams[beam.start_node].remove(beam)
+        count += 1
+        if beam.end_node == start_node:
+            return count
+        else:
+            incoming_angle = self.rel_beam_angle(beam.end_node, beam)
+            smaller_angle_beams = [beam for beam in  sorted_beams[beam.end_node] if beam.angle < incoming_angle]
+            next_beam = smaller_angle_beams[-1] if smaller_angle_beams else sorted_beams[beam.end_node][-1]
+            return self.find_face(sorted_beams, start_node, next_beam, count)
+
+    def rel_beam_angle(self, node: Node, beam: Beam) -> float:
+        start, end = (beam.start_node, beam.end_node) if beam.start_node == node else (beam.end_node, beam.start_node)
+        return Line(Point(start.x, start.y), Point(end.x, end.y)).angle()
 
     def supports_parallel(self):
         if len(self.supports) > 2 and all(support.constraints == 1 for support in self.supports):
