@@ -436,7 +436,7 @@ class SupportTool(ComponentTool[Support]):
     def action(self, event):
         if not self.node:
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if clicked_node and not clicked_node.supports:
+            if clicked_node:
                 self.node = clicked_node
                 self.component._node._value = self.node
             return False
@@ -454,7 +454,7 @@ class SupportTool(ComponentTool[Support]):
     def prepare(self, event) -> bool:
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if hovering_node and not hovering_node.supports:
+            if hovering_node:
                 TempSupportShape(Support(Model(UpdateManager()), hovering_node), self.diagram)
             return False
         else:
