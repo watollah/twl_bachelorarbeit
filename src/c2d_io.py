@@ -7,6 +7,7 @@ from c2d_components import Node, Beam, Support, Force
 
 
 FILENAME: str | None = None
+EXTENSION: str = ".c2d"
 
 def get_project_name() -> str | None:
     return os.path.splitext(os.path.basename(FILENAME))[0] if FILENAME else None
@@ -35,20 +36,20 @@ def save_project():
 
 def save_project_as():
     global FILENAME
-    new_filename = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+    new_filename = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D projects", f"*{EXTENSION}")])
     if new_filename:
         FILENAME = new_filename
         save_project()
 
-def open_project():
+def open_project(filename=None):
     global FILENAME
     if not TwlApp.saved_state().get():
         ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
         if not ok:
             return
-    new_filename = filedialog.askopenfilename(filetypes=[("JSON files", "*.json")])
-    if new_filename:
-        FILENAME = new_filename
+    filename = filename if filename else filedialog.askopenfilename(filetypes=[("C2D projects", f"*{EXTENSION}")])
+    if filename:
+        FILENAME = filename
         with open(FILENAME, "r") as file:
             serialized_project = json.load(file)
             TwlApp.update_manager().pause_observing()
