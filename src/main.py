@@ -41,11 +41,15 @@ class TwlTool(Observer, tk.Tk):
         self.notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
 
         self.bind("<Control-n>", lambda *ignore: io.clear_project())
-        self.bind("<Control-o>", lambda *ignore: io.open_project())
+        self.bind("<Control-o>", lambda *ignore: self.open_project())
         self.bind("<Control-s>", lambda *ignore: io.save_project())
         self.bind("<Control-S>", lambda *ignore: io.save_project_as())
 
         TwlApp.update_manager().register_observer(self)
+
+    def open_project(self):
+        if io.open_project():
+            self.notebook.select(0)
 
     def update_window_title(self):
         project_name = io.get_project_name()
@@ -76,7 +80,7 @@ class TwlTool(Observer, tk.Tk):
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="New Project", command=lambda *ignore: io.clear_project(), accelerator="Ctrl+N")
         file_menu.add_separator()
-        file_menu.add_command(label="Open", command=lambda *ignore: io.open_project(), accelerator="Ctrl+O")
+        file_menu.add_command(label="Open", command=lambda *ignore: self.open_project(), accelerator="Ctrl+O")
         file_menu.add_separator()
         file_menu.add_command(label="Save", command=lambda *ignore: io.save_project(), accelerator="Ctrl+S")
         file_menu.add_command(label="Save As...", command=lambda *ignore: io.save_project_as(), accelerator="Ctrl+Shift+S")
