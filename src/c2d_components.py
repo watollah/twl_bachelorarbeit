@@ -571,27 +571,17 @@ class Model:
             if math.isclose(s1_c, s2_c):
                 return True, None #colinear
             return False, None #parallel
-        elif s1.angle in (90, 270) and s2.angle in (0, 180, 360):
-            x = s2.node.x
-            y = s1.node.y
-        elif s2.angle in (90, 270) and s1.angle in (0, 180, 360):
-            x = s1.node.x
-            y = s2.node.y
-        elif s1.angle in (90, 270):
-            y = s1.node.y
-            x = (y - s2_c) / s2_m
-        elif s1.angle in (0, 180, 360):
-            x = s1.node.x
-            y = s2_m * x + s2_c
-        elif s2.angle in (90, 270):
-            y = s2.node.y
-            x = (y - s1_c) / s1_m
-        elif s2.angle in (0, 180, 360):
-            x = s2.node.x
-            y = s1_m * x + s1_c
-        else:
-            x = (s1_c - s2_c) / (s2_m - s1_m)
-            y = s1_m * x + s1_c
+        get_result: dict[tuple[bool, bool, bool, bool], tuple[float, float]] = {
+            #s1 hor, s1 vert, s2 hor, s2 vert
+            (True, False, False, True): (s2.node.x, s1.node.y),
+            (False, True, True, False): (s1.node.x, s2.node.y),
+            (True, False, False, False): ((s1.node.y - s2_c) / s2_m, s1.node.y),
+            (False, True, False, False): (s1.node.x, s2_m * s1.node.x + s2_c),
+            (False, False, True, False): ((s2.node.y - s1_c) / s1_m, s2.node.y),
+            (False, False, False, True): (s2.node.x, s1_m * s2.node.x + s1_c),
+            (False, False, False, False): ((s1_c - s2_c) / (s2_m - s1_m), s1_m * ((s1_c - s2_c) / (s2_m - s1_m)) + s1_c),
+        }
+        x, y = get_result[s1.angle in (90, 270), s1.angle in (0, 180, 360), s2.angle in (90, 270), s2.angle in (0, 180, 360)]
         return True, Point(x, y)
 
     def line_equation(self, support: Support):
