@@ -655,7 +655,12 @@ class DefinitionDiagram(ModelDiagram):
         text = self.validation_text
         text.config(state=tk.NORMAL)
         text.delete("1.0", tk.END)
+
         text.insert(tk.END, self.stat_determ_text() + "\n" + self.stable_text())
+        text.insert(tk.END, f"{"\nThere should be exactly 3 reaction forces." if not TwlApp.model().has_three_reaction_forces() else ""}")
+        text.tag_add("reaction_forces", "5.0", "5.end" if not TwlApp.model().has_three_reaction_forces() else "5.0")
+        text.tag_config("reaction_forces", foreground=Colors.RED)
+
         text.tag_add("stat_determ", "1.0", "3.end")
         text.tag_config("stat_determ", foreground=Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
         text.tag_add("stable", "4.0", "4.end" if TwlApp.model().is_stable() else tk.END)
@@ -678,8 +683,6 @@ class DefinitionDiagram(ModelDiagram):
         stable = TwlApp.model().is_stable()
         text = f"The model is {"stable" if stable else "not stable"}."
         if not stable:
-            constraints = sum(support.constraints for support in TwlApp.model().supports)
-            text += f"{"\nThere should be exactly 3 reaction forces." if constraints < 3 else ""}"
             text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
             text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"
         return text

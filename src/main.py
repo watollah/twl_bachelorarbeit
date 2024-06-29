@@ -51,11 +51,12 @@ class TwlTool(Observer, tk.Tk):
         self.title(f"{"" if TwlApp.saved_state().get() else "*"}{self.TITLE}{" - " + project_name if project_name else ""}")
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
-        tab_state = tk.NORMAL if TwlApp.model().is_stat_det() and TwlApp.model().is_stable() and not TwlApp.model().is_empty() else tk.DISABLED
+        model = TwlApp.model()
+        tab_state = tk.NORMAL if model.is_stat_det() and model.is_stable() and not model.is_empty() and model.has_three_reaction_forces() else tk.DISABLED
         self.notebook.tab(self.cremona_tab, state=tab_state)
         self.notebook.tab(self.result_tab, state=tab_state)
-        TwlApp.saved_state().set(TwlApp.model().is_empty())
-        TwlApp.changed_state().set(not TwlApp.model().is_empty())
+        TwlApp.saved_state().set(model.is_empty())
+        TwlApp.changed_state().set(not model.is_empty())
 
     def tab_changed(self, event):
         selected_tab = event.widget.nametowidget(event.widget.select())

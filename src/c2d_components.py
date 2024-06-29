@@ -545,6 +545,9 @@ class Model:
     def is_stable(self) -> bool:
         return not (sum(support.constraints for support in self.supports) < 3 or self.supports_parallel() or self.all_supports_intersect())
 
+    def has_three_reaction_forces(self) -> bool:
+        return sum(support.constraints for support in self.supports) == 3
+
     def supports_parallel(self):
         if len(self.supports) > 2 and all(support.constraints == 1 for support in self.supports):
             return all(self.supports[0].angle % 180 == support.angle % 180 for support in self.supports)
@@ -565,6 +568,10 @@ class Model:
         return all(math.isclose(x, all_x[0]) for x in all_x) and all(math.isclose(y, all_y[0]) for y in all_y)
 
     def support_intersection(self, s1: Support, s2: Support) -> tuple[bool, Point | None]:
+        if s1.angle in (90, 270) and s2.angle in (90, 270): #both horizontal
+            return (True, None) if s1.node.y == s2.node.y else (False, None) #colinear or parallel
+        if s1.angle in (0, 180, 360) and s2.angle in (0, 180, 360): #both vertical
+            return (True, None) if s1.node.x == s2.node.x else (False, None) #colinear or parallel
         s1_m, s1_c = self.line_equation(s1)
         s2_m, s2_c = self.line_equation(s2)
         if math.isclose(s1_m, s2_m):
