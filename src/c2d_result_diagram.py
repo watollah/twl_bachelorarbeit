@@ -53,6 +53,7 @@ class ResultDiagram(ResultModelDiagram):
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
+        [shape.remove() for shape in self.shapes.copy() if isinstance(shape, BeamForcePlotShape)]
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)
