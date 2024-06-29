@@ -1,13 +1,12 @@
 from abc import abstractmethod
 import tkinter as tk
 from tkinter import ttk
-from tkinter import font as tkfont
 from typing import Generic, TypeVar
 
 from c2d_app import TwlApp
 from c2d_style import Colors, FONT
 from c2d_images import add_png_by_name
-from c2d_widgets import BorderFrame, CustomEntry
+from c2d_widgets import BorderFrame, CustomEntry, ValidationText
 from c2d_update import UpdateManager
 from c2d_math import Point, Line
 from c2d_help import f_range
@@ -553,7 +552,7 @@ class DefinitionDiagram(ModelDiagram):
         super().__init__(diagram_frame)
 
         #statically determinate label
-        self.validation_text = tk.Text(self, borderwidth=0, font=FONT, width=40, height=4)
+        self.validation_text = ValidationText(self, borderwidth=0, font=FONT)
         self.validation_text.place(x=self.UI_PADDING, y=self.UI_PADDING)
         self.update_validation_text()
 
@@ -653,21 +652,13 @@ class DefinitionDiagram(ModelDiagram):
 
     def update_validation_text(self):
         text = self.validation_text
-        text.config(state=tk.NORMAL)
-        text.delete("1.0", tk.END)
-
-        text.insert(tk.END, self.stat_determ_text() + "\n" + self.stable_text())
-        text.insert(tk.END, f"{"\nThere should be exactly 3 reaction forces." if not TwlApp.model().has_three_reaction_forces() else ""}")
-        text.tag_add("reaction_forces", "5.0", "5.end" if not TwlApp.model().has_three_reaction_forces() else "5.0")
-        text.tag_config("reaction_forces", foreground=Colors.RED)
-
-        text.tag_add("stat_determ", "1.0", "3.end")
-        text.tag_config("stat_determ", foreground=Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
-        text.tag_add("stable", "4.0", "4.end" if TwlApp.model().is_stable() else tk.END)
-        text.tag_config("stable", foreground=Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
-        width = max(tkfont.Font(font=FONT).measure(line) for line in text.get("1.0", tk.END).split("\n"))
-        height = len(text.get("1.0", tk.END).split("\n")) - 1
-        text.config(state=tk.DISABLED, width=(width // tkfont.Font(font=FONT).measure("0") + 1), height=height)
+        text.clear()
+        text.text_add(self.stat_determ_text(), "stat_determ", Colors.GREEN if TwlApp.model().is_stat_det() else Colors.RED)
+        text.text_add(self.stable_text(), "stable", Colors.GREEN if TwlApp.model().is_stable() else Colors.RED)
+        if not TwlApp.model().has_three_reaction_forces():
+            text.text_add("\nThere have to be exactly 3 reaction forces.", "reaction_forces", Colors.RED)
+        if len(TwlApp.model().forces) == 0:
+            text.text_add("\nThere should be at least one force.", "missing_forces", Colors.RED)
 
     def stat_determ_text(self) -> str:
         """Get the explanation text about static determinacy."""
@@ -677,11 +668,11 @@ class DefinitionDiagram(ModelDiagram):
         beams = len(TwlApp.model().beams)
         unknowns = constraints + beams
         f = equations - unknowns
-        return f"f = {f}, the model ist statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
+        return f"f = {f}, the model is statically {"" if f == 0 else "in"}determinate.\n{equations} equations (2 * {nodes} nodes)\n{unknowns} unknowns ({constraints} for supports, {beams} for beams)"
 
     def stable_text(self) -> str:
         stable = TwlApp.model().is_stable()
-        text = f"The model is {"stable" if stable else "not stable"}."
+        text = f"\nThe model is {"stable" if stable else "not stable"}."
         if not stable:
             text += f"{"\nAll reaction forces are parallel." if TwlApp.model().supports_parallel() else ""}"
             text += f"{"\nReaction forces intersect in single point." if TwlApp.model().all_supports_intersect() else ""}"

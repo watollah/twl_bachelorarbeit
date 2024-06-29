@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import font as tkfont
 
 from c2d_update import Observer
-from c2d_style import Colors
+from c2d_style import FONT, Colors
 from c2d_images import add_png_by_name
 
 
@@ -255,3 +256,24 @@ class CustomEntry(tk.Entry):
         if self.popup:
             self.popup.destroy()
             self.popup = None
+
+class ValidationText(tk.Text):
+
+    def clear(self):
+        self.config(state=tk.NORMAL)
+        self.delete("1.0", tk.END)
+        self.config(state=tk.DISABLED, width=0, height=0)
+
+    def text_add(self, text: str, tag: str, color: str):
+        self.config(state=tk.NORMAL)
+        start = self.index("end-1c")
+        self.insert(start, text)
+        self.tag_add(tag, start, tk.END)
+        self.tag_config(tag, foreground=color)
+        self.resize()
+        self.config(state=tk.DISABLED)
+
+    def resize(self):
+        width = max(tkfont.Font(font=FONT).measure(line) for line in self.get("1.0", tk.END).split("\n"))
+        height = len(self.get("1.0", tk.END).split("\n")) - 1
+        self.config(width=(width // tkfont.Font(font=FONT).measure("0") + 1), height=height)
