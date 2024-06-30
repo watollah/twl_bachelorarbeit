@@ -342,7 +342,7 @@ class TwlDiagram(Observer, tk.Canvas):
         assert len(sr_int) == 4
         return sr_int
 
-    def zoom(self, event): #todo: scroll to previous position in diagram
+    def zoom(self, event):
         if event.delta < 0:
             self.current_zoom.set(max(self.MIN_ZOOM, self.current_zoom.get() - self.ZOOM_STEP))
         else:

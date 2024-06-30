@@ -46,7 +46,7 @@ class CremonaTab(TwlTab):
         return cremona_diagram
 
     def create_control_panel(self, frame: ttk.Frame) -> 'ControlPanel':
-        background_frame = ttk.Frame(frame, style="ControlPanel.TFrame") #todo: find a way to directly change panedwindow background color
+        background_frame = ttk.Frame(frame, style="ControlPanel.TFrame")
         background_frame.pack(fill=tk.BOTH, expand=True)
         control_panel = ControlPanel(background_frame, self.selected_step)
         control_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
