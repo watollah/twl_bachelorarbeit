@@ -20,7 +20,8 @@ class Shape():
     COLOR = "black"
     BG_COLOR = "white"
 
-    def __init__(self, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
+    def __init__(self, diagram: 'TwlDiagram') -> None:
+        """Create an instance of Shape."""
         self.diagram: 'TwlDiagram' = diagram
         self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
@@ -66,6 +67,7 @@ class ComponentShape(Generic[C], Shape, Observer):
         cls.TAGS.append(cls.TAG)
 
     def __init__(self, component: C, diagram: 'TwlDiagram'):
+        """Create an instance of ComponentShape."""
         super().__init__(diagram)
         self.component: C = component
         if self.TEMP not in self.TAGS:
@@ -164,6 +166,7 @@ class Tool:
     ICON: str = "X"
 
     def __init__(self, diagram: 'TwlDiagram'):
+        """Create an instance of Tool."""
         self.diagram: 'TwlDiagram' = diagram
 
     def activate(self):
@@ -229,6 +232,7 @@ class TwlDiagram(Observer, tk.Canvas):
     NO_UPDATE_TAGS = []
 
     def __init__(self, master):
+        """Create an instance of TwlDiagram."""
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
         self.grid(column=0, row=0, sticky=tk.NSEW)

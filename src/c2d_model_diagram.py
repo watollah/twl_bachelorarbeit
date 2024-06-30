@@ -16,6 +16,7 @@ class NodeShape(ComponentShape[Node]):
     LABEL_OFFSET = 15
 
     def __init__(self, node: Node, diagram: 'ModelDiagram') -> None:
+        """Create an instance of NodeShape."""
         super().__init__(node, diagram)
         self.draw_circle()
 
@@ -77,6 +78,7 @@ class BeamShape(ComponentShape[Beam]):
     WIDTH: int = 4
 
     def __init__(self, beam: Beam, diagram: 'ModelDiagram') -> None:
+        """Create an instance of BeamShape."""
         super().__init__(beam, diagram)
         self.draw_line()
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
@@ -136,6 +138,7 @@ class SupportShape(ComponentShape[Support]):
     LABEL_OFFSET = 20
 
     def __init__(self, support: Support, diagram: 'ModelDiagram') -> None:
+        """Create an instance of SupportShape."""
         super().__init__(support, diagram)
         self.draw_triangle()
         self.draw_line()
@@ -237,6 +240,7 @@ class ForceShape(ComponentShape[Force]):
     LABEL_OFFSET = 20
 
     def __init__(self, force: Force, diagram: 'ModelDiagram') -> None:
+        """Create an instance of ForceShape."""
         super().__init__(force, diagram)
         self.draw_arrow()
 
@@ -295,6 +299,7 @@ class ForceShape(ComponentShape[Force]):
 class ModelDiagram(TwlDiagram):
 
     def __init__(self, master):
+        """Create an instance of ModelDiagram."""
         super().__init__(master)
         TwlApp.settings().show_node_labels.trace_add("write", lambda *ignore: self.refresh())
         TwlApp.settings().show_beam_labels.trace_add("write", lambda *ignore: self.refresh())

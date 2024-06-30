@@ -22,6 +22,7 @@ class BaseLineShape(Shape):
     DASH = (2, 1, 1, 1)
 
     def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
+        """Create an instance of BaseLineShape."""
         super().__init__(diagram)
         self.pos = pos
         self.draw_line()
@@ -46,6 +47,7 @@ class ResultShape(ComponentShape[Force]):
     SELECTED_WIDTH = 3
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
+        """Create an instance of ResultShape."""
         self.start = Point(start.x, start.y)
         self.end = Point(end.x, end.y)
         super().__init__(force, diagram)
@@ -94,6 +96,7 @@ class SketchShape(ComponentShape[Force]):
     SELECTED_DASH = 10
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
+        """Create an instance of SketchShape."""
         line = Line(Point(start.x, start.y), Point(end.x, end.y))
         if line.length() < self.MIN_LENGTH:
             line = Line(Point(start.x, start.y - self.MIN_LENGTH / 2), Point(end.x, end.y + self.MIN_LENGTH / 2))
@@ -126,6 +129,7 @@ class CremonaDiagram(TwlDiagram):
     SCALE = 6
 
     def __init__(self, master, selected_step: tk.IntVar):
+        """Create an instance of CremonaDiagram."""
         super().__init__(master)
         TwlApp.settings().show_cremona_labels.trace_add("write", lambda *ignore: self.update_observer())
         self.selected_step: tk.IntVar = selected_step

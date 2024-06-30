@@ -21,6 +21,7 @@ class BeamForceShape(ComponentShape[Beam]):
     Z_ARROW = (12,12,10)
 
     def __init__(self, beam: Beam, force: Force, diagram: 'ModelDiagram') -> None:
+        """Create an instance of BeamForceShape."""
         super().__init__(beam, diagram)
         self.force = force
         if round(force.strength, 2) == 0:

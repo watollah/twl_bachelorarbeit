@@ -12,6 +12,7 @@ C = TypeVar('C', bound=Component)
 class TwlTableEntryPopUp(CustomEntry):
 
     def __init__(self, table, component: Component, attribute: Attribute, **kw):
+        """Create an instance of TwlTableEntryPopup."""
         super().__init__(table, attribute.filter, **kw)
         self.component: Component = component
         self.attribute: Attribute = attribute
@@ -33,6 +34,7 @@ class TwlTableEntryPopUp(CustomEntry):
 class TwlTable(Observer, ttk.Treeview, Generic[C]):
 
     def __init__(self, master, component_list: list[C], component_type: type[C]):
+        """Create an instance of TwlTable."""
         ttk.Treeview.__init__(self, master, show="headings")
         self.component_list: list[C] = component_list
 

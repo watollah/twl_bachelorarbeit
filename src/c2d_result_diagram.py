@@ -17,6 +17,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
     BORDER = 1
 
     def __init__(self, beam: Beam, force: Force, diagram: 'ResultModelDiagram') -> None:
+        """Create an instance of BeamForcePlotShape."""
         super().__init__(beam, diagram)
         self.force = force
         self.draw_rect()

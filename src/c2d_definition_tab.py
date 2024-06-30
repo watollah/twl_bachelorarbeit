@@ -13,6 +13,7 @@ class DefinitionTab(TwlTab):
     ID: str = "definition_tab"
 
     def __init__(self, notebook: ttk.Notebook) -> None:
+        """Create an instance of DefintionTab."""
         super().__init__(notebook)
 
         horizontal_panes = ttk.PanedWindow(self, orient=tk.HORIZONTAL)

@@ -12,6 +12,7 @@ class CremonaTab(TwlTab):
     ID: str = "cremona_tab"
 
     def __init__(self, notebook: ttk.Notebook) -> None:
+        """Create an instance of CremonaTab."""
         super().__init__(notebook)
         self.selected_step = tk.IntVar()
 

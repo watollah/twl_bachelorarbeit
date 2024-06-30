@@ -1,4 +1,5 @@
 def int_to_roman(num: int) -> str:
+    """Return the roman numeral equivalent of i."""
     val = [
         1000, 900, 500, 400,
         100, 90, 50, 40,

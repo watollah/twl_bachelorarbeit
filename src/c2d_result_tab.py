@@ -14,6 +14,7 @@ class ResultTab(TwlTab):
     ID: str = "result_tab"
 
     def __init__(self, notebook: ttk.Notebook) -> None:
+        """Create an instance of ResultTab."""
         super().__init__(notebook)
 
         horizontal_panes = ttk.PanedWindow(self, orient=tk.HORIZONTAL)

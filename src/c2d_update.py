@@ -14,6 +14,7 @@ class UpdateManager:
     """Class that keeps track of a list of Observers that get can be notified to reflect changes."""
 
     def __init__(self) -> None:
+        """Create an instance of UpdateManager."""
         self._paused: bool = False
         self._observers: list[Observer] = []
 
