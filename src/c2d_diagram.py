@@ -70,11 +70,7 @@ class ComponentShape(Generic[C], Shape, Observer):
         self.component: C = component
         if self.TEMP not in self.TAGS:
             self.component.model.update_manager.register_observer(self)
-
-        self.label_tk_id, self.label_bg_tk_id = self.draw_label()
-        self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
-        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+        self.draw_label()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         if component_id == self.component.id and attribute_id == IdAttribute.ID:
@@ -122,19 +118,22 @@ class ComponentShape(Generic[C], Shape, Observer):
         super().scale(factor)
         self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
-    @property
-    @abstractmethod
-    def label_position(self) -> Point:
-        return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
-
-    def draw_label(self) -> tuple[int, int]:
+    def draw_label(self):
         label_pos = self.label_position
-        return self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
+        self.label_tk_id, self.label_bg_tk_id = self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
                                  text=self.component.id, 
                                  tags=[*self.TAGS, str(self.component.id)],
                                  label_tag=self.LABEL_TAG,
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
+        self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
+        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
+    @property
+    @abstractmethod
+    def label_position(self) -> Point:
+        return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
 
     def set_label_text(self, text: str):
         self.diagram.itemconfig(self.label_tk_id, text=text)

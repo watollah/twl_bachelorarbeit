@@ -23,12 +23,17 @@ class BaseLineShape(Shape):
 
     def __init__(self, pos: Point, diagram: TwlDiagram) -> None:
         super().__init__(diagram)
-        line = self.line_coords(pos)
-        tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAGS)
-        self.tk_shapes[tk_id] = Polygon(line.start, line.end)
+        self.pos = pos
+        self.draw_line()
 
-    def line_coords(self, pos: Point) -> Line:
-        return Line(Point(pos.x - self.LENGTH - self.SPACING, pos.y), Point(pos.x + self.LENGTH + self.SPACING, pos.y))
+    def draw_line(self):
+        line = self.line_coords
+        self.line_tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAGS)
+        self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
+
+    @property
+    def line_coords(self) -> Line:
+        return Line(Point(self.pos.x - self.LENGTH - self.SPACING, self.pos.y), Point(self.pos.x + self.LENGTH + self.SPACING, self.pos.y))
 
 
 class ResultShape(ComponentShape[Force]):
@@ -41,31 +46,39 @@ class ResultShape(ComponentShape[Force]):
     SELECTED_WIDTH = 3
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
-        self.start = start
-        self.end = end
-        self.line_id = diagram.create_line(start.x, start.y,
-                            end.x, end.y,
+        self.start = Point(start.x, start.y)
+        self.end = Point(end.x, end.y)
+        super().__init__(force, diagram)
+        self.diagram = diagram
+        self.component = force
+        self.draw_line()
+
+    def draw_line(self):
+        self.line_tk_id = self.diagram.create_line(self.start.x, self.start.y,
+                            self.end.x, self.end.y,
                             width=self.WIDTH,
                             arrow=tk.LAST, 
                             arrowshape=self.ARROW, 
-                            tags=[*self.TAGS, str(force.id)])
-        super().__init__(force, diagram)
-        self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
+                            tags=[*self.TAGS, str(self.component.id)])
+        self.tk_shapes[self.line_tk_id] = Polygon(self.start, self.end)
+        self.diagram.tag_raise(self.label_bg_tk_id)
+        self.diagram.tag_raise(self.label_tk_id)
 
+    @property
     def line_coords(self):
-        return Line(self.start, self.end)
+        return Line(Point(self.start.x, self.start.y), Point(self.end.x, self.end.y))
 
     def is_at(self, x: float, y: float) -> bool:
-        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
     @property
     def label_position(self) -> Point:
-        return self.line_coords().midpoint()
+        return self.line_coords.midpoint()
 
     def scale(self, factor: float):
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW)
-        self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
+        self.diagram.itemconfig(self.line_tk_id, arrowshape=scaled_arrow)
 
 
 class SketchShape(ComponentShape[Force]):
@@ -81,26 +94,30 @@ class SketchShape(ComponentShape[Force]):
     SELECTED_DASH = 10
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
-        line = Line(start, end)
+        line = Line(Point(start.x, start.y), Point(end.x, end.y))
         if line.length() < self.MIN_LENGTH:
             line = Line(Point(start.x, start.y - self.MIN_LENGTH / 2), Point(end.x, end.y + self.MIN_LENGTH / 2))
             line.rotate(start, force.angle)
         line.resize(self.EXTEND)
         self.start = line.start
         self.end = line.end
-        self.line_id = diagram.create_line(self.start.x, self.start.y,
+        super().__init__(force, diagram)
+        self.draw_line()
+
+    def draw_line(self):
+        self.line_tk_id = self.diagram.create_line(self.start.x, self.start.y,
                             self.end.x, self.end.y,
                             width=self.WIDTH,
                             dash=self.DASH,
-                            tags=[*self.TAGS, str(force.id)])
-        super().__init__(force, diagram)
-        self.tk_shapes[self.line_id] = Polygon(self.start, self.end)
+                            tags=[*self.TAGS, str(self.component.id)])
+        self.tk_shapes[self.line_tk_id] = Polygon(self.start, self.end)
 
+    @property
     def line_coords(self):
-        return Line(self.start, self.end)
+        return Line(Point(self.start.x, self.start.y), Point(self.end.x, self.end.y))
 
     def is_at(self, x: float, y: float) -> bool:
-        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
 
 class CremonaDiagram(TwlDiagram):
@@ -128,9 +145,9 @@ class CremonaDiagram(TwlDiagram):
         pos = self.START_POINT
         pre_sketch_pos = None
         for node, force, component, sketch in self.steps:
-            existing_force_shape = self.find_withtags(ResultShape.TAG, force.id)
-            if node and existing_force_shape:
-                coords = self.coords(existing_force_shape)
+            existing_shape = next((shape for shape in self.component_shapes if (isinstance(shape, ResultShape) and shape.component.id == force.id)), None)
+            if node and existing_shape:
+                coords = self.coords(existing_shape.line_tk_id)
                 pos = Point(coords[2], coords[3])
                 if type(component) in (Support, Force):
                     continue

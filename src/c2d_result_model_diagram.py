@@ -29,26 +29,28 @@ class BeamForceShape(ComponentShape[Beam]):
             self.draw_arrows()
 
     def draw_circle(self):
-            oval = self.oval_coords()
-            self.oval_id = self.diagram.create_oval(oval[0].x, oval[0].y, oval[1].x, oval[1].y, tags=[*self.TAGS, str(self.component.id)])
-            self.tk_shapes[self.oval_id] = Polygon(*oval)
+            circle = self.circle_coords
+            self.circle_tk_id = self.diagram.create_oval(circle[0].x, circle[0].y, circle[1].x, circle[1].y, tags=[*self.TAGS, str(self.component.id)])
+            self.tk_shapes[self.circle_tk_id] = Polygon(*circle)
 
-    def oval_coords(self) -> tuple[Point, Point]:
-        middle = self.line_coords().midpoint()
+    @property
+    def circle_coords(self) -> tuple[Point, Point]:
+        middle = self.arrow_line_coords.midpoint()
         return (Point(middle.x - self.RADIUS, middle.y - self.RADIUS), 
                 Point(middle.x + self.RADIUS, middle.y + self.RADIUS))
 
     def draw_arrows(self):
-            line = self.line_coords()
-            self.line_id = self.diagram.create_line(line.start.x, line.start.y,
+            line = self.arrow_line_coords
+            self.line_tk_id = self.diagram.create_line(line.start.x, line.start.y,
                                 line.end.x, line.end.y,
                                 width=self.WIDTH,
                                 arrow=tk.BOTH, 
                                 arrowshape=self.Z_ARROW if self.force.strength < 0 else self.D_ARROW, 
                                 tags=[*self.TAGS, str(self.component.id)])
-            self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
+            self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
 
-    def line_coords(self):
+    @property
+    def arrow_line_coords(self):
         line = Line(Point(self.component.start_node.x, self.component.start_node.y), 
                     Point(self.component.end_node.x, self.component.end_node.y))
         line.resize(self.END_OFFSET)
@@ -57,11 +59,11 @@ class BeamForceShape(ComponentShape[Beam]):
     def scale(self, factor: float):
         super().scale(factor)
         if round(self.force.strength, 2) == 0:
-            self.diagram.itemconfig(self.oval_id, width=self.BORDER * factor)
+            self.diagram.itemconfig(self.circle_tk_id, width=self.BORDER * factor)
         else:
             arrow = self.Z_ARROW if self.force.strength < 0 else self.D_ARROW
             scaled_arrow = tuple(value * factor for value in arrow)
-            self.diagram.itemconfig(self.line_id, arrowshape=scaled_arrow)
+            self.diagram.itemconfig(self.line_tk_id, arrowshape=scaled_arrow)
 
 
 class ResultModelDiagram(ModelDiagram):
@@ -103,7 +105,7 @@ class ResultModelDiagram(ModelDiagram):
         for beam_force_shape in zero_beam_force_shapes:
             beam_shape = self.shapes_of_type_for(BeamShape, beam_force_shape.component)[0]
             self.reset_label_position(beam_shape)
-            if self.itemcget(beam_force_shape.oval_id, "state") in ("", tk.NORMAL):
+            if self.itemcget(beam_force_shape.circle_tk_id, "state") in ("", tk.NORMAL):
                 beam_shape.tk_shapes[beam_shape.label_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
                 beam_shape.tk_shapes[beam_shape.label_bg_tk_id].move(0, BeamForceShape.RADIUS + BeamForceShape.LABEL_PADDING)
 
