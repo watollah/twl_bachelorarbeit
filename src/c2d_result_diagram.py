@@ -67,11 +67,10 @@ class ResultDiagram(ResultModelDiagram):
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)
-            if not strength == 0:
-                color = Colors.DARK_SELECTED if strength < 0 else Colors.RED
-                for shape in self.shapes_for(beam):
-                    self.highlight(shape, color)
-                self.shapes.append(BeamForcePlotShape(beam, force, self))
+            color = Colors.BLACK if strength == 0 else Colors.DARK_SELECTED if strength < 0 else Colors.RED
+            for shape in self.shapes_for(beam):
+                self.highlight(shape, color)
+            self.shapes.append(BeamForcePlotShape(beam, force, self))
         self.tag_lower(BeamForcePlotShape.TAG)
 
     def highlight(self, shape: ComponentShape, color: str):
@@ -79,6 +78,8 @@ class ResultDiagram(ResultModelDiagram):
             tags = self.gettags(tk_id)
             if all(tag not in tags for tag in (shape.LABEL_TAG, shape.LABEL_BG_TAG)):
                 self.itemconfig(tk_id, fill=color)
+        if isinstance(shape, BeamForceShape) and round(shape.force.strength, 2) == 0:
+            self.itemconfig(shape.circle_tk_id, fill=Colors.WHITE)
 
     def label_visible(self, shape: Shape) -> bool:
         return type(shape) not in (BeamForceShape, BeamForcePlotShape) and super().label_visible(shape)
