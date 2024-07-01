@@ -12,6 +12,9 @@ from c2d_components import Component, Node, Support, Force
 
 
 class BaseLineShape(Shape):
+    """Short horizontal dashed lines that are drawn at the startpoint of the Cremona diagram 
+    and after the last Force before drawing the first reaction force. 
+    Are especially useful when using Force spacing option."""
 
     TAG = "baseline"
 
@@ -28,12 +31,14 @@ class BaseLineShape(Shape):
         self.draw_line()
 
     def draw_line(self):
+        """Draw the line in the diagram and store it's position and tkinter id."""
         line = self.line_coords
         self.line_tk_id = self.diagram.create_line(line.start.x, line.start.y, line.end.x, line.end.y, dash=self.DASH, tags=self.TAGS)
         self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
 
     @property
     def line_coords(self) -> Line:
+        """Get the lines coordinates in the diagram."""
         return Line(Point(self.pos.x - self.LENGTH - self.SPACING, self.pos.y), Point(self.pos.x + self.LENGTH + self.SPACING, self.pos.y))
 
 
