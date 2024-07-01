@@ -16,15 +16,20 @@ class NodeShape(ComponentShape[Node]):
     LABEL_OFFSET = 15
 
     def __init__(self, node: Node, diagram: 'ModelDiagram') -> None:
+        """Create an instance of NodeShape."""
         super().__init__(node, diagram)
-        p1, p2 = self.circle_coords()
-        self.oval_id = diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
+        self.draw_circle()
+
+    def draw_circle(self):
+        p1, p2 = self.circle_coords
+        self.circle_tk_id = self.diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
                             fill=self.BG_COLOR, 
                             outline=self.COLOR, 
                             width = self.BORDER, 
-                            tags=[*self.TAGS, str(node.id)])
-        self.tk_shapes[self.oval_id] = Polygon(p1, p2)
+                            tags=[*self.TAGS, str(self.component.id)])
+        self.tk_shapes[self.circle_tk_id] = Polygon(p1, p2)
 
+    @property
     def circle_coords(self) -> tuple[Point, Point]:
         return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
 
@@ -47,12 +52,12 @@ class NodeShape(ComponentShape[Node]):
 
     def scale(self, factor: float):
         super().scale(factor)
-        self.diagram.itemconfig(self.oval_id, width=self.BORDER * factor)
+        self.diagram.itemconfig(self.circle_tk_id, width=self.BORDER * factor)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
         if component_id == self.component.id and attribute_id in (XCoordinateAttribute.ID, YCoordinateAttribute.ID):
-            p1, p2 = self.circle_coords()
-            self.tk_shapes[self.oval_id] = Polygon(p1, p2)
+            p1, p2 = self.circle_coords
+            self.tk_shapes[self.circle_tk_id] = Polygon(p1, p2)
             self.update_label_pos()
             for beam in self.component.beams:
                 beam_shape = self.diagram.shapes_of_type_for(BeamShape, beam)[0]
@@ -73,23 +78,28 @@ class BeamShape(ComponentShape[Beam]):
     WIDTH: int = 4
 
     def __init__(self, beam: Beam, diagram: 'ModelDiagram') -> None:
+        """Create an instance of BeamShape."""
         super().__init__(beam, diagram)
-        line = self.line_coords()
-        self.line_id = diagram.create_line(line.start.x, line.start.y,
-                            line.end.x, line.end.y,
-                            fill=self.COLOR,
-                            width=self.WIDTH,
-                            tags=[*self.TAGS, str(beam.id)])
-        self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
+        self.draw_line()
         diagram.tag_lower(BeamShape.TAG, NodeShape.TAG)
         diagram.tag_lower(BeamShape.TAG, SupportShape.TAG)
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
 
+    def draw_line(self):
+        line = self.line_coords
+        self.line_tk_id = self.diagram.create_line(line.start.x, line.start.y,
+                            line.end.x, line.end.y,
+                            fill=self.COLOR,
+                            width=self.WIDTH,
+                            tags=[*self.TAGS, str(self.component.id)])
+        self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
+
+    @property
     def line_coords(self) -> Line:
         return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
 
     def is_at(self, x: float, y: float) -> bool:
-        return Point(x, y).distance_to_line(self.line_coords()) < self.WIDTH/2
+        return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
     def default_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.COLOR}
@@ -99,16 +109,16 @@ class BeamShape(ComponentShape[Beam]):
 
     @property
     def label_position(self) -> Point:
-        return self.line_coords().midpoint()
+        return self.line_coords.midpoint()
 
     def scale(self, factor: float):
         super().scale(factor)
-        self.diagram.itemconfig(self.line_id, width=self.WIDTH * factor)
+        self.diagram.itemconfig(self.line_tk_id, width=self.WIDTH * factor)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
         if component_id == self.component.id and attribute_id in (StartNodeAttribute.ID, EndNodeAttribute.ID):
-            line = self.line_coords()
-            self.tk_shapes[self.line_id] = Polygon(line.start, line.end)
+            line = self.line_coords
+            self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
             self.update_label_pos()
             self.diagram.refresh()
         super().update_observer(component_id, attribute_id)
@@ -128,9 +138,19 @@ class SupportShape(ComponentShape[Support]):
     LABEL_OFFSET = 20
 
     def __init__(self, support: Support, diagram: 'ModelDiagram') -> None:
+        """Create an instance of SupportShape."""
         super().__init__(support, diagram)
+        self.draw_triangle()
+        self.draw_line()
+        self.update_line_visibility()
+        diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
+
+    def is_at(self, x: float, y: float) -> bool:
+        return self.triangle_coords.inside_triangle(Point(x, y))
+
+    def draw_triangle(self):
         triangle = self.triangle_coords
-        self.triangle_tk_id = diagram.create_polygon(triangle.p1.x, 
+        self.triangle_tk_id = self.diagram.create_polygon(triangle.p1.x, 
                                triangle.p1.y, 
                                triangle.p2.x, 
                                triangle.p2.y, 
@@ -139,22 +159,8 @@ class SupportShape(ComponentShape[Support]):
                                fill=self.BG_COLOR, 
                                outline=self.COLOR, 
                                width=self.BORDER, 
-                               tags=[*self.TAGS, str(support.id)])
+                               tags=[*self.TAGS, str(self.component.id)])
         self.tk_shapes[self.triangle_tk_id] = Polygon(triangle.p1, triangle.p2, triangle.p3)
-        line = self.line_coords
-        self.line_tk_id = diagram.create_line(line.start.x, 
-                            line.start.y, 
-                            line.end.x, 
-                            line.end.y, 
-                            fill=self.COLOR, 
-                            width=self.BORDER, 
-                            tags=[*self.TAGS, str(support.id), self.LINE_TAG])
-        self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
-        self.update_line_visibility()
-        diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
-
-    def is_at(self, x: float, y: float) -> bool:
-        return self.triangle_coords.inside_triangle(Point(x, y))
 
     @property
     def triangle_coords(self) -> Triangle:
@@ -164,6 +170,17 @@ class SupportShape(ComponentShape[Support]):
         triangle = Triangle(n_point, l_point, r_point)
         triangle.rotate(n_point, self.component.angle + 180)
         return triangle
+
+    def draw_line(self):
+        line = self.line_coords
+        self.line_tk_id = self.diagram.create_line(line.start.x, 
+                            line.start.y, 
+                            line.end.x, 
+                            line.end.y, 
+                            fill=self.COLOR, 
+                            width=self.BORDER, 
+                            tags=[*self.TAGS, str(self.component.id), self.LINE_TAG])
+        self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
 
     @property
     def line_coords(self) -> Line:
@@ -223,9 +240,13 @@ class ForceShape(ComponentShape[Force]):
     LABEL_OFFSET = 20
 
     def __init__(self, force: Force, diagram: 'ModelDiagram') -> None:
+        """Create an instance of ForceShape."""
         super().__init__(force, diagram)
+        self.draw_arrow()
+
+    def draw_arrow(self):
         arrow = self.arrow_coords
-        self.arrow_id = diagram.create_line(arrow.start.x, 
+        self.arrow_tk_id = self.diagram.create_line(arrow.start.x, 
                             arrow.start.y, 
                             arrow.end.x, 
                             arrow.end.y, 
@@ -233,11 +254,8 @@ class ForceShape(ComponentShape[Force]):
                             arrow=tk.FIRST, 
                             arrowshape=self.ARROW_SHAPE, 
                             fill=self.COLOR, 
-                            tags=[*self.TAGS, str(force.id)])
-        self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
-
-    def is_at(self, x: float, y: float) -> bool:
-        return Point(x, y).distance_to_line(self.arrow_coords) < self.WIDTH/2
+                            tags=[*self.TAGS, str(self.component.id)])
+        self.tk_shapes[self.arrow_tk_id] = Polygon(arrow.start, arrow.end)
 
     @property
     def arrow_coords(self) -> Line:
@@ -254,6 +272,9 @@ class ForceShape(ComponentShape[Force]):
     def selected_style(self, *tags: str) -> dict[str, str]:
         return {"fill": self.SELECTED_COLOR}
 
+    def is_at(self, x: float, y: float) -> bool:
+        return Point(x, y).distance_to_line(self.arrow_coords) < self.WIDTH/2
+
     @property
     def label_position(self) -> Point:
         n_point = Point(self.component.node.x, self.component.node.y)
@@ -264,12 +285,12 @@ class ForceShape(ComponentShape[Force]):
     def scale(self, factor: float):
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
-        self.diagram.itemconfig(self.arrow_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
+        self.diagram.itemconfig(self.arrow_tk_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         if component_id == self.component.id and attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
             arrow = self.arrow_coords
-            self.tk_shapes[self.arrow_id] = Polygon(arrow.start, arrow.end)
+            self.tk_shapes[self.arrow_tk_id] = Polygon(arrow.start, arrow.end)
             self.update_label_pos()
             self.diagram.refresh()
         super().update_observer(component_id, attribute_id)
@@ -278,6 +299,7 @@ class ForceShape(ComponentShape[Force]):
 class ModelDiagram(TwlDiagram):
 
     def __init__(self, master):
+        """Create an instance of ModelDiagram."""
         super().__init__(master)
         TwlApp.settings().show_node_labels.trace_add("write", lambda *ignore: self.refresh())
         TwlApp.settings().show_beam_labels.trace_add("write", lambda *ignore: self.refresh())

@@ -8,6 +8,7 @@ from c2d_components import Model, Component, Node, Beam, Force
 class Solver:
 
     def __init__(self, model: Model) -> None:
+        """Create an instance of Solver."""
         self.model = model
 
         self.factor_matrix: list[list[float]] = []

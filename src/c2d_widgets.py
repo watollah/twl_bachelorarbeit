@@ -12,6 +12,7 @@ class TwlTab(Observer, ttk.Frame):
     ID: str = ""
 
     def __init__(self, notebook: ttk.Notebook) -> None:
+        """Create an instance of TwlTab."""
         ttk.Frame.__init__(self, notebook)
 
 
@@ -21,8 +22,8 @@ class ToolTip(object):
     WIDTH: int = 200
     OFFSET: int = 20
 
-    """Create a tooltip for a given widget."""
     def __init__(self, widget, text='widget info'):
+        """Create an instance of ToolTip."""
         self.widget = widget
         self.text = text
         self.widget.bind("<Enter>", self.enter)
@@ -68,6 +69,7 @@ class ToolTip(object):
 class CustomButton(ttk.Button):
 
     def __init__(self, master=None, **kw):
+        """Create an instance of CustomButton."""
         outlinewidth = kw.pop("outlinewidth", None)
         outlinecolor = kw.pop("outlinecolor", Colors.BLACK)
         kw.setdefault("takefocus", False)
@@ -90,6 +92,7 @@ class CustomButton(ttk.Button):
 class CustomToggleButton(CustomButton):
 
     def __init__(self, master=None, **kw):
+        """Create an instance of ToggleButton."""
         self.state: tk.BooleanVar = kw.pop("variable", tk.BooleanVar())
         self.state.trace_add("write", lambda *ignore: self.on_toggle(command))
 
@@ -128,6 +131,7 @@ class CustomToggleButton(CustomButton):
 class CustomRadioButton(CustomToggleButton):
 
     def __init__(self, master=None, **kw):
+        """Create an instance of CustomRadioButton."""
         self.variable: tk.Variable = kw.pop("variable", tk.StringVar())
         self.value = kw.pop("value", "")
         self.variable.trace_add("write", lambda *ignore: self.on_radio_toggle())
@@ -152,6 +156,7 @@ class CustomRadioButton(CustomToggleButton):
 class BorderFrame(ttk.Frame):
 
     def __init__(self, master=None, **kw):
+        """Create an instance of BorderFrame."""
         kw["style"] = "Outer.Border.TFrame"
         super().__init__(master, **kw)
         ttk.Frame(self, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
@@ -164,6 +169,7 @@ class ToggledFrame(tk.Frame):
     CLOSED_ICON: str = "arrow_closed_icon"
 
     def __init__(self, parent, title: str = "", *args, **options):
+        """Create an instance of ToggledFrame."""
         tk.Frame.__init__(self, parent, *args, **options)
 
         self.title: str = title
@@ -195,6 +201,7 @@ class CustomMenuButton(ttk.OptionMenu):
     ARROW_SIZE = 5
 
     def __init__(self, parent, *args, **options):
+        """Create an instance of CustomMenuButton."""
         outlinewidth = options.pop("outlinewidth", None)
         outlinecolor = options.pop("outlinecolor", Colors.BLACK)
         if outlinewidth:
@@ -210,6 +217,7 @@ class CustomEntry(tk.Entry):
     POPUP_WIDTH = 70
 
     def __init__(self, master, validator, **kwargs):
+        """Create an instance of CustomEntry."""
         self.popup = None
         self.validator = validator
         self.variable = tk.StringVar()
@@ -260,6 +268,7 @@ class CustomEntry(tk.Entry):
 class ValidationText(tk.Text):
 
     def __init__(self, master, action, **kwargs):
+        """Create an instance of ValidationText."""
         super().__init__(master, kwargs)
         self.is_expanded = False
         self.action = action

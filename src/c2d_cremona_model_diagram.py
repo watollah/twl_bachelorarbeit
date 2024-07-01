@@ -11,6 +11,7 @@ from c2d_model_diagram import NodeShape, SupportShape, ForceShape
 class CremonaModelDiagram(ResultModelDiagram):
 
     def __init__(self, master, selected_step: tk.IntVar):
+        """Create an instance of CremonaModelDiagram."""
         super().__init__(master)
         self.selected_step: tk.IntVar = selected_step
         self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))

@@ -15,6 +15,7 @@ class ControlPanel(Observer, ttk.Frame):
     SPEED_OPTIONS = {"0.5x": 2000, "1x": 1000, "2x": 500, "5x": 200}
 
     def __init__(self, master, selected_step: tk.IntVar):
+        """Create an instance of ControlPanel."""
         super().__init__(master, style="ControlPanel.TFrame")
         self.steps: list[tuple[Node | None, Force, Component, bool]] = []
         self.selected_step = selected_step

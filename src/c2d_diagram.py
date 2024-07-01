@@ -20,7 +20,8 @@ class Shape():
     COLOR = "black"
     BG_COLOR = "white"
 
-    def __init__(self, diagram: 'TwlDiagram') -> None: #todo: always draw labels here, configure visibility in update
+    def __init__(self, diagram: 'TwlDiagram') -> None:
+        """Create an instance of Shape."""
         self.diagram: 'TwlDiagram' = diagram
         self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
@@ -66,15 +67,12 @@ class ComponentShape(Generic[C], Shape, Observer):
         cls.TAGS.append(cls.TAG)
 
     def __init__(self, component: C, diagram: 'TwlDiagram'):
+        """Create an instance of ComponentShape."""
         super().__init__(diagram)
         self.component: C = component
         if self.TEMP not in self.TAGS:
             self.component.model.update_manager.register_observer(self)
-
-        self.label_tk_id, self.label_bg_tk_id = self.draw_label()
-        self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
-        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
-        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+        self.draw_label()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
         if component_id == self.component.id and attribute_id == IdAttribute.ID:
@@ -122,19 +120,22 @@ class ComponentShape(Generic[C], Shape, Observer):
         super().scale(factor)
         self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
-    @property
-    @abstractmethod
-    def label_position(self) -> Point:
-        return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
-
-    def draw_label(self) -> tuple[int, int]:
+    def draw_label(self):
         label_pos = self.label_position
-        return self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
+        self.label_tk_id, self.label_bg_tk_id = self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
                                  text=self.component.id, 
                                  tags=[*self.TAGS, str(self.component.id)],
                                  label_tag=self.LABEL_TAG,
                                  bg_tag=self.LABEL_BG_TAG,
                                  font=('Helvetica', self.LABEL_SIZE))
+        self.tk_shapes[self.label_tk_id] = Polygon(Point(self.label_position.x, self.label_position.y))
+        x1, x2, y1, y2 = self.diagram.bbox(self.label_tk_id)
+        self.tk_shapes[self.label_bg_tk_id] = Polygon(Point(x1, x2), Point(y1, y2))
+
+    @property
+    @abstractmethod
+    def label_position(self) -> Point:
+        return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
 
     def set_label_text(self, text: str):
         self.diagram.itemconfig(self.label_tk_id, text=text)
@@ -165,6 +166,7 @@ class Tool:
     ICON: str = "X"
 
     def __init__(self, diagram: 'TwlDiagram'):
+        """Create an instance of Tool."""
         self.diagram: 'TwlDiagram' = diagram
 
     def activate(self):
@@ -230,6 +232,7 @@ class TwlDiagram(Observer, tk.Canvas):
     NO_UPDATE_TAGS = []
 
     def __init__(self, master):
+        """Create an instance of TwlDiagram."""
         tk.Canvas.__init__(self, master)
         self.configure(background="white", highlightthickness=0)
         self.grid(column=0, row=0, sticky=tk.NSEW)
@@ -339,7 +342,7 @@ class TwlDiagram(Observer, tk.Canvas):
         assert len(sr_int) == 4
         return sr_int
 
-    def zoom(self, event): #todo: scroll to previous position in diagram
+    def zoom(self, event):
         if event.delta < 0:
             self.current_zoom.set(max(self.MIN_ZOOM, self.current_zoom.get() - self.ZOOM_STEP))
         else:

@@ -23,6 +23,7 @@ class SelectTool(Tool):
     ICON: str = "select_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
+        """Create an instance of SelectTool."""
         super().__init__(diagram)
         self.selection_rect: int | None = None
 
@@ -116,6 +117,7 @@ class TempNodeShape(NodeShape):
     COLOR: str = ComponentShape.TEMP_COLOR
 
     def __init__(self, node: Node, diagram: 'DefinitionDiagram') -> None:
+        """Create an instance of TempNodeShape."""
         super().__init__(node, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
         self.set_label_visible(False)
@@ -127,6 +129,7 @@ class TempBeamShape(BeamShape):
     COLOR: str = ComponentShape.TEMP_COLOR
 
     def __init__(self, beam: Beam, diagram: 'DefinitionDiagram') -> None:
+        """Create an instance of TempBeamShape."""
         super().__init__(beam, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
         self.set_label_visible(False)
@@ -138,6 +141,7 @@ class TempSupportShape(SupportShape):
     COLOR = ComponentShape.TEMP_COLOR
 
     def __init__(self, support: Support, diagram: 'DefinitionDiagram') -> None:
+        """Create an instance of TempSupportShape."""
         super().__init__(support, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
         self.set_label_visible(False)
@@ -149,6 +153,7 @@ class TempForceShape(ForceShape):
     COLOR = ComponentShape.TEMP_COLOR
 
     def __init__(self, force: Force, diagram: 'DefinitionDiagram') -> None:
+        """Create an instance of TempForceShape."""
         super().__init__(force, diagram)
         self.scale(self.diagram.current_zoom.get() / 100)
         self.set_label_visible(False)
@@ -161,6 +166,7 @@ class ComponentTool(Generic[C], Tool):
     COMPONENT_TYPE: type[C]
 
     def __init__(self, diagram: 'DefinitionDiagram'):
+        """Create an instance of ComponentTool."""
         self.diagram: 'DefinitionDiagram' = diagram
         self.component = self.dummy_component()
         self.popup: ComponentToolPopup | None = None
@@ -174,6 +180,7 @@ class ComponentTool(Generic[C], Tool):
             self.popup = None
 
     def dummy_component(self) -> C:
+        """Create a dummy instance the Component created by the Tool."""
         component: C = self.COMPONENT_TYPE.dummy()
         component.model = TwlApp.model()
         component._id._value = TwlApp.model().next_unique_id_for(self.COMPONENT_TYPE)
@@ -250,6 +257,7 @@ class ComponentToolPopup(tk.Toplevel):
     CONTENT_PADDING = 2
 
     def __init__(self, tool: ComponentTool[C]):
+        """Create an instance of ComponentToolPopup."""
         super().__init__(tool.diagram)
         self.wm_overrideredirect(True)
         self.attributes("-topmost", True)
@@ -343,6 +351,7 @@ class BeamTool(ComponentTool[Beam]):
     ICON: str = "beam_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
+        """Create an instance of BeamTool."""
         super().__init__(diagram)
         self.start_node: Node | None = None
         self.end_node: Node | None = None
@@ -426,6 +435,7 @@ class SupportTool(ComponentTool[Support]):
     ICON: str = "support_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
+        """Create an instance of SupportTool."""
         super().__init__(diagram)
         self.node: Node | None = None
 
@@ -436,7 +446,7 @@ class SupportTool(ComponentTool[Support]):
     def action(self, event):
         if not self.node:
             clicked_node: Node | None = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if clicked_node and not clicked_node.supports:
+            if clicked_node:
                 self.node = clicked_node
                 self.component._node._value = self.node
             return False
@@ -454,7 +464,7 @@ class SupportTool(ComponentTool[Support]):
     def prepare(self, event) -> bool:
         if not self.node:
             hovering_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
-            if hovering_node and not hovering_node.supports:
+            if hovering_node:
                 TempSupportShape(Support(Model(UpdateManager()), hovering_node), self.diagram)
             return False
         else:
@@ -477,6 +487,7 @@ class ForceTool(ComponentTool[Force]):
     ICON: str = "force_icon"
 
     def __init__(self, diagram: 'DefinitionDiagram'):
+        """Create an instance of ForceTool."""
         super().__init__(diagram)
         self.node: Node | None = None
 
@@ -536,6 +547,7 @@ class DefinitionDiagram(ModelDiagram):
     NO_UPDATE_TAGS = [GRID_TAG, ANGLE_GUIDE_TAG]
 
     def __init__(self, master):
+        """Create an instance of DefinitionDiagram."""
 
         #toolbar
         toolbar: ttk.Frame = ttk.Frame(master, style="Diagram.TFrame")

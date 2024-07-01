@@ -15,7 +15,9 @@ class Direction(Enum):
 
 
 class Point:
+
     def __init__(self, x: float, y: float):
+        """Create an instance of Point."""
         self.x: float = x
         self.y: float = y
 
@@ -80,7 +82,9 @@ class Point:
 
 
 class Line:
+
     def __init__(self, start: Point, end: Point) -> None:
+        """Create an instance of Line."""
         self.start: Point = start
         self.end: Point = end
 
@@ -200,26 +204,11 @@ class Line:
         c = (self.end.x - self.start.x) * (line.start.y - self.start.y) - (self.end.y - self.start.y) * (line.start.x - self.start.x)
         return False if b == 0 else 0 < (a / b) < 1 and 0 < (c / b) < 1
 
-#     def line_intersection(line1, line2):
-#         xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-#         ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
-
-#         def det(a, b):
-#             return a[0] * b[1] - a[1] * b[0]
-
-#         div = det(xdiff, ydiff)
-#         if div == 0:
-#             raise Exception('lines do not intersect')
-
-#         d = (det(*line1), det(*line2))
-#         x = det(d, xdiff) / div
-#         y = det(d, ydiff) / div
-#         return x, y
-
-# print line_intersection((A, B), (C, D))
 
 class Triangle:
+
     def __init__(self, p1: Point, p2: Point, p3: Point) -> None:
+        """Create an instance of Triangle."""
         self.p1: Point = p1
         self.p2: Point = p2
         self.p3: Point = p3
@@ -258,6 +247,7 @@ class Triangle:
 
 class Polygon:
     def __init__(self, *points: Point) -> None:
+        """Create an instance of Polygon."""
         self.points: list[Point] = list(points)
         
     @classmethod

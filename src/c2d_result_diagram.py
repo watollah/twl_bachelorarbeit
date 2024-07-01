@@ -17,18 +17,23 @@ class BeamForcePlotShape(ComponentShape[Beam]):
     BORDER = 1
 
     def __init__(self, beam: Beam, force: Force, diagram: 'ResultModelDiagram') -> None:
+        """Create an instance of BeamForcePlotShape."""
         super().__init__(beam, diagram)
         self.force = force
-        rect = self.rect_coords()
-        bd_color, bg_color = (Colors.DARK_SELECTED, Colors.LIGHT_SELECTED) if force.strength < 0 else (Colors.RED, Colors.LIGHT_RED)
-        self.rect_id = self.diagram.create_polygon(rect[0].x, rect[0].y, rect[1].x, rect[1].y,
+        self.draw_rect()
+
+    def draw_rect(self):
+        rect = self.rect_coords
+        bd_color, bg_color = (Colors.DARK_SELECTED, Colors.LIGHT_SELECTED) if self.force.strength < 0 else (Colors.RED, Colors.LIGHT_RED)
+        self.rect_tk_id = self.diagram.create_polygon(rect[0].x, rect[0].y, rect[1].x, rect[1].y,
                             rect[2].x, rect[2].y, rect[3].x, rect[3].y,
                             width=self.BORDER,
                             outline=bd_color,
                             fill=bg_color,
                             tags=[*self.TAGS, str(self.component.id)])
-        self.tk_shapes[self.rect_id] = Polygon(rect[0], rect[1], rect[2], rect[3])
+        self.tk_shapes[self.rect_tk_id] = Polygon(rect[0], rect[1], rect[2], rect[3])
 
+    @property
     def rect_coords(self) -> tuple[Point, Point, Point, Point]:
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
@@ -46,7 +51,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
 
     def scale(self, factor: float):
         super().scale(factor)
-        self.diagram.itemconfig(self.rect_id, width=self.BORDER * factor)
+        self.diagram.itemconfig(self.rect_tk_id, width=self.BORDER * factor)
 
 
 class ResultDiagram(ResultModelDiagram):
@@ -54,6 +59,11 @@ class ResultDiagram(ResultModelDiagram):
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
         [shape.remove() for shape in self.shapes.copy() if isinstance(shape, BeamForcePlotShape)]
+        self.draw_beam_force_plots()
+        self.adjust_label_positions()
+        self.refresh()
+
+    def draw_beam_force_plots(self):
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)
@@ -62,9 +72,7 @@ class ResultDiagram(ResultModelDiagram):
                 for shape in self.shapes_for(beam):
                     self.highlight(shape, color)
                 self.shapes.append(BeamForcePlotShape(beam, force, self))
-        self.adjust_label_positions()
         self.tag_lower(BeamForcePlotShape.TAG)
-        self.refresh()
 
     def highlight(self, shape: ComponentShape, color: str):
         for tk_id in shape.tk_shapes.keys():

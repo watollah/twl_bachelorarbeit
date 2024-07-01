@@ -6,6 +6,7 @@ from c2d_update import UpdateManager
 class Settings:
 
     def __init__(self, update_manager: UpdateManager) -> None:
+        """Create an instance of Settings."""
         self.update_manager = update_manager
 
         self.show_node_labels = tk.BooleanVar(value=True)

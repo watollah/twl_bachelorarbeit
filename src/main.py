@@ -19,6 +19,7 @@ class TwlTool(Observer, tk.Tk):
     ICON: str = "c2d_icon"
 
     def __init__(self):
+        """Create an instance of TwlTool."""
         super().__init__()
 
         TwlApp.saved_state().trace_add("write", lambda *ignore: self.update_window_title())
