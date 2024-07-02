@@ -43,6 +43,7 @@ class BaseLineShape(Shape):
 
 
 class ResultShape(ComponentShape[Force]):
+    """Arrow in CremonaDiagram that represents Force calculated by solver."""
 
     TAG: str = "result"
 
@@ -61,6 +62,7 @@ class ResultShape(ComponentShape[Force]):
         self.draw_line()
 
     def draw_line(self):
+        """Draw the line in the diagram and store the position and tkinter id."""
         self.line_tk_id = self.diagram.create_line(self.start.x, self.start.y,
                             self.end.x, self.end.y,
                             width=self.WIDTH,
@@ -73,13 +75,16 @@ class ResultShape(ComponentShape[Force]):
 
     @property
     def line_coords(self):
+        """Get the coordinates of the shape in the diagram."""
         return Line(Point(self.start.x, self.start.y), Point(self.end.x, self.end.y))
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
     @property
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns the middle of the line."""
         return self.line_coords.midpoint()
 
     def scale(self, factor: float):
@@ -125,6 +130,7 @@ class SketchShape(ComponentShape[Force]):
         return Line(Point(self.start.x, self.start.y), Point(self.end.x, self.end.y))
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
 

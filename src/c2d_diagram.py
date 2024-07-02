@@ -42,6 +42,7 @@ class Shape():
 
     @abstractmethod
     def is_at(self, x: float, y: float) -> bool:
+        """Always returns False. Default implementation of check to see if the shape is at the specified position in the diagram."""
         return False
 
 
@@ -135,6 +136,7 @@ class ComponentShape(Generic[C], Shape, Observer):
     @property
     @abstractmethod
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns point at the top right corner of diagram for Shapes that don't use labels."""
         return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
 
     def set_label_text(self, text: str):
