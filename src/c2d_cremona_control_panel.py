@@ -5,8 +5,6 @@ from c2d_cremona_algorithm import CremonaAlgorithm
 from c2d_update import Observer
 from c2d_components import Component, Node, Force
 from c2d_widgets import CustomMenuButton, CustomToggleButton
-from c2d_cremona_model_diagram import CremonaModelDiagram
-from c2d_cremona_diagram import CremonaDiagram
 
 
 class ControlPanel(Observer, ttk.Frame):
