@@ -1,11 +1,26 @@
 import tkinter as tk
 
 from c2d_style import Colors
-from c2d_diagram import ComponentShape
+from c2d_diagram import ComponentShape, Tool, TwlDiagram
 from c2d_components import Component, Node, Force
 from c2d_cremona_algorithm import CremonaAlgorithm
 from c2d_result_model_diagram import ResultModelDiagram, BeamForceShape
 from c2d_model_diagram import NodeShape, SupportShape, ForceShape
+
+
+class SelectNodeTool(Tool):
+
+    def __init__(self, diagram: 'CremonaModelDiagram'):
+        super().__init__(diagram)
+        self.diagram: 'CremonaModelDiagram' = diagram
+
+    def action(self, event) -> bool:
+        node_shapes = [shape for shape in self.diagram.component_shapes if isinstance(shape, NodeShape)]
+        node_shape = self.diagram.find_shape_of_list_at(node_shapes, event.x, event.y)
+        if node_shape:
+            step = next(i for i, step in enumerate(self.diagram.steps) if step[0] == node_shape.component) + 1
+            self.diagram.selected_step.set(step)
+        return True
 
 
 class CremonaModelDiagram(ResultModelDiagram):
@@ -14,6 +29,8 @@ class CremonaModelDiagram(ResultModelDiagram):
     def __init__(self, master, selected_step: tk.IntVar):
         """Create an instance of CremonaModelDiagram."""
         super().__init__(master)
+        self.tools = [SelectNodeTool(self)]
+        self.select_tool(0)
         self.selected_step: tk.IntVar = selected_step
         self.selected_step.trace_add("write", lambda *ignore: self.display_step(self.selected_step.get()))
         self.steps: list[tuple[Node | None, Force, Component, bool]] = []
@@ -21,6 +38,10 @@ class CremonaModelDiagram(ResultModelDiagram):
     def update_observer(self, component_id: str="", attribute_id: str=""):
         super().update_observer(component_id, attribute_id)
         self.steps = CremonaAlgorithm.get_steps()
+        node_shapes = [shape for shape in self.component_shapes if isinstance(shape, NodeShape)]
+        for node_shape in node_shapes:
+            self.tag_bind(node_shape.circle_tk_id, "<Enter>", lambda event: event.widget.config(cursor="hand2"))
+            self.tag_bind(node_shape.circle_tk_id, "<Leave>", lambda event: event.widget.config(cursor=""))
 
     def display_step(self, selected_step: int):
         self.step_visibility(selected_step)

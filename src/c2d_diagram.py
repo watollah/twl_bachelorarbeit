@@ -253,9 +253,9 @@ class TwlDiagram(Observer, tk.Canvas):
 
         self.create_scrollbars(master)
 
-        self.tools: list[Tool]
+        self.tools: list[Tool] = []
         self._selected_tool_id: tk.IntVar = tk.IntVar(value=0)
-        self.selected_tool: Tool
+        self.selected_tool: Tool | None = None
 
         #bottom elements
         self.bottom_bar = self.create_bottom_bar()
@@ -383,7 +383,8 @@ class TwlDiagram(Observer, tk.Canvas):
 
     def handle_tool_change(self):
         """Perform tool change."""
-        self.selected_tool.deactivate()
+        if self.selected_tool:
+            self.selected_tool.deactivate()
         self.selected_tool = self.tools[self._selected_tool_id.get()]
         self.selected_tool.activate()
 
@@ -423,7 +424,8 @@ class TwlDiagram(Observer, tk.Canvas):
         """Check if there is a shape in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), self.shapes), None)
 
-    def find_shape_of_list_at(self, shapes: list[ComponentShape], x: float, y: float) -> ComponentShape | None:
+    S = TypeVar("S", bound=ComponentShape)
+    def find_shape_of_list_at(self, shapes: list[S], x: float, y: float) -> S | None:
         """Check if there is a shape that is included in the list in the diagram at the specified coordinate."""
         return next(filter(lambda shape: shape.is_at(x, y), shapes), None)
 
