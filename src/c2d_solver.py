@@ -6,6 +6,7 @@ from c2d_components import Model, Component, Node, Beam, Force
 
 
 class Solver:
+    """Converts the Model into a system of linear equations and uses numpy to solve those equations."""
 
     def __init__(self, model: Model) -> None:
         """Create an instance of Solver."""
@@ -17,7 +18,7 @@ class Solver:
 
     def solve(self):
         self.reset()
-        if not self.model.is_stat_det() or self.model.is_empty():
+        if not self.model.is_valid():
             return
 
         self.solution = self.get_unknown_forces()

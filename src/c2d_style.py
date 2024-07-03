@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from c2d_images import add_image
 
 
-TTK_CLAM = "clam"
+TTK_CLAM = "clam" #ttk style that this application's style is build on
 
 FONT_TYPE = "Helvetica"
 

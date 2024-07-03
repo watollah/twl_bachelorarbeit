@@ -250,11 +250,13 @@ class SupportShape(ComponentShape[Support]):
         super().update_observer(component_id, attribute_id)
 
     def update_line_visibility(self):
+        """Set the visibility of the line underneath the triangle based on the number of constraints of the Support."""
         line_visibility = tk.NORMAL if self.component.constraints == 1 else tk.HIDDEN
         self.diagram.itemconfig(self.line_tk_id, state=line_visibility)
 
 
 class ForceShape(ComponentShape[Force]):
+    """Shape that represents Force component in the diagram. Drawn as arrow pointing at Node."""
 
     TAG: str = "force"
 
@@ -315,11 +317,13 @@ class ForceShape(ComponentShape[Force]):
         return point
 
     def scale(self, factor: float):
+        """Scale the arrowhead and the linewidth of the arrow to fit with current diagram scaling."""
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
         self.diagram.itemconfig(self.arrow_tk_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update the position of the arrow if the Force angle or Node position changed."""
         if component_id == self.component.id and attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
             arrow = self.arrow_coords
             self.tk_shapes[self.arrow_tk_id] = Polygon(arrow.start, arrow.end)
@@ -329,6 +333,7 @@ class ForceShape(ComponentShape[Force]):
 
 
 class ModelDiagram(TwlDiagram):
+    """Base class for all Diagrams that display the Model."""
 
     def __init__(self, master):
         """Create an instance of ModelDiagram."""
@@ -355,10 +360,12 @@ class ModelDiagram(TwlDiagram):
         super().update_observer(component_id, attribute_id)
 
     def refresh(self):
+        """Refresh the diagram and set correct label visibility based on selected settings."""
         super().refresh()
         self.label_visibility()
 
     def label_visible(self, shape: Shape) -> bool:
+        """Returns if the label of a shape should be visible in the diagram or not."""
         visible: dict[type[Shape], bool] = {
             NodeShape: TwlApp.settings().show_node_labels.get(),
             BeamShape: TwlApp.settings().show_beam_labels.get(),

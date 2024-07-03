@@ -10,6 +10,7 @@ from c2d_update import Observer
 C = TypeVar('C', bound=Component)
 
 class TwlTableEntryPopUp(CustomEntry):
+    """Popup on top of a """
 
     def __init__(self, table, component: Component, attribute: Attribute, **kw):
         """Create an instance of TwlTableEntryPopup."""

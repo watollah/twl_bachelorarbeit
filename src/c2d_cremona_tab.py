@@ -8,6 +8,7 @@ from c2d_widgets import TwlTab
 
 
 class CremonaTab(TwlTab):
+    """Tab that displays CremonaModelDiagram, CremonaDiagram and CremonaControlPanel."""
 
     ID: str = "cremona_tab"
 
@@ -36,16 +37,19 @@ class CremonaTab(TwlTab):
         self.control_panel = self.create_control_panel(control_panel_frame)
 
     def create_model_diagram(self, frame: ttk.Frame) -> CremonaModelDiagram:
+        """Create the diagram on the left that displays the Model."""
         model_diagram = CremonaModelDiagram(frame, self.selected_step)
         ttk.Label(frame, text="Model", font=("Helvetica", 12)).place(x=10, y=10)
         return model_diagram
 
     def create_cremona_diagram(self, frame: ttk.Frame) -> CremonaDiagram:
+        """Create the diagram on the right that displays the Cremona diagram."""
         cremona_diagram = CremonaDiagram(frame, self.selected_step)
         ttk.Label(frame, text="Cremona Diagram", font=("Helvetica", 12)).place(x=10, y=10)
         return cremona_diagram
 
     def create_control_panel(self, frame: ttk.Frame) -> 'ControlPanel':
+        """Create the control panel on the bottom of the tab that handles the algorithm playback."""
         background_frame = ttk.Frame(frame, style="ControlPanel.TFrame")
         background_frame.pack(fill=tk.BOTH, expand=True)
         control_panel = ControlPanel(background_frame, self.selected_step)
@@ -53,6 +57,7 @@ class CremonaTab(TwlTab):
         return control_panel
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        """Update all UI elements in the tab."""
         self.model_diagram.update_observer(component_id, attribute_id)
         self.cremona_diagram.update_observer(component_id, attribute_id)
         self.control_panel.update_observer(component_id, attribute_id)
