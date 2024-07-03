@@ -9,6 +9,7 @@ from c2d_model_diagram import NodeShape, SupportShape, ForceShape
 
 
 class CremonaModelDiagram(ResultModelDiagram):
+    """Model diagram on the left of cremona tab. Synchronizes with the selected step."""
 
     def __init__(self, master, selected_step: tk.IntVar):
         """Create an instance of CremonaModelDiagram."""

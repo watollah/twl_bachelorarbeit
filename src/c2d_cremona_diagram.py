@@ -88,12 +88,14 @@ class ResultShape(ComponentShape[Force]):
         return self.line_coords.midpoint()
 
     def scale(self, factor: float):
+        """Scale the arrowhead of the shape to fit with current diagram scaling."""
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW)
         self.diagram.itemconfig(self.line_tk_id, arrowshape=scaled_arrow)
 
 
 class SketchShape(ComponentShape[Force]):
+    """Dashed line that represents pre-sketching a Force in cremona diagram."""
 
     TAG: str = "sketch"
 
@@ -106,7 +108,7 @@ class SketchShape(ComponentShape[Force]):
     SELECTED_DASH = 10
 
     def __init__(self, start: Point, end: Point, force: Force, diagram: 'CremonaDiagram') -> None:
-        """Create an instance of SketchShape."""
+        """Create an instance of SketchShape. Calculate new end points by extending the line a bit in both directions."""
         line = Line(Point(start.x, start.y), Point(end.x, end.y))
         if line.length() < self.MIN_LENGTH:
             line = Line(Point(start.x, start.y - self.MIN_LENGTH / 2), Point(end.x, end.y + self.MIN_LENGTH / 2))
@@ -118,6 +120,7 @@ class SketchShape(ComponentShape[Force]):
         self.draw_line()
 
     def draw_line(self):
+        """Draw the sketched line in the diagram."""
         self.line_tk_id = self.diagram.create_line(self.start.x, self.start.y,
                             self.end.x, self.end.y,
                             width=self.WIDTH,
@@ -127,6 +130,7 @@ class SketchShape(ComponentShape[Force]):
 
     @property
     def line_coords(self):
+        """Get the coordinates of the line in the diagram."""
         return Line(Point(self.start.x, self.start.y), Point(self.end.x, self.end.y))
 
     def is_at(self, x: float, y: float) -> bool:
@@ -135,6 +139,7 @@ class SketchShape(ComponentShape[Force]):
 
 
 class CremonaDiagram(TwlDiagram):
+    """Cremona diagram displayed at the right of cremona tab."""
 
     START_POINT = Point(800, 50)
     SCALE = 6
@@ -148,6 +153,7 @@ class CremonaDiagram(TwlDiagram):
         self.steps = []
 
     def create_bottom_bar(self) -> tk.Frame:
+        """Add force spacing checkbox widget to bottom of the diagram."""
         bottom_bar = super().create_bottom_bar()
         force_spacing_check = ttk.Checkbutton(bottom_bar, takefocus=False, variable=TwlApp.settings().force_spacing, text="Force Spacing", style="Custom.TCheckbutton")
         force_spacing_check.pack(padx=self.UI_PADDING)
@@ -155,6 +161,8 @@ class CremonaDiagram(TwlDiagram):
         return bottom_bar
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update this diagram when there were changes to the Model and the solver was triggered. (By switching to cremona or result tab)
+        Clears the diagram and redraws all of the lines by getting the steps from CremonaAlgorithm."""
         self.clear()
         self.steps = CremonaAlgorithm.get_steps()
         pos = self.START_POINT
@@ -180,6 +188,7 @@ class CremonaDiagram(TwlDiagram):
         self.display_step(self.selected_step.get())
 
     def draw_force(self, start: Point, force: Force, component: Component, sketch: bool) -> Point:
+        """Draw or pre draw a force in the diagram."""
         angle = math.radians((force.angle + 180) % 360) if type(component) in (Support, Force) else math.radians(force.angle)
         start = Point(start.x, start.y)
         end = Point(start.x + force.strength * math.sin(angle) * self.SCALE, start.y + (-force.strength * math.cos(angle) * self.SCALE))
@@ -190,6 +199,7 @@ class CremonaDiagram(TwlDiagram):
         return Point(end.x, end.y)
 
     def force_spacing(self):
+        """Add spacing between beam forces, external force and reaction forces in the diagram."""
         force_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Force)]
         [self.shapes_for(force)[0].move(BaseLineShape.SPACING, 0) for force in force_forces]
         support_forces = [force for node, force, component, sketch in self.steps if not node and isinstance(component, Support)]
@@ -199,10 +209,13 @@ class CremonaDiagram(TwlDiagram):
         self.shapes.append(BaseLineShape(Point(coords[2], coords[3]), self))
 
     def display_step(self, selected_step: int):
+        """Display a specific step in the cremona diagram creation. Highlights all forces on current node, highlights current force and
+        hides all forces drawn after this step."""
         self.step_visibility(selected_step)
         self.step_highlighting(selected_step)
 
     def step_visibility(self, selected_step: int):
+        """Hide all forces drawn after the selected step."""
         visible: set[Shape] = set()
         for i, step in enumerate(self.steps):
             shape_type = SketchShape if step[3] else ResultShape
@@ -214,6 +227,7 @@ class CremonaDiagram(TwlDiagram):
             shape.set_label_visible(is_visible and self.label_visible(shape))
 
     def step_highlighting(self, selected_step: int):
+        """Highlights all forces on current node and current force. Also makes highlighted lines slightly thicker."""
         line_style: dict[tuple[type, bool], dict[str, Any]] = {
             #(shape type, active): line style
             (BaseLineShape, False): {"width": BaseLineShape.WIDTH, "dash": BaseLineShape.DASH},
@@ -233,6 +247,7 @@ class CremonaDiagram(TwlDiagram):
             self.highlight(shape, Colors.DARK_SELECTED, line_style[type(shape), True])
 
     def highlight(self, shape: ComponentShape, color: str, line_style: dict[str, Any]):
+        """Highlight a shape in the diagram with the specified color and line style."""
         for tk_id in shape.tk_shapes.keys():
             tags = self.gettags(tk_id)
             if shape.LABEL_TAG in tags:
@@ -241,7 +256,10 @@ class CremonaDiagram(TwlDiagram):
                 self.itemconfig(tk_id, line_style, fill=color)
 
     def shapes_for_node(self, node: Node) -> list[ComponentShape]:
+        """Get all shapes in the diagram that represent forces that are connected to the Node."""
         return [self.shapes_of_type_for(SketchShape if step[3] else ResultShape, step[1])[0] for step in self.steps if step[0] == node]
 
     def label_visible(self, shape: Shape) -> bool:
+        """Return if a label should be visible for the Shape in this diagram. Labels are hidden for 0 forces and pre-sketched forces.
+        Also hidden if the label option is disabled in settings."""
         return isinstance(shape, ResultShape) and round(shape.component.strength, 2) != 0 and TwlApp.settings().show_cremona_labels.get()
