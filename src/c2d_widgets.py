@@ -8,6 +8,7 @@ from c2d_images import add_png_by_name
 
 
 class TwlTab(Observer, ttk.Frame):
+    """Base class of the applications tabs."""
 
     ID: str = ""
 
@@ -17,6 +18,7 @@ class TwlTab(Observer, ttk.Frame):
 
 
 class ToolTip(object):
+    """Class that can display a tooltip on top of a widget. Not used in this version of the app but might be used in future versions."""
 
     DELAY: int = 500
     WIDTH: int = 200
@@ -33,22 +35,27 @@ class ToolTip(object):
         self.tooltip = None
 
     def enter(self, event=None):
+        """Schedule the creation of a tooltip when the user enters the widget with the cursor."""
         self.schedule()
 
     def leave(self, event=None):
+        """Unschedule the creation of a tooltip and hide the tooltip if there is one when the user exits the widget with the cursor."""
         self.unschedule()
         self.hide()
 
     def schedule(self):
+        """Schedule the creation of a tooltip. Tooltip is created after the time specified in Tooltip.DELAY if the cursor doesn't leave the widget."""
         self.unschedule()
         self.id = self.widget.after(self.DELAY, self.show)
 
     def unschedule(self):
+        """Unschedule the creation of a tooltip."""
         if self.id:
             self.widget.after_cancel(self.id)
             self.id = None
 
     def show(self, event=None):
+        """Show the tooltip on top of the widget."""
         x, y, cx, cy = self.widget.bbox("insert")
         x += self.widget.winfo_rootx() + self.OFFSET
         y += self.widget.winfo_rooty() + self.OFFSET
@@ -61,12 +68,14 @@ class ToolTip(object):
         label.pack(ipadx=1)
 
     def hide(self):
+        """Destroy the tooltip if it exists."""
         if self.tooltip:
             self.tooltip.destroy()
             self.tooltip = None
 
 
 class CustomButton(ttk.Button):
+    """Custom styled button widget with a solid outline."""
 
     def __init__(self, master=None, **kw):
         """Create an instance of CustomButton."""
@@ -83,13 +92,16 @@ class CustomButton(ttk.Button):
         self.bind("<Leave>", self.default)
 
     def hover(self, event):
+        """Override to change style when cursor enters this widget."""
         pass
 
     def default(self, event):
+        """Override to change style when cursor exits this widget."""
         pass
 
 
 class CustomToggleButton(CustomButton):
+    """Custom styled toggle button widget. Supports on/off icon and text."""
 
     def __init__(self, master=None, **kw):
         """Create an instance of ToggleButton."""
@@ -129,6 +141,7 @@ class CustomToggleButton(CustomButton):
 
 
 class CustomRadioButton(CustomToggleButton):
+    """Custom styled radio button widget. Can be used to group multiple CustomToggleButtons as radio buttons."""
 
     def __init__(self, master=None, **kw):
         """Create an instance of CustomRadioButton."""
@@ -139,14 +152,18 @@ class CustomRadioButton(CustomToggleButton):
         self.configure(style="Selected.Radio.TButton" if self.state.get() else "Radio.TButton")
 
     def toggle(self):
+        """Switch the state of the button and set the connected variable to this buttons value."""
         super().toggle()
         self.variable.set(self.value)
 
     def on_toggle(self, command):
+        """When this button is toggled, switch the style of this button to reflect the new state."""
         self.configure(style="Selected.Radio.TButton" if self.state.get() else "Radio.TButton")
         return super().on_toggle(command)
 
     def on_radio_toggle(self):
+        """Executed when there is a change to the variable this radio button is connected to, for example by another radio button with the same variable
+        or by external code. Changes the state of this button to reflect the changed variable."""
         if not self.state.get() and self.variable.get() == self.value:
             self.state.set(True)
         elif self.state.get() and not self.variable.get() == self.value:
@@ -154,6 +171,7 @@ class CustomRadioButton(CustomToggleButton):
 
 
 class BorderFrame(ttk.Frame):
+    """Custom widget built from two nested empty frames with a slight padding to create a border."""
 
     def __init__(self, master=None, **kw):
         """Create an instance of BorderFrame."""
@@ -162,6 +180,9 @@ class BorderFrame(ttk.Frame):
         ttk.Frame(self, style="Inner.Border.TFrame").pack(padx=1, pady=1, fill="both", expand=True)
 
 class ToggledFrame(tk.Frame):
+    """Custom widget with CustomToggleButton with a Frame underneath. 
+    When the button is toggled the Frame is visible, otherwise it's collapsed.
+    Used for the table sections in the UI."""
 
     HEADER_SIZE = 50
 
@@ -197,6 +218,7 @@ class ToggledFrame(tk.Frame):
 
 
 class CustomMenuButton(ttk.OptionMenu):
+    """Custom styled dropdown selection button. Used for the speed selection in CremonaControlPanel."""
 
     ARROW_SIZE = 5
 
@@ -213,6 +235,9 @@ class CustomMenuButton(ttk.OptionMenu):
 
 
 class CustomEntry(tk.Entry):
+    """Custom entry widget that uses a specified filter method to filter inputs. 
+    For invalid inputs a warning popup is displayed with the warning returned by the filter method.
+    Used all over the UI."""
 
     POPUP_WIDTH = 70
 
@@ -229,6 +254,7 @@ class CustomEntry(tk.Entry):
         self['exportselection'] = False #stop selected text from being copied to clipboard
 
     def validate(self, new_value) -> bool:
+        """Executed whenever a new value is entered in the entry. Shows and hides warning popup."""
         validation = self.validator(new_value)
         if validation[0]:
             self.hide_popup()
@@ -237,6 +263,7 @@ class CustomEntry(tk.Entry):
         return True
 
     def show_popup(self, message):
+        """Show warning popup with the specified message."""
         if self.popup:
             self.popup.destroy()
         x, y, width = self.winfo_rootx(), self.winfo_rooty() + self.winfo_height(), self.winfo_width()
@@ -261,11 +288,13 @@ class CustomEntry(tk.Entry):
         label.pack(expand=True, fill="both")
 
     def hide_popup(self):
+        """Hide the warning popup if it exists."""
         if self.popup:
             self.popup.destroy()
             self.popup = None
 
 class ValidationText(tk.Text):
+    """Custom expandable text widget that is used for the validation text at the top of DefinitionDiagram."""
 
     def __init__(self, master, action, **kwargs):
         """Create an instance of ValidationText."""
@@ -274,11 +303,13 @@ class ValidationText(tk.Text):
         self.action = action
 
     def clear(self):
+        """Remove all text from the widget."""
         self.config(state=tk.NORMAL)
         self.delete("1.0", tk.END)
         self.config(state=tk.DISABLED, width=0, height=0)
 
     def text_add(self, text: str, tag: str, color: str):
+        """Add text to the widget and style it with the specified color."""
         self.config(state=tk.NORMAL)
         start = self.index("end-1c")
         self.insert(start, text)
@@ -288,6 +319,7 @@ class ValidationText(tk.Text):
         self.config(state=tk.DISABLED)
 
     def add_button(self):
+        """Add the show more/show less button at the end of the text widget."""
         self.config(state=tk.NORMAL)
         text = "show less" if self.is_expanded else "show more"
         start = self.index("end-1c")
@@ -301,10 +333,12 @@ class ValidationText(tk.Text):
         self.config(state=tk.DISABLED)
 
     def on_action(self, event):
+        """Action executed when the show more/show less button is pressed."""
         self.is_expanded = not self.is_expanded
         self.action()
 
     def resize(self):
+        """Resize the widget size to fit exactly with it's content."""
         width = max(tkfont.Font(font=FONT).measure(line) for line in self.get("1.0", tk.END).split("\n"))
         height = len(self.get("1.0", tk.END).split("\n")) - 1
         self.config(width=(width // tkfont.Font(font=FONT).measure("0") + 1), height=height)

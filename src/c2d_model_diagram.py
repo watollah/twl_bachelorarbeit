@@ -7,6 +7,7 @@ from c2d_diagram import Shape, ComponentShape, TwlDiagram
 
 
 class NodeShape(ComponentShape[Node]):
+    """Shape that represents Node Component in the diagram. Drawn as a circle."""
 
     TAG: str = "node"
 
@@ -21,6 +22,7 @@ class NodeShape(ComponentShape[Node]):
         self.draw_circle()
 
     def draw_circle(self):
+        """Draw the circle that represents the Node in the diagram and store its position and tkinter id."""
         p1, p2 = self.circle_coords
         self.circle_tk_id = self.diagram.create_oval(p1.x, p1.y, p2.x, p2.y, 
                             fill=self.BG_COLOR, 
@@ -31,30 +33,33 @@ class NodeShape(ComponentShape[Node]):
 
     @property
     def circle_coords(self) -> tuple[Point, Point]:
+        """Get the position of the circle that represents the Node in the diagram. Defined by top left and bottom right corner."""
         return Point(self.component.x - self.RADIUS, self.component.y - self.RADIUS), Point(self.component.x + self.RADIUS, self.component.y + self.RADIUS)
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return True if abs(self.component.x - x) <= self.RADIUS and abs(self.component.y - y) <= self.RADIUS else False
 
     def default_style(self, *tags: str) -> dict[str, str]:
+        """Get default, unselected style. Node is filled white with black outline."""
         return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     def selected_style(self, *tags: str) -> dict[str, str]:
+        """Get selected style. Node is filled light selected color, outline is selected color."""
         return {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     @property
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns position at top right of Node."""
         return Point(self.component.x + self.LABEL_OFFSET, self.component.y - self.LABEL_OFFSET)
 
-    @property
-    def bounds(self) -> Polygon:
-        return Polygon(Point(self.component.x, self.component.y))
-
     def scale(self, factor: float):
+        """Scale the circle of the Node to fit with current scaling in diagram."""
         super().scale(factor)
         self.diagram.itemconfig(self.circle_tk_id, width=self.BORDER * factor)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        """Update the position of this shape in the diagram if the Node's position changed. Also notifies shapes connected to Node to move."""
         if component_id == self.component.id and attribute_id in (XCoordinateAttribute.ID, YCoordinateAttribute.ID):
             p1, p2 = self.circle_coords
             self.tk_shapes[self.circle_tk_id] = Polygon(p1, p2)
@@ -73,6 +78,7 @@ class NodeShape(ComponentShape[Node]):
 
 
 class BeamShape(ComponentShape[Beam]):
+    """Shape that represents Beam Component in the diagram. Drawn as a line connecting two Nodes."""
 
     TAG: str = "beam"
     WIDTH: int = 4
@@ -86,6 +92,7 @@ class BeamShape(ComponentShape[Beam]):
         diagram.tag_lower(BeamShape.TAG, ForceShape.TAG)
 
     def draw_line(self):
+        """Draw the line that represents the Beam in the diagram and store it's position and tkinter id."""
         line = self.line_coords
         self.line_tk_id = self.diagram.create_line(line.start.x, line.start.y,
                             line.end.x, line.end.y,
@@ -96,26 +103,33 @@ class BeamShape(ComponentShape[Beam]):
 
     @property
     def line_coords(self) -> Line:
+        """Get the position of the line in the diagram. Returns the position of it's Nodes."""
         return Line(Point(self.component.start_node.x, self.component.start_node.y), Point(self.component.end_node.x, self.component.end_node.y))
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return Point(x, y).distance_to_line(self.line_coords) < self.WIDTH/2
 
     def default_style(self, *tags: str) -> dict[str, str]:
+        """Get default, unselected style. Beam line is black."""
         return {"fill": self.COLOR}
 
     def selected_style(self, *tags: str) -> dict[str, str]:
+        """Get selected style. Beam line is selected color."""
         return {"fill": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns the middle of the BeamShape."""
         return self.line_coords.midpoint()
 
     def scale(self, factor: float):
+        """Scale the line width to represent current scale in the diagram."""
         super().scale(factor)
         self.diagram.itemconfig(self.line_tk_id, width=self.WIDTH * factor)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        """Update line position if start or end Node changed."""
         if component_id == self.component.id and attribute_id in (StartNodeAttribute.ID, EndNodeAttribute.ID):
             line = self.line_coords
             self.tk_shapes[self.line_tk_id] = Polygon(line.start, line.end)
@@ -125,6 +139,7 @@ class BeamShape(ComponentShape[Beam]):
 
 
 class SupportShape(ComponentShape[Support]):
+    """Shape that represents Support component in the diagram. Drawn as Triangle connected to a Node."""
 
     TAG: str = "support"
 
@@ -146,9 +161,11 @@ class SupportShape(ComponentShape[Support]):
         diagram.tag_lower(SupportShape.TAG, NodeShape.TAG)
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return self.triangle_coords.inside_triangle(Point(x, y))
 
     def draw_triangle(self):
+        """Draw the triangle that represents the Support in the diagram and store it's position and tkinter id."""
         triangle = self.triangle_coords
         self.triangle_tk_id = self.diagram.create_polygon(triangle.p1.x, 
                                triangle.p1.y, 
@@ -164,6 +181,7 @@ class SupportShape(ComponentShape[Support]):
 
     @property
     def triangle_coords(self) -> Triangle:
+        """Get the coordinates of the triangle that represents the Support in the diagram."""
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT)
@@ -172,6 +190,7 @@ class SupportShape(ComponentShape[Support]):
         return triangle
 
     def draw_line(self):
+        """Draw the line below the triangle for Supports with one contraint. Is hidden if constraints == 2."""
         line = self.line_coords
         self.line_tk_id = self.diagram.create_line(line.start.x, 
                             line.start.y, 
@@ -184,6 +203,7 @@ class SupportShape(ComponentShape[Support]):
 
     @property
     def line_coords(self) -> Line:
+        """Get the coordinates of the line below the triangle for supports with one constraint."""
         n_point = Point(self.component.node.x, self.component.node.y)
         l_point = Point(int(n_point.x - self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
         r_point = Point(int(n_point.x + self.WIDTH / 2), n_point.y + self.HEIGHT + self.LINE_SPACING)
@@ -192,24 +212,30 @@ class SupportShape(ComponentShape[Support]):
         return line
 
     def default_style(self, *tags: str) -> dict[str, str]:
+        """Get default, unselected style. Triangle is filled white with black outline."""
         return {"fill": self.COLOR} if self.LINE_TAG in tags else {"fill": self.BG_COLOR, "outline": self.COLOR}
 
     def selected_style(self, *tags: str) -> dict[str, str]:
+        """Get the selected style. Triangle is filled light selected color, outline and line below triangle is selected color."""
         return {"fill": self.SELECTED_COLOR} if self.LINE_TAG in tags else {"fill": self.SELECTED_BG_COLOR, "outline": self.SELECTED_COLOR}
 
     @property
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns position below triangle of SupportShape."""
         n_point = Point(self.component.node.x, self.component.node.y)
         point = Point(self.component.node.x, self.component.node.y + self.HEIGHT + self.LABEL_OFFSET)
         point.rotate(n_point, self.component.angle + 180)
         return point
 
     def scale(self, factor: float):
+        """Scale the triangle and line to represent the current scaling of the diagram."""
         super().scale(factor)
         self.diagram.itemconfig(self.triangle_tk_id, width=self.BORDER * factor)
         self.diagram.itemconfig(self.line_tk_id, width=self.BORDER * factor)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        """Update the triangles position in the diagram if Node position or angle changed. 
+        Oupdate visibility of the line if constraints changed."""
         if component_id == self.component.id:
             if attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
                 triangle = self.triangle_coords
@@ -224,11 +250,13 @@ class SupportShape(ComponentShape[Support]):
         super().update_observer(component_id, attribute_id)
 
     def update_line_visibility(self):
+        """Set the visibility of the line underneath the triangle based on the number of constraints of the Support."""
         line_visibility = tk.NORMAL if self.component.constraints == 1 else tk.HIDDEN
         self.diagram.itemconfig(self.line_tk_id, state=line_visibility)
 
 
 class ForceShape(ComponentShape[Force]):
+    """Shape that represents Force component in the diagram. Drawn as arrow pointing at Node."""
 
     TAG: str = "force"
 
@@ -245,6 +273,7 @@ class ForceShape(ComponentShape[Force]):
         self.draw_arrow()
 
     def draw_arrow(self):
+        """Draw this shape as a line with an arrowhead in the diagram."""
         arrow = self.arrow_coords
         self.arrow_tk_id = self.diagram.create_line(arrow.start.x, 
                             arrow.start.y, 
@@ -259,6 +288,7 @@ class ForceShape(ComponentShape[Force]):
 
     @property
     def arrow_coords(self) -> Line:
+        """Get the position of the arrow that represents the Force in the diagram."""
         n = Point(self.component.node.x, self.component.node.y)
         a1 = Point(n.x, n.y - self.DISTANCE_FROM_NODE)
         a2 = Point(a1.x, a1.y - self.LENGTH)
@@ -267,27 +297,33 @@ class ForceShape(ComponentShape[Force]):
         return line
 
     def default_style(self, *tags: str) -> dict[str, str]:
+        """Get default, unselected style. Arrow is black."""
         return {"fill": self.COLOR}
 
     def selected_style(self, *tags: str) -> dict[str, str]:
+        """Get selected style. Arrow is selected color."""
         return {"fill": self.SELECTED_COLOR}
 
     def is_at(self, x: float, y: float) -> bool:
+        """Returns True if the shape is at the specified position in the diagram, False otherwise."""
         return Point(x, y).distance_to_line(self.arrow_coords) < self.WIDTH/2
 
     @property
     def label_position(self) -> Point:
+        """Get the position of the label of this shape in the diagram. Returns position to the right of the Force."""
         n_point = Point(self.component.node.x, self.component.node.y)
         point = Point(n_point.x + self.LABEL_OFFSET, n_point.y - self.DISTANCE_FROM_NODE - ((self.LENGTH + self.ARROW_SHAPE[0]) / 2))
         point.rotate(n_point, self.component.angle)
         return point
 
     def scale(self, factor: float):
+        """Scale the arrowhead and the linewidth of the arrow to fit with current diagram scaling."""
         super().scale(factor)
         scaled_arrow = tuple(value * factor for value in self.ARROW_SHAPE)
         self.diagram.itemconfig(self.arrow_tk_id, width=self.WIDTH * factor, arrowshape=scaled_arrow)
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update the position of the arrow if the Force angle or Node position changed."""
         if component_id == self.component.id and attribute_id in (NodeAttribute.ID, AngleAttribute.ID):
             arrow = self.arrow_coords
             self.tk_shapes[self.arrow_tk_id] = Polygon(arrow.start, arrow.end)
@@ -297,6 +333,7 @@ class ForceShape(ComponentShape[Force]):
 
 
 class ModelDiagram(TwlDiagram):
+    """Base class for all Diagrams that display the Model."""
 
     def __init__(self, master):
         """Create an instance of ModelDiagram."""
@@ -323,10 +360,12 @@ class ModelDiagram(TwlDiagram):
         super().update_observer(component_id, attribute_id)
 
     def refresh(self):
+        """Refresh the diagram and set correct label visibility based on selected settings."""
         super().refresh()
         self.label_visibility()
 
     def label_visible(self, shape: Shape) -> bool:
+        """Returns if the label of a shape should be visible in the diagram or not."""
         visible: dict[type[Shape], bool] = {
             NodeShape: TwlApp.settings().show_node_labels.get(),
             BeamShape: TwlApp.settings().show_beam_labels.get(),

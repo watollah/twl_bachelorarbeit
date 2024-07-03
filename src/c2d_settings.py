@@ -4,6 +4,7 @@ from c2d_update import UpdateManager
 
 
 class Settings:
+    """Class that stores global settings used throughout the application."""
 
     def __init__(self, update_manager: UpdateManager) -> None:
         """Create an instance of Settings."""

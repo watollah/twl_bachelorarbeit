@@ -28,6 +28,7 @@ class UpdateManager:
         self.notify_observers()
 
     def register_observer(self, observer: Observer):
+        """Add an Observer to the UpdateManager's Observer list."""
         self._observers.append(observer)
 
     def notify_observers(self, component_id: str="", attribute_id: str=""):

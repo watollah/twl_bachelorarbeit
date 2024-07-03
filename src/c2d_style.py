@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 from c2d_images import add_image
 
 
-TTK_CLAM = "clam"
+TTK_CLAM = "clam" #ttk style that this application's style is build on
 
 FONT_TYPE = "Helvetica"
 
@@ -25,6 +25,7 @@ CHECK_SYMBOL = "✔"
 
 
 class Colors:
+    """Class that stores all color values used throughout the ui."""
 
     ACCENT = ""
     LIGHT_ACCENT = ""
@@ -47,7 +48,7 @@ class Colors:
 
 
 def init_style():
-
+    """Initialize and register the Styles for all UI widgets."""
     style = ttk.Style()
     style.theme_use(TTK_CLAM)
 
@@ -153,20 +154,17 @@ def init_style():
     style.map("TMenubutton", background=[('pressed', '!disabled', Colors.LIGHT_GRAY), ('active', Colors.VERY_LIGHT_GRAY)])
 
 def create_scale_image(color: str) -> tk.PhotoImage:
+    """Create a round slider button for the control panel slider. The default one looks very outdated."""
     image = Image.new("RGBA", (100, 100))
     draw = ImageDraw.Draw(image)
     draw.ellipse((0, 0, 95, 95), fill=color, outline=Colors.BLACK, width=4)
     return add_image(image, SCALE_THUMB_SIZE, SCALE_THUMB_SIZE)
 
 def create_checkbutton_image(color: str, text: str) -> tk.PhotoImage:
-        checkbutton_on = Image.new("RGBA", (134, 134))
-        draw = ImageDraw.Draw(checkbutton_on)
-        draw.rectangle(
-            [2, 2, 132, 132],
-            outline=color,
-            width=6,
-            fill=Colors.WHITE,
-        )
-        fnt = ImageFont.truetype("seguisym.ttf", 110)
-        draw.text((20, -10), text, font=fnt, fill=Colors.BLACK)
-        return add_image(checkbutton_on, CHECK_SIZE, CHECK_SIZE)
+    """Create the checkmark image for checkbuttons in the UI."""
+    checkbutton_on = Image.new("RGBA", (134, 134))
+    draw = ImageDraw.Draw(checkbutton_on)
+    draw.rectangle([2, 2, 132, 132], outline=color, width=6, fill=Colors.WHITE)
+    fnt = ImageFont.truetype("seguisym.ttf", 110)
+    draw.text((20, -10), text, font=fnt, fill=Colors.BLACK)
+    return add_image(checkbutton_on, CHECK_SIZE, CHECK_SIZE)

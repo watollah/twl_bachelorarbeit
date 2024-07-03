@@ -4,8 +4,6 @@ import math
 from typing import Callable, TypeVar, Type, cast, Generic
 from enum import Enum
 
-import numpy as np
-
 from c2d_math import Point, Line
 from c2d_update import UpdateManager
 from c2d_help import int_to_roman
