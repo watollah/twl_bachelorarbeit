@@ -10,6 +10,7 @@ from c2d_table import TwlTable
 
 
 class ResultTab(TwlTab):
+    """Represents the result tab, the last tab in the application where the results of solving the Model are displayed in the ResultDiagram and tables."""
 
     ID: str = "result_tab"
 
@@ -30,16 +31,19 @@ class ResultTab(TwlTab):
         self.tables = self.create_tables(tables_frame)
 
     def update_observer(self) -> None:
+        """Update all UI widgets in the tab with the newest results from the solver."""
         self.beams_table.component_list = self.get_result_forces(Beam)
         self.supports_table.component_list = self.get_result_forces(Support)
         [table.update_observer() for table in self.tables]
         self.result_diagram.update_observer()
 
     def create_diagram(self, frame: ttk.Frame):
+        """Create the ResultDiagram."""
         result_diagram = ResultDiagram(frame)
         return result_diagram
 
     def create_tables(self, frame: ttk.Frame):
+        """Create the tables on the right that display all of the results."""
         beams_entry = ToggledFrame(frame, "Beams")
         beams_entry.pack(fill="x")
         self.beams_table = TwlTable(beams_entry.content, self.get_result_forces(Beam), Result)
@@ -61,5 +65,6 @@ class ResultTab(TwlTab):
         return self.beams_table, self.supports_table, self.force_table
 
     def get_result_forces(self, component_type: type[Beam] | type[Support]):
+        """Create Result components from the results of the solver to populate the result tables."""
         model = Model(UpdateManager())
         return [Result(model, force) for force, component in TwlApp.solver().solution.items() if isinstance(component, component_type)]

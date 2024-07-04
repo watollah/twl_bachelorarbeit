@@ -9,6 +9,7 @@ from c2d_table import TwlTable
 
 
 class DefinitionTab(TwlTab):
+    """Class that represents first tab in the application with DefinitionDiagram and Model component tables."""
 
     ID: str = "definition_tab"
 
@@ -29,11 +30,13 @@ class DefinitionTab(TwlTab):
         self.tables = self.create_tables(tables_frame)
 
     def create_diagram(self, frame: ttk.Frame):
+        """Create the DefinitionDiagram and register it in the UpdateManager."""
         diagram = DefinitionDiagram(frame)
         TwlApp.update_manager().register_observer(diagram)
         return diagram
 
     def create_tables(self, frame: ttk.Frame):
+        """Create the Model component tables on the right of the definition tab and register them in the UpdateManager."""
         nodes_entry = ToggledFrame(frame, "Nodes")
         nodes_entry.pack(fill="x")
         nodes_table = TwlTable(nodes_entry.content, TwlApp.model().nodes, Node)

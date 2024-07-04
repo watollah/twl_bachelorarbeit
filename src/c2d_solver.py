@@ -17,6 +17,7 @@ class Solver:
         self.solution: dict[Force, Component] = {}
 
     def solve(self):
+        """Solve the model by constructing the system of linear equations and solving them with np.linalg.solve."""
         self.reset()
         if not self.model.is_valid():
             return
@@ -35,11 +36,14 @@ class Solver:
         self.print_result()
 
     def reset(self):
+        """Reset the solver by deleting the equation and solution."""
         self.factor_matrix = []
         self.result_vector = []
         self.solution = {}
 
     def get_unknown_forces(self) -> dict[Force, Component]:
+        """Returns a list of all the unknown forces in the system mapped to the component that they belong to. 
+        Includes reaction forces and beam forces."""
         unknown_forces: dict[Force, Component] = {}
         for support in self.model.supports:
             if support.constraints == 2:
@@ -52,6 +56,8 @@ class Solver:
         return unknown_forces
 
     def get_node_factors(self, node: Node, orientation: Orientation) -> list[float]:
+        """Get all the factors for one Node and orientation for a row of the factor matrix A in Ax = b.
+        Specifies for all unknown forces in the Model the extend to which these forces are present on the Node in the specified orientation/direction."""
         factors: list[float] = []
         for support in self.model.supports:
             support_factors = self.generate_factors((support.angle + 180) % 360)
@@ -62,6 +68,8 @@ class Solver:
         return factors
 
     def get_node_forces(self, node: Node, orientation: Orientation) -> float:
+        """Get the sum of the strength of all Force components in the Model on this Node in the specified orientation.
+        This is used for the entry for the Node in the result vector b of Ax = b."""
         forces: list[float] = []
         for force in self.model.forces:
             force_factors = self.generate_factors((force.angle + 180) % 360)
@@ -69,6 +77,10 @@ class Solver:
         return -sum(forces)
 
     def generate_factors(self, angle: float) -> dict[tuple[bool, int, Orientation], list[float]]:
+        """Get a mapping for a factor for an unknown force on a Node depending on if the force exists on the Node, how many constraints it has 
+        (only relevant if it's a Support), and in which orientation I'm interested. If it doesn't exist or doesn't go at all in the specified direction
+        then the factor is 0. If it exists and goes completely in the specified direction the factor is 1. If it goes in part in the specified direction then
+        the factor is determined using sin/cos."""
         return {
             #(exists on node, no of constraints, orientation): factors
             (True, 1, Orientation.HORIZONTAL): [math.sin(math.radians(angle))],
@@ -82,12 +94,14 @@ class Solver:
         }
 
     def beam_angle(self, node: Node, beam: Beam) -> float:
+        """Get the angle of a beam relative to the specified Node (using the Node as the start Node)."""
         if beam in node.beams:
             other_node = beam.start_node if beam.start_node != node else beam.end_node
             return Line(Point(node.x, node.y), Point(other_node.x, other_node.y)).angle()
         return beam.angle
 
     def print_result(self):
+        """Used for debug-purposes to print a readable representation of the matrix equation and the solution vector in the console."""
         unknown_forces = list(self.solution.keys())
 
         prefix_max_width = max(len(node.id) for node in self.model.nodes) + 8
@@ -109,4 +123,5 @@ class Solver:
                   + space3 + f"[{self.format_float(unknown_forces[i].strength).ljust(solved_max_width)}]")
 
     def format_float(self, f) -> str:
+        """Format a float value to display it neatly in the console."""
         return "{:.2f}".format(f)

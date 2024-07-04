@@ -8,6 +8,7 @@ from typing import cast
 image_references: list[tk.PhotoImage] = []
 
 def add_image(pil_image: Image.Image, width: int|None=None, height: int|None=None) -> tk.PhotoImage:
+    """Add an image to the application. Resizes it to the specified width and height and stores a reference to keep it in memory."""
     if width and height:
         pil_image = pil_image.resize((width, height), Image.Resampling.LANCZOS)
     tk_image = cast(tk.PhotoImage, ImageTk.PhotoImage(pil_image))
@@ -15,6 +16,7 @@ def add_image(pil_image: Image.Image, width: int|None=None, height: int|None=Non
     return tk_image
 
 def add_png_by_name(name: str, width: int|None=None, height: int|None=None) -> tk.PhotoImage:
+    """Add a png by specifying it's name. The image is looked up in the img folder."""
     pil_image = Image.open(get_image_path(name, "png"))
     return add_image(pil_image, width, height)
 
