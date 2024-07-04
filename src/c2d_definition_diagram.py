@@ -458,7 +458,7 @@ class BeamTool(ComponentTool[Beam]):
         inital_line = Line(start_point, Point(event.x, event.y))
         rounded_line = Line(start_point, Point(start_point.x, start_point.y + 10))
         rounded_line.rotate(start_point, inital_line.angle_rounded())
-        new_point = rounded_line.closest_point_on_axis(Point(event.x, event.y))
+        new_point = rounded_line.closest_point(Point(event.x, event.y))
         event.x = new_point.x
         event.y = new_point.y
 
