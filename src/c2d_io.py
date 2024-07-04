@@ -6,61 +6,68 @@ from c2d_app import TwlApp
 from c2d_components import Node, Beam, Support, Force
 
 
-FILENAME: str | None = None
+FILE_PATH: str | None = None
 EXTENSION: str = ".c2d"
 
 def get_project_name() -> str | None:
-    return os.path.splitext(os.path.basename(FILENAME))[0] if FILENAME else None
+    """Get the name of the project from the project path."""
+    return os.path.splitext(os.path.basename(FILE_PATH))[0] if FILE_PATH else None
 
-def clear_project():
-    global FILENAME
+def new_project():
+    """Clear all data from the Model and reset the stored project path."""
+    global FILE_PATH
     if not TwlApp.model().is_empty() and not TwlApp.saved_state().get():
         ok = messagebox.askokcancel("Warning", "Creating a new project will discard current changes.", default="cancel")
         if not ok:
             return
     TwlApp.model().clear()
-    FILENAME = None
+    FILE_PATH = None
     print("Project cleared")
     TwlApp.saved_state().set(True)
 
 def save_project():
-    global FILENAME
-    if FILENAME:
-        with open(FILENAME, "w") as file:
+    """Serialize the project and save it to the stored project path. If no path is stored ask the user to provide one."""
+    global FILE_PATH
+    if FILE_PATH:
+        with open(FILE_PATH, "w") as file:
             serialized_project = serialize_project()
             json.dump(serialized_project, file)
-            print("Project saved to", FILENAME)
+            print("Project saved to", FILE_PATH)
         TwlApp.saved_state().set(True)
         return
     save_project_as()
 
 def save_project_as():
-    global FILENAME
-    new_filename = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D Projects", f"*{EXTENSION}")])
-    if new_filename:
-        FILENAME = new_filename
+    """Serialize the project and save it to a new path."""
+    global FILE_PATH
+    new_file_path = filedialog.asksaveasfilename(defaultextension=EXTENSION, filetypes=[("C2D Projects", f"*{EXTENSION}")])
+    if new_file_path:
+        FILE_PATH = new_file_path
         save_project()
 
-def open_project(filename=None) -> bool:
-    global FILENAME
+def open_project(file_path=None) -> bool:
+    """Open a project from a specified path. Warning is displayed for loss of current project. If accepted current project is cleared, new path is stored
+    and project from path is deserialized."""
+    global FILE_PATH
     if not TwlApp.saved_state().get():
         ok = messagebox.askokcancel("Warning", "Opening a new project will discard current changes.", default="cancel")
         if not ok:
             return False
-    filename = filename if filename else filedialog.askopenfilename(filetypes=[("C2D Projects", f"*{EXTENSION}")])
-    if filename:
-        FILENAME = filename
-        with open(FILENAME, "r") as file:
+    file_path = file_path if file_path else filedialog.askopenfilename(filetypes=[("C2D Projects", f"*{EXTENSION}")])
+    if file_path:
+        FILE_PATH = file_path
+        with open(FILE_PATH, "r") as file:
             serialized_project = json.load(file)
             TwlApp.update_manager().pause_observing()
             deserialize_project(serialized_project)
             TwlApp.update_manager().resume_observing()
-        print("Project loaded from", FILENAME)
+        print("Project loaded from", FILE_PATH)
         TwlApp.saved_state().set(True)
         return True
     return False
 
 def serialize_project():
+    """Project is converted to a dict in preparation to be stored in a json file."""
     serialized_project = {
         "nodes": [(node.id, node.x, node.y) for node in TwlApp.model().nodes],
         "beams": [(beam.id, beam.start_node.id, beam.end_node.id) for beam in TwlApp.model().beams],
@@ -70,6 +77,7 @@ def serialize_project():
     return serialized_project
 
 def deserialize_project(serialized_project):
+    """Project is read from a string in json text format. The data in the file is converted to objects."""
     model = TwlApp.model()
     model.clear()
 
