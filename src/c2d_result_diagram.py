@@ -43,7 +43,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         line = Line(Point(p1.x, p1.y), Point(p2.x, p2.y))
-        height = 0 if self.get_max_strength() == 0 else (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
+        height = 0 if self.get_max_strength() == 0 or round(self.force.strength, 2) == 0 else (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
         angle = (self.component.angle + 90) % 360
         if 0 <= angle <= 90 or 270 < angle <= 360:
             angle = (angle + 180) % 360
@@ -53,7 +53,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
 
     def get_max_strength(self) -> float:
         """Get the maximum result force strength in the diagram."""
-        return max([force.strength for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)])
+        return max([abs(force.strength) for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)])
 
     def scale(self, factor: float):
         """Scale the width of the rectangle border."""
