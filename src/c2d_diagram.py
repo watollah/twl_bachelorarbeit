@@ -26,16 +26,21 @@ class Shape():
         self.tk_shapes: dict[int, Polygon] = {} #all tk_ids related to this shape with their position in the diagram
 
     def scale(self, factor: float):
+        """Scale the shape with a factor. Takes all tkinter shapes connected to this shape 
+        and changes their coordinates by scaling the polygon connected to each id."""
         for tk_id, polygon in self.tk_shapes.items():
             coords = [coord * factor for point in polygon.points for coord in (point.x, point.y)]
             self.diagram.coords(tk_id, coords)
 
     def move(self, x: int, y: int):
+        """Move the shape by the specified amount in the x and y direction 
+        by moving them directly in the diagram and also moving the position of the stored polygons."""
         for tk_id, polygon in self.tk_shapes.items():
             self.diagram.move(tk_id, x, y)
             polygon.move(x, y)
 
     def set_visible(self, visible: bool):
+        """Set the visibility state of all tkinter shapes connected to this shape."""
         state = tk.NORMAL if visible else tk.HIDDEN
         for tk_id in self.tk_shapes.keys():
             self.diagram.itemconfig(tk_id, state=state)
@@ -63,6 +68,7 @@ class ComponentShape(Generic[C], Shape, Observer):
     LABEL_SIZE = 12
 
     def __init_subclass__(cls):
+        """When initializing a subclass of ComponentShape, add the tag specified in the subclasses TAG to the subclasses TAGS."""
         super().__init_subclass__()
         cls.TAGS = cls.TAGS.copy()
         cls.TAGS.append(cls.TAG)
@@ -76,17 +82,20 @@ class ComponentShape(Generic[C], Shape, Observer):
         self.draw_label()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update the component shape. Updates the id label if the id attribute is changed."""
         if component_id == self.component.id and attribute_id == IdAttribute.ID:
             self.set_label_text(self.component.id)
             self.diagram.refresh()
         super().update_observer(component_id, attribute_id)
 
     def remove(self):
+        """Remove all tkinter shapes connected to this shape from the diagram and remove the shape itself from the diagrams shape list."""
         for tk_id in self.tk_shapes.keys():
             self.diagram.delete(tk_id)
         self.diagram.shapes.remove(self)
 
     def select(self):
+        """Append this shape to the selection of the diagram and style all of it's tkinter shapes with the shape's selected style."""
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
             if self.LABEL_TAG in tags:
@@ -97,6 +106,7 @@ class ComponentShape(Generic[C], Shape, Observer):
         print(f"selected: {self.component.id}")
 
     def deselect(self):
+        """Remove this shape from the selection of the diagram and style all of it's tkinter shapes with the shape's default style."""
         for tk_id in self.tk_shapes.keys():
             tags = self.diagram.gettags(tk_id)
             if self.LABEL_TAG in tags:
@@ -122,6 +132,7 @@ class ComponentShape(Generic[C], Shape, Observer):
         self.diagram.itemconfig(self.label_tk_id, font=('Helvetica', int(self.LABEL_SIZE * factor)))
 
     def draw_label(self):
+        """Draw the label at the position specified in the shapes label position and with the value of the shape's component's id."""
         label_pos = self.label_position
         self.label_tk_id, self.label_bg_tk_id = self.diagram.create_text_with_bg(label_pos.x, label_pos.y, 
                                  text=self.component.id, 
@@ -140,15 +151,18 @@ class ComponentShape(Generic[C], Shape, Observer):
         return Point(TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING, TwlDiagram.SCROLL_EXTEND + TwlDiagram.UI_PADDING)
 
     def set_label_text(self, text: str):
+        """Change the text of this shape's label and reset it's size and position accordingly."""
         self.diagram.itemconfig(self.label_tk_id, text=text)
         self.update_label_pos()
 
     def set_label_visible(self, visible: bool):
+        """Change the state of visibilty of this shape's label."""
         state = tk.NORMAL if visible else tk.HIDDEN
         self.diagram.itemconfig(self.label_tk_id, state=state)
         self.diagram.itemconfig(self.label_bg_tk_id, state=state)
 
     def update_label_pos(self):
+        """Reset this shape's label position, for example after the shape is moved."""
         label_pos = self.label_position
         self.tk_shapes[self.label_tk_id] = Polygon(label_pos)
         self.diagram.coords(self.label_tk_id, label_pos.x, label_pos.y)
@@ -161,6 +175,8 @@ class ComponentShape(Generic[C], Shape, Observer):
 
 
 class Tool:
+    """Base class for all tools in diagrams. Handles binding of actions used by all tools 
+    and correction of event positions for scrolling and zooming."""
 
     ID: int = -1
     NAME: str = "X"
@@ -172,17 +188,20 @@ class Tool:
         self.diagram: 'TwlDiagram' = diagram
 
     def activate(self):
+        """Activate the tool by binding events."""
         self.diagram.bind("<Button-1>", self._action)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
         self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(ComponentShape.TEMP))
 
     def deactivate(self):
+        """Deactivate the tool by unbinding events."""
         self.diagram.unbind("<Button-1>")
         self.diagram.unbind("<Escape>")
         self.diagram.unbind("<Leave>")
         self.reset()
 
     def reset(self):
+        """Reset the tool by deleting all temporary component shapes."""
         self.diagram.delete_with_tag(ComponentShape.TEMP)
 
     def correct_event_pos(self, event):
@@ -191,6 +210,7 @@ class Tool:
         self.correct_scaling(event)
 
     def correct_scrolling(self, event):
+        """Correct the event position to account for scrolling in the diagram."""
         x_min, y_min, x_max, y_max = self.diagram.get_scrollregion()
         sr_width = abs(x_min) + abs(x_max)
         sr_height = abs(y_min) + abs(y_max)
@@ -198,10 +218,12 @@ class Tool:
         event.y = event.y + self.diagram.yview()[0] * sr_height - abs(y_min)
 
     def correct_scaling(self, event):
+        """Correct the event position to account for scaling in the diagram."""
         event.x = event.x * (1 / (self.diagram.current_zoom.get() / 100))
         event.y = event.y * (1 / (self.diagram.current_zoom.get() / 100))
 
     def _action(self, event):
+        """Correct event position and execute action."""
         self.correct_event_pos(event)
         self.action(event)
 
@@ -210,6 +232,7 @@ class Tool:
         return True
 
     def holding_shift_key(self, event) -> bool:
+        """Returns True if the user is holding the shift-key. Used for snapping and in selection."""
         return event.state & 0x1 #bitwise ANDing the event.state with the ShiftMask flag
 
 

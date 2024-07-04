@@ -10,7 +10,7 @@ from c2d_update import Observer
 C = TypeVar('C', bound=Component)
 
 class TwlTableEntryPopUp(CustomEntry):
-    """Popup on top of a """
+    """Entry that appears on top of table cells to enable editing their value."""
 
     def __init__(self, table, component: Component, attribute: Attribute, **kw):
         """Create an instance of TwlTableEntryPopup."""
@@ -27,12 +27,14 @@ class TwlTableEntryPopUp(CustomEntry):
         self.bind("<FocusOut>", lambda *ignore: self.destroy())
 
     def on_return(self, event):
+        """When the user presses enter to set a value in the table the popup is destroyed if the value is valid."""
         if self.attribute.filter(self.get())[0]:
             self.attribute.set_value(self.get())
             self.destroy()
 
 
 class TwlTable(Observer, ttk.Treeview, Generic[C]):
+    """Table that can display a list of Components. Extracts the columns and values from the Components attributes."""
 
     def __init__(self, master, component_list: list[C], component_type: type[C]):
         """Create an instance of TwlTable."""
@@ -47,11 +49,12 @@ class TwlTable(Observer, ttk.Treeview, Generic[C]):
         self.bind('<Double-1>', self.direct_edit_cell)
 
     def update_observer(self, component_id: str = "", attribute_id: str = ""):
+        """Update the table by deleting all entries and repopulating it with the entries in it's list."""
         self.delete(*self.get_children())
         for c in self.component_list: self.insert("", tk.END, text=str(c.id), values=[attr.get_display_value() for attr in c.attributes])
 
     def direct_edit_cell(self, event):
-        ''' Executed when a table entry is double-clicked. Opens popup on top of entry to enable editing its value.'''
+        """Executed when a table entry is double-clicked. Opens entry on top of table cell to enable editing it's value."""
         columnid = self.identify_column(event.x)
         rowid = self.identify_row(event.y)
         itemid = self.item(rowid, "text")
@@ -73,6 +76,7 @@ class TwlTable(Observer, ttk.Treeview, Generic[C]):
         self.entryPopup.place( x=x, y=y+pady, anchor=tk.W, width=width)
 
     def hide_columns(self, *column_ids: str):
+        """Can be used to hide specific attribute columns from the table."""
         columns = list(self["columns"])
         for column_id in column_ids:
             columns.remove(column_id)
