@@ -10,6 +10,7 @@ from c2d_result_model_diagram import BeamForceShape, ResultModelDiagram
 
 
 class BeamForcePlotShape(ComponentShape[Beam]):
+    """Plotted result force in the result diagram. Displayed as rectangles on the Beams."""
 
     TAG: str = "beam_force_plot"
 
@@ -23,6 +24,7 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         self.draw_rect()
 
     def draw_rect(self):
+        """Draw the rectangle shape and store its coordinates and tkinter id."""
         rect = self.rect_coords
         bd_color, bg_color = (Colors.DARK_SELECTED, Colors.LIGHT_SELECTED) if self.force.strength < 0 else (Colors.RED, Colors.LIGHT_RED)
         self.rect_tk_id = self.diagram.create_polygon(rect[0].x, rect[0].y, rect[1].x, rect[1].y,
@@ -35,10 +37,13 @@ class BeamForcePlotShape(ComponentShape[Beam]):
 
     @property
     def rect_coords(self) -> tuple[Point, Point, Point, Point]:
+        """Calculate the coordinates of the rectangle. The orientation is determined by the strength being compressive or tensile.
+        The maximum height of the rectangle is fixed and assigned to the biggest force in the result. The rest of the heights are calculated
+        as fractions of the maximum height."""
         p1 = Point(self.component.start_node.x, self.component.start_node.y)
         p2 = Point(self.component.end_node.x, self.component.end_node.y)
         line = Line(Point(p1.x, p1.y), Point(p2.x, p2.y))
-        height = 0 if self.get_max_strength() == 0 else (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
+        height = 0 if self.get_max_strength() == 0 or round(self.force.strength, 2) == 0 else (self.force.strength / self.get_max_strength()) * self.MAX_HEIGHT
         angle = (self.component.angle + 90) % 360
         if 0 <= angle <= 90 or 270 < angle <= 360:
             angle = (angle + 180) % 360
@@ -47,16 +52,21 @@ class BeamForcePlotShape(ComponentShape[Beam]):
         return p1, p2, line.end, line.start
 
     def get_max_strength(self) -> float:
-        return max([force.strength for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)])
+        """Get the maximum result force strength in the diagram."""
+        return max([abs(force.strength) for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)])
 
     def scale(self, factor: float):
+        """Scale the width of the rectangle border."""
         super().scale(factor)
         self.diagram.itemconfig(self.rect_tk_id, width=self.BORDER * factor)
 
 
 class ResultDiagram(ResultModelDiagram):
+    """Result diagram displayed in result tab. Displays to the user the result of solving the Model.
+    Shows the beams marked with symbols and colors as compressive/tensile/zero and the forces on the beams plotted as rectangles."""
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update the diagram by redrawing the BeamForcePlotShapes."""
         super().update_observer(component_id, attribute_id)
         [shape.remove() for shape in self.shapes.copy() if isinstance(shape, BeamForcePlotShape)]
         self.draw_beam_force_plots()
@@ -64,6 +74,7 @@ class ResultDiagram(ResultModelDiagram):
         self.refresh()
 
     def draw_beam_force_plots(self):
+        """Draw the result in the diagram for each beam."""
         beam_forces = {force: component for force, component in TwlApp.solver().solution.items() if isinstance(component, Beam)}
         for force, beam in beam_forces.items():
             strength = round(force.strength, 2)
@@ -74,6 +85,7 @@ class ResultDiagram(ResultModelDiagram):
         self.tag_lower(BeamForcePlotShape.TAG)
 
     def highlight(self, shape: ComponentShape, color: str):
+        """Highlight a shape in the diagram with the specified color."""
         for tk_id in shape.tk_shapes.keys():
             tags = self.gettags(tk_id)
             if all(tag not in tags for tag in (shape.LABEL_TAG, shape.LABEL_BG_TAG)):
@@ -82,4 +94,5 @@ class ResultDiagram(ResultModelDiagram):
             self.itemconfig(shape.circle_tk_id, fill=Colors.WHITE)
 
     def label_visible(self, shape: Shape) -> bool:
+        """Returns if label for shape should be visible in the diagram. Labels are disabled for BeamForceShapes and BeamForcePlotShapes."""
         return type(shape) not in (BeamForceShape, BeamForcePlotShape) and super().label_visible(shape)

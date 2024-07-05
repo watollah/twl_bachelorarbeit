@@ -191,7 +191,7 @@ class Tool:
         """Activate the tool by binding events."""
         self.diagram.bind("<Button-1>", self._action)
         self.diagram.bind("<Escape>", lambda *ignore: self.reset())
-        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_with_tag(ComponentShape.TEMP))
+        self.diagram.bind("<Leave>", lambda *ignore: self.diagram.delete_temp_shapes())
 
     def deactivate(self):
         """Deactivate the tool by unbinding events."""
@@ -202,7 +202,7 @@ class Tool:
 
     def reset(self):
         """Reset the tool by deleting all temporary component shapes."""
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.diagram.delete_temp_shapes()
 
     def correct_event_pos(self, event):
         """Correct the coordinates of the mouse pointer to account for scrolling and scaling of the diagram."""
@@ -237,6 +237,7 @@ class Tool:
 
 
 class TwlDiagram(Observer, tk.Canvas):
+    """Base class of the application's diagrams."""
 
     ZOOM_STEP: float = 5
     MIN_ZOOM: float = 10
@@ -301,6 +302,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.update_scrollregion()
 
     def update_observer(self, component_id: str="", attribute_id: str=""):
+        """Update the diagram. Performs refresh."""
         self.refresh()
 
     def clear(self):
@@ -312,6 +314,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.shapes.clear()
 
     def create_bottom_bar(self) -> tk.Frame:
+        """Create frame on bottom of the diagram that holds zoom control."""
         bottom_bar = tk.Frame(self, background=Colors.WHITE)
         zoom_label = ttk.Label(bottom_bar, text=f"Zoom ")
         zoom_label.pack(side=tk.LEFT, padx=(0, 0))
@@ -326,6 +329,7 @@ class TwlDiagram(Observer, tk.Canvas):
         return bottom_bar
 
     def create_scrollbars(self, master):
+        """Create the scrollbars around the diagram."""
         v_scrollbar = tk.Scrollbar(master, orient=tk.VERTICAL, command=lambda scrolltype, amount: self.scroll(tk.VERTICAL, scrolltype, amount))
         v_scrollbar.grid(column=1, row=0, sticky=tk.NS)
 
@@ -338,6 +342,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.configure(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set)
 
     def scroll(self, orientation: str, scroll_type: str, amount):
+        """Scroll the diagram by a specific amount in a specific direction."""
         if orientation == tk.HORIZONTAL:
             if scroll_type == tk.MOVETO:
                 self.xview_moveto(amount)
@@ -351,6 +356,7 @@ class TwlDiagram(Observer, tk.Canvas):
         self.refresh()
 
     def update_scrollregion(self):
+        """Update the scrollable area of the canvas. Calculated with the bounds of all the shapes plus a margin."""
         shapes = [tk_id for shape in self.shapes for tk_id in shape.tk_shapes.keys() if self.itemcget(tk_id, "state") in (tk.NORMAL, "")]
         if shapes:
             bbox = self.bbox(*shapes)
@@ -362,12 +368,14 @@ class TwlDiagram(Observer, tk.Canvas):
             self.configure(scrollregion=(0, 0, self.winfo_width(), self.winfo_height()))
 
     def get_scrollregion(self) -> tuple[int, int, int, int]:
+        """Get the dimensions of the currently configured scrollregion."""
         sr_str = self.cget("scrollregion") or "0 0 0 0"
         sr_int = tuple([int(num) for num in sr_str.split()])
         assert len(sr_int) == 4
         return sr_int
 
     def zoom(self, event):
+        """Zoom the diagram one increment in or out depending on the direction the mousewheel was turned."""
         if event.delta < 0:
             self.current_zoom.set(max(self.MIN_ZOOM, self.current_zoom.get() - self.ZOOM_STEP))
         else:
@@ -375,12 +383,14 @@ class TwlDiagram(Observer, tk.Canvas):
         self.refresh()
 
     def start_pan(self, event):
+        """Start panning the diagram. Change cursor to cross arrows and store panning start position."""
         self.pan_start_pos = Point(event.x, event.y)
         self.pan_xview_start = self.xview()[0]
         self.pan_yview_start = self.yview()[0]
         self.config(cursor="fleur")
 
     def pan(self, event):
+        """Pan the diagram."""
         delta_x = event.x - self.pan_start_pos.x
         delta_y = event.y - self.pan_start_pos.y
         x_min, y_min, x_max, y_max = self.get_scrollregion()
@@ -393,26 +403,29 @@ class TwlDiagram(Observer, tk.Canvas):
         self.refresh()
 
     def end_pan(self, event):
-        self.config(cursor="arrow")
+        """End panning the diagram. Restore default cursor."""
+        self.config(cursor="")
 
-    def add_button(self, tool: Tool, toolbar: ttk.Frame):
+    def add_tool_button(self, tool: Tool, toolbar: ttk.Frame):
+        """Add a button for the tool to the diagrams toolbar."""
         image = add_png_by_name(tool.ICON, self.TOOL_BUTTON_SIZE, self.TOOL_BUTTON_SIZE)
         button = CustomRadioButton(toolbar, image=image, variable=self._selected_tool_id, value=tool.ID, command=self.handle_tool_change, outlinewidth=1)
         button.pack()
 
     def select_tool(self, tool_id: int):
+        """Select the tool with the specified id."""
         self._selected_tool_id.set(tool_id)
         self.handle_tool_change()
 
     def handle_tool_change(self):
-        """Perform tool change."""
+        """Perform tool change. Deactivate the previously selected tool and activate the new one."""
         if self.selected_tool:
             self.selected_tool.deactivate()
         self.selected_tool = self.tools[self._selected_tool_id.get()]
         self.selected_tool.activate()
 
     def create_text_with_bg(self, *args, **kw) -> tuple[int, int]:
-        """Creates a label with a specific bg color to ensure readability. Used for model component labels."""
+        """Creates a label with a specific bg color to ensure readability. Used for ComponentShape labels."""
         tags = kw.pop("tags", [])
         label_tag = kw.pop("label_tag", self.TEXT_TAG)
         bg_tag = kw.pop("bg_tag", self.TEXT_BG_TAG)
@@ -434,56 +447,69 @@ class TwlDiagram(Observer, tk.Canvas):
         return text_id, bg_id
 
     def label_visibility(self):
+        """Refresh the visibility of all ComponentShape labels."""
         [shape.set_label_visible(self.label_visible(shape)) for shape in self.component_shapes]
 
     def label_visible(self, shape: Shape) -> bool:
+        """Returns weather the label for the specified shape should be visible in the diagram. Default is False."""
         return False
 
     @property
     def component_shapes(self):
+        """Get all ComponentShapes from diagrams shapes."""
         return [shape for shape in self.shapes if isinstance(shape, ComponentShape)]
 
     def find_shape_at(self, x: float, y: float) -> Shape | None:
-        """Check if there is a shape in the diagram at the specified coordinate."""
+        """Returns shape in the diagram at the specified coordinate if it exists."""
         return next(filter(lambda shape: shape.is_at(x, y), self.shapes), None)
 
     S = TypeVar("S", bound=ComponentShape)
     def find_shape_of_list_at(self, shapes: list[S], x: float, y: float) -> S | None:
-        """Check if there is a shape that is included in the list in the diagram at the specified coordinate."""
+        """Returns shape that is included in the list in the diagram at the specified coordinate if it exists."""
         return next(filter(lambda shape: shape.is_at(x, y), shapes), None)
 
     def find_shape_of_type_at(self, component_type: Type[C], x: float, y: float) -> ComponentShape[C] | None:
-        """Check if there is a component shape in the diagram at the specified coordinate."""
+        """Returns component shape of the specified type in the diagram at the specified coordinate if it exists."""
         return next(filter(lambda shape: isinstance(shape.component, component_type) and shape.is_at(x, y), self.component_shapes), None)
 
     def find_component_of_type_at(self, component_type: Type[C], x: float, y: float) -> C | None:
+        """Returns a component of the specified type in the diagram that is at the specified coordinate if it exists."""
         shape = self.find_shape_of_type_at(component_type, x, y)
         return shape.component if shape else None
 
     def shapes_for(self, component: C) -> list[ComponentShape[C]]:
+        """Returns all ComponentShapes in the diagram for the component."""
         return [shape for shape in self.component_shapes if shape.component == component]
 
     S = TypeVar('S', bound=Shape)
     def shapes_of_type_for(self, shape_type: Type[S], component: Component) -> list[S]:
+        """Returns all shapes of a specified type for a component in the diagram."""
         return [shape for shape in self.shapes_for(component) if isinstance(shape, shape_type)]
 
     def find_withtag(self, tagOrId: str | int) -> tuple[int, ...]:
+        """Returns tkinter shape ids for all shapes in the diagram that have this tag."""
         return tuple(filter(lambda id: (id == tagOrId) or (tagOrId in self.gettags(id)), self.find_all()))
 
     def find_withtags(self, *tags: str) -> int | None:
+        """Returns tkinter shape ids for all shapes in the diagram that have all of these tags."""
         return next((id for id in self.find_all() if set(tags).issubset(set(self.gettags(id)))), None)
 
     def find_except_withtags(self, *tagOrIds: str | int) -> tuple[int, ...]:
+        """Returns tkinter shape ids for all shapes in the diagram that don't have any of these tags."""
         return tuple([id for id in self.find_all() if all(id != tagOrId and tagOrId not in self.gettags(id) for tagOrId in tagOrIds)])
 
     def tag_lower(self, lower: str | int, upper: str | int | None = None) -> None:
+        """Lower all shapes with lower tag under shapes with upper tag if specified, otherwise under all shapes.
+        This method doesn't raise exception if there are no shapes with this tag in the diagram, unlike tkinter build-in method."""
         if self.find_withtag(lower) and (not upper or self.find_withtag(upper)):
             super().tag_lower(lower, upper)
 
-    def delete_with_tag(self, tag: str):
-        [self.delete(shape) for shape in self.find_withtag("temp")]
+    def delete_temp_shapes(self):
+        """Delete all temporary shapes in the diagram. Temporary shapes are identified with temp tag."""
+        [self.delete(shape) for shape in self.find_withtag(ComponentShape.TEMP)]
 
     def process_entry(self, entry: ttk.Entry, min: float, max: float, variable: tk.DoubleVar):
+        """Process the value of an entry in the diagrams bottom bar. Check if the value is valid and within the specified min and max."""
         try:
             value = float(entry.get())
         except ValueError:
@@ -493,5 +519,6 @@ class TwlDiagram(Observer, tk.Canvas):
             variable.set(value)
 
     def set_entry_text(self, entry: ttk.Entry, text):
+        """Set the text in an entry. Clears the previous text."""
         entry.delete(0, tk.END)
         entry.insert(0, str(text))

@@ -46,7 +46,7 @@ class C2D(Observer, tk.Tk):
         self.notebook.pack(fill=tk.BOTH, expand=True)
         self.notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
 
-        self.bind("<Control-n>", lambda *ignore: io.clear_project())
+        self.bind("<Control-n>", lambda *ignore: io.new_project())
         self.bind("<Control-o>", lambda *ignore: self.open_project())
         self.bind("<Control-s>", lambda *ignore: io.save_project())
         self.bind("<Control-S>", lambda *ignore: io.save_project_as())
@@ -91,7 +91,7 @@ class C2D(Observer, tk.Tk):
         menubar = tk.Menu(self)
 
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New Project", command=lambda *ignore: io.clear_project(), accelerator="Ctrl+N")
+        file_menu.add_command(label="New Project", command=lambda *ignore: io.new_project(), accelerator="Ctrl+N")
         file_menu.add_separator()
         file_menu.add_command(label="Open", command=lambda *ignore: self.open_project(), accelerator="Ctrl+O")
         file_menu.add_separator()
@@ -117,7 +117,7 @@ class C2D(Observer, tk.Tk):
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
         help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_command(label="Help", command=lambda: webbrowser.open("https://example.com"))
+        menubar.add_command(label="Help", command=lambda: webbrowser.open("https://github.com/watollah/twl_bachelorarbeit/releases/download/C2D/Quickstart.pdf"))
 
         return menubar
 

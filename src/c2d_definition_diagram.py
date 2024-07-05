@@ -244,7 +244,7 @@ class ComponentTool(Generic[C], Tool):
     def _move(self, event):
         """Gets executed when the user moves the cursor. Prepares and then shows the preview (the temp shape)."""
         self.diagram.focus_set()
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.diagram.delete_temp_shapes()
         self.correct_event_pos(event)
         self._snap_event_to_grid(event)
         if self.prepare(event):
@@ -440,7 +440,7 @@ class BeamTool(ComponentTool[Beam]):
         existing_node = self.diagram.find_component_of_type_at(Node, event.x, event.y)
         if not self.start_node:
             if not existing_node:
-                self.diagram.delete_with_tag(ComponentShape.TEMP)
+                self.diagram.delete_temp_shapes()
                 TempNodeShape(Node.dummy(event.x, event.y), self.diagram)
             return False
         else:
@@ -458,13 +458,13 @@ class BeamTool(ComponentTool[Beam]):
         inital_line = Line(start_point, Point(event.x, event.y))
         rounded_line = Line(start_point, Point(start_point.x, start_point.y + 10))
         rounded_line.rotate(start_point, inital_line.angle_rounded())
-        new_point = rounded_line.closest_point_on_axis(Point(event.x, event.y))
+        new_point = rounded_line.closest_point(Point(event.x, event.y))
         event.x = new_point.x
         event.y = new_point.y
 
     def show_temp_shape(self):
         """Show temporary Node and Beam shapes."""
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.diagram.delete_temp_shapes()
         assert(self.start_node)
         assert(self.end_node)
         if self.start_node not in TwlApp.model().nodes:
@@ -530,7 +530,7 @@ class SupportTool(ComponentTool[Support]):
 
     def show_temp_shape(self):
         """Show TempSupportShape."""
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.diagram.delete_temp_shapes()
         TempSupportShape(self.component, self.diagram)
 
 
@@ -588,7 +588,7 @@ class ForceTool(ComponentTool[Force]):
 
     def show_temp_shape(self):
         """Show the TempForceShape in the diagram."""
-        self.diagram.delete_with_tag(ComponentShape.TEMP)
+        self.diagram.delete_temp_shapes()
         TempForceShape(self.component, self.diagram)
 
 
@@ -651,7 +651,7 @@ class DefinitionDiagram(ModelDiagram):
         self.tools: list[Tool] = [SelectTool(self), BeamTool(self), SupportTool(self), ForceTool(self)]
         self.selected_tool: Tool = self.tools[0]
         for tool in self.tools: 
-            self.add_button(tool, toolbar)
+            self.add_tool_button(tool, toolbar)
         self.select_tool(SelectTool.ID)
         BorderFrame(toolbar).pack(fill="both", expand=True)
 

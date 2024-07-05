@@ -741,6 +741,16 @@ class Model:
 
     def all_supports_intersect(self):
         """Check if all lines of action of Supports in the Model intersect in a single point. Used for Model validation."""
+        if len(self.supports) == 2 and self.has_three_reaction_forces():
+            s1 = self.supports[0] if self.supports[0].constraints == 1 else self.supports[1]
+            s2 = self.supports[0] if not self.supports[0] == s1 else self.supports[1]
+            if s1.angle in (90, 270):
+                return s1.node.y == s2.node.y
+            elif s1.angle in (0, 180, 360):
+                return s1.node.x == s2.node.x
+            else:
+                s1_m, s1_c = self.line_equation(s1)
+                return math.isclose(s1_m * s2.node.x + s1_c, s2.node.y)
         if not len(self.supports) == 3 or not all(support.constraints == 1 for support in self.supports) or self.supports_parallel():
             return False
         intersections = [self.support_intersection(self.supports[0], self.supports[1]),
