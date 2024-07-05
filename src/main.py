@@ -117,7 +117,7 @@ class C2D(Observer, tk.Tk):
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
         help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_command(label="Help", command=lambda: webbrowser.open("https://example.com"))
+        menubar.add_command(label="Help", command=lambda: webbrowser.open("https://github.com/watollah/twl_bachelorarbeit/releases/download/C2D/Quickstart.pdf"))
 
         return menubar
 
